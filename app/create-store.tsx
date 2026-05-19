@@ -30,6 +30,7 @@ export default function CreateStoreScreen() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [description, setDescription] = useState("");
+  const [industry, setIndustry] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +48,7 @@ export default function CreateStoreScreen() {
       whatsapp_number: whatsappNumber,
       currency,
       description: description || null,
+      industry: industry || null,
     });
 
     if (!parsed.success) {
@@ -131,6 +133,13 @@ export default function CreateStoreScreen() {
         autoCapitalize="characters"
         maxLength={3}
         error={errors.currency}
+      />
+      <AuthInput
+        label="Industry"
+        value={industry}
+        onChangeText={setIndustry}
+        placeholder="e.g. Fashion, Electronics, Food"
+        error={errors.industry}
       />
       <AuthInput
         label="Description"

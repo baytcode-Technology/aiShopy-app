@@ -1,0 +1,170 @@
+import { AuthButton } from "@/components/auth/AuthButton";
+import { AuthInput } from "@/components/auth/AuthInput";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { createStore } from "@src/api/stores";
+import { env } from "@src/config/env";
+import { useStore } from "@src/contexts/store-context";
+import { showError, showSuccess } from "@src/lib/toast";
+import { theme } from "@src/theme/colors";
+import {
+  createStoreFormSchema,
+  slugifyFromName,
+  toCreateStorePayload,
+  type CreateStoreFormValues,
+} from "@src/validations/store.validation";
+import { router } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, Text } from "react-native";
+
+type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>;
+
+function SectionTitle({ children }: { children: string }) {
+  return <Text style={styles.sectionTitle}>{children}</Text>;
+}
+
+export default function CreateStoreScreen() {
+  const { activateStoreSession } = useStore();
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [currency, setCurrency] = useState("INR");
+  const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [loading, setLoading] = useState(false);
+
+  const onNameChange = (value: string) => {
+    setName(value);
+    if (!slugTouched) {
+      setSlug(slugifyFromName(value));
+    }
+  };
+
+  const onSubmit = async () => {
+    const parsed = createStoreFormSchema.safeParse({
+      name,
+      slug,
+      whatsapp_number: whatsappNumber,
+      currency,
+      description: description || null,
+    });
+
+    if (!parsed.success) {
+      const next: FieldErrors = {};
+      for (const issue of parsed.error.issues) {
+        const key = issue.path[0] as keyof CreateStoreFormValues;
+        if (!next[key]) {
+          next[key] = issue.message;
+        }
+      }
+      setErrors(next);
+      showError(parsed.error.issues[0]?.message ?? "Please fix the form");
+      return;
+    }
+
+    setErrors({});
+    setLoading(true);
+
+    try {
+      const res = await createStore(toCreateStorePayload(parsed.data));
+      await activateStoreSession(res.data.store, res.data.subdomainUrl);
+      showSuccess(
+        res.message,
+        `${res.data.store.slug}.${env.storefrontBaseDomain}`,
+      );
+      router.replace("/(tabs)");
+    } catch (e) {
+      showError(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthLayout
+      title="Create your store"
+      subtitle="Required fields are marked with *. Optional fields can be added now or later."
+    >
+      <SectionTitle>Basics</SectionTitle>
+      <AuthInput
+        label="Store name *"
+        value={name}
+        onChangeText={onNameChange}
+        placeholder="My Shop"
+        error={errors.name}
+      />
+      <AuthInput
+        label="Store slug (subdomain) *"
+        value={slug}
+        onChangeText={(v) => {
+          setSlugTouched(true);
+          setSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, ""));
+        }}
+        placeholder="my-shop"
+        autoCapitalize="none"
+        autoCorrect={false}
+        error={errors.slug}
+      />
+      <Text style={styles.hint}>
+        Your store domain: {slug || "my-shop"}.{env.storefrontBaseDomain}
+      </Text>
+      <AuthInput
+        label="WhatsApp number *"
+        value={whatsappNumber}
+        onChangeText={setWhatsappNumber}
+        placeholder="+919876543210"
+        keyboardType="phone-pad"
+        error={errors.whatsapp_number}
+      />
+      <AuthInput
+        label="Currency *"
+        value={currency}
+        onChangeText={(v) =>
+          setCurrency(
+            v
+              .toUpperCase()
+              .replace(/[^A-Z]/g, "")
+              .slice(0, 3),
+          )
+        }
+        placeholder="INR"
+        autoCapitalize="characters"
+        maxLength={3}
+        error={errors.currency}
+      />
+      <AuthInput
+        label="Description"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="Tell customers about your shop"
+        multiline
+        numberOfLines={3}
+        style={styles.multiline}
+        error={errors.description}
+      />
+
+      <AuthButton label="Create store" loading={loading} onPress={onSubmit} />
+    </AuthLayout>
+  );
+}
+
+const styles = StyleSheet.create({
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    color: theme.black,
+    marginTop: 8,
+  },
+  hint: {
+    fontSize: 12,
+    color: theme.gray600,
+    marginTop: -8,
+    marginBottom: 4,
+  },
+  multiline: {
+    minHeight: 88,
+    textAlignVertical: "top",
+  },
+});

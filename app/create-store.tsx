@@ -12,7 +12,7 @@ import {
   toCreateStorePayload,
   type CreateStoreFormValues,
 } from "@src/validations/store.validation";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text } from "react-native";
 
@@ -74,7 +74,7 @@ export default function CreateStoreScreen() {
         res.message,
         `${res.data.store.slug}.${env.storefrontBaseDomain}`,
       );
-      router.replace("/(tabs)");
+      router.replace("/(store)/chats" as Href);
     } catch (e) {
       showError(e);
     } finally {

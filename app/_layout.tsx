@@ -57,6 +57,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="store-check" />
             <Stack.Screen name="create-store" />
+            <Stack.Screen name="(store)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>

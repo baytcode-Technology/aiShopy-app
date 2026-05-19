@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { router } from 'expo-router'
+import { router, type Href } from 'expo-router'
 import { ActivityIndicator, StyleSheet, View, Text } from 'react-native'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
@@ -25,7 +25,7 @@ export default function StoreCheckScreen() {
         if (cancelled) return
 
         if (hasStore) {
-          router.replace('/(tabs)')
+          router.replace('/(store)/chats' as Href)
         } else {
           router.replace('/create-store')
         }

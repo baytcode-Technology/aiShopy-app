@@ -32,11 +32,12 @@ export type CreateProductPayload = {
   store_id: string
   name: string
   base_price: number
+  images: string[]
+  thumbnail_url: string
   description?: string
   sku?: string
   stock_qty?: number
   track_inventory?: boolean
-  images?: string[]
   is_active?: boolean
   sort_order?: number
   metadata?: Record<string, unknown>

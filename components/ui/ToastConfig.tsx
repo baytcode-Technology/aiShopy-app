@@ -6,14 +6,14 @@ export const toastConfig: ToastConfig = {
     <BaseToast
       {...props}
       style={{
-        borderLeftColor: theme.black,
+        borderLeftColor: theme.success,
         borderLeftWidth: 4,
-        backgroundColor: theme.white,
+        backgroundColor: theme.successBg,
         borderWidth: 1,
-        borderColor: theme.black,
+        borderColor: theme.successBorder,
       }}
       contentContainerStyle={{ paddingHorizontal: 12 }}
-      text1Style={{ fontSize: 15, fontWeight: '700', color: theme.black }}
+      text1Style={{ fontSize: 15, fontWeight: '700', color: theme.success }}
       text2Style={{ fontSize: 13, color: theme.gray600 }}
     />
   ),

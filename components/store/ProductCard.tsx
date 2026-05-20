@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Image, StyleSheet, Text, View } from 'react-native'
 import type { Product } from '@src/types/product'
 import { theme } from '@src/theme/colors'
 
@@ -22,7 +22,15 @@ export function ProductCard({ product, currency = 'INR' }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.image}>
-        <Text style={styles.initials}>{initials(product.name)}</Text>
+        {product.thumbnail_url ? (
+          <Image
+            source={{ uri: product.thumbnail_url }}
+            style={styles.thumbImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.initials}>{initials(product.name)}</Text>
+        )}
       </View>
       <Text style={styles.name} numberOfLines={2}>
         {product.name}
@@ -57,6 +65,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
   },
   initials: {
     fontSize: 28,

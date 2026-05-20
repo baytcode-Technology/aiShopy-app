@@ -27,7 +27,6 @@ export async function createProduct(
     method: 'POST',
     body: JSON.stringify({
       track_inventory: false,
-      images: [],
       is_active: true,
       sort_order: 0,
       metadata: {},

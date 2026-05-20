@@ -6,4 +6,7 @@ export const theme = {
   gray400: '#A3A3A3',
   gray600: '#525252',
   border: '#000000',
+  success: '#16A34A',
+  successBg: '#F0FDF4',
+  successBorder: '#BBF7D0',
 } as const

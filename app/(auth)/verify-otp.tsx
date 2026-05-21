@@ -88,8 +88,9 @@ export default function VerifyOtpScreen() {
 const styles = StyleSheet.create({
   back: {
     fontSize: 14,
-    color: theme.black,
+    color: theme.gray600,
     fontWeight: '600',
     textDecorationLine: 'underline',
+    marginTop: 8,
   },
 })

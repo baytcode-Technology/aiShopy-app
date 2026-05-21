@@ -24,8 +24,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.gray200,
   },
   text: {
-    fontSize: 13,
+    fontSize: 11,
     color: theme.gray400,
-    textTransform: 'lowercase',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    fontWeight: '700',
   },
 })

@@ -54,25 +54,27 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 52,
+    minHeight: 54,
+    borderRadius: 14,
   },
   primary: {
     backgroundColor: theme.black,
   },
   outline: {
     backgroundColor: theme.white,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.black,
   },
   disabled: {
     opacity: 0.5,
   },
   pressed: {
-    opacity: 0.85,
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
   },
   label: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   labelPrimary: {

@@ -60,5 +60,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 14,
     color: theme.gray600,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
 })

@@ -72,10 +72,11 @@ const styles = StyleSheet.create({
   footer: {
     fontSize: 14,
     color: theme.gray600,
+    fontWeight: '500',
   },
   link: {
     color: theme.black,
-    fontWeight: '600',
+    fontWeight: '700',
     textDecorationLine: 'underline',
   },
 })

@@ -159,21 +159,25 @@ export default function CreateStoreScreen() {
 
 const styles = StyleSheet.create({
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
     textTransform: "uppercase",
     color: theme.black,
-    marginTop: 8,
+    marginTop: 18,
+    marginBottom: 6,
+    paddingLeft: 4,
   },
   hint: {
     fontSize: 12,
     color: theme.gray600,
-    marginTop: -8,
-    marginBottom: 4,
+    marginTop: -4,
+    marginBottom: 10,
+    paddingLeft: 4,
   },
   multiline: {
-    minHeight: 88,
+    minHeight: 100,
     textAlignVertical: "top",
+    borderRadius: 14,
   },
 });

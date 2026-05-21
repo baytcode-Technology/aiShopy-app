@@ -2,11 +2,19 @@ import { StyleSheet, Text, View } from 'react-native'
 import type { Order } from '@src/types/order'
 import { theme } from '@src/theme/colors'
 
-const STATUS_COLORS: Record<string, string> = {
-  confirmed: theme.success,
-  pending_payment: '#B45309',
-  cancelled: theme.gray400,
-  delivered: theme.black,
+const getStatusBadgeStyle = (status: string) => {
+  switch (status) {
+    case 'confirmed':
+      return { bg: '#ECFDF5', text: '#059669' }
+    case 'pending_payment':
+      return { bg: '#FFFBEB', text: '#D97706' }
+    case 'cancelled':
+      return { bg: '#F4F4F5', text: '#71717A' }
+    case 'delivered':
+      return { bg: '#E0F2FE', text: '#0369A1' }
+    default:
+      return { bg: '#F4F4F6', text: '#52525B' }
+  }
 }
 
 type Props = {
@@ -18,15 +26,20 @@ export function OrderCard({ order, currency = 'INR' }: Props) {
   const symbol = currency === 'INR' ? '₹' : '$'
   const customerName = order.customers?.name ?? order.customers?.whatsapp_number ?? 'Customer'
   const itemCount = order.items?.length ?? 0
-  const statusColor = STATUS_COLORS[order.status] ?? theme.gray600
+  const badge = getStatusBadgeStyle(order.status)
 
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.number}>{order.order_number}</Text>
-        <Text style={[styles.status, { color: statusColor }]}>{order.status.replace('_', ' ')}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+          <Text style={[styles.statusText, { color: badge.text }]}>
+            {order.status.replace('_', ' ')}
+          </Text>
+        </View>
       </View>
       <Text style={styles.customer}>{customerName}</Text>
+      <View style={styles.divider} />
       <View style={styles.footer}>
         <Text style={styles.meta}>
           {itemCount} item{itemCount !== 1 ? 's' : ''}
@@ -45,15 +58,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.white,
     borderWidth: 1,
     borderColor: theme.gray200,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  number: { fontSize: 15, fontWeight: '700', color: theme.black },
-  status: { fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },
-  customer: { fontSize: 14, color: theme.gray600, marginBottom: 10 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  number: { fontSize: 16, fontWeight: '800', color: theme.black, letterSpacing: -0.2 },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: { fontSize: 11, fontWeight: '700', textTransform: 'capitalize', letterSpacing: 0.2 },
+  customer: { fontSize: 14, color: theme.gray600, fontWeight: '500', marginBottom: 12 },
+  divider: { height: 1, backgroundColor: theme.gray200, marginBottom: 12 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  meta: { fontSize: 13, color: theme.gray600 },
-  total: { fontSize: 16, fontWeight: '700', color: theme.black },
+  meta: { fontSize: 13, color: theme.gray400, fontWeight: '500' },
+  total: { fontSize: 18, fontWeight: '800', color: theme.black, letterSpacing: -0.3 },
 })

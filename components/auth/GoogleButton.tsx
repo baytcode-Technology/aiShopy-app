@@ -28,14 +28,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: theme.black,
+    borderColor: theme.gray200,
     backgroundColor: theme.white,
     paddingVertical: 14,
     paddingHorizontal: 16,
+    borderRadius: 14,
     gap: 12,
+    minHeight: 52,
   },
   pressed: {
     backgroundColor: theme.gray100,
+    transform: [{ scale: 0.98 }],
   },
   iconWrap: {
     width: 24,
@@ -43,7 +46,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
     color: theme.black,
   },
 })

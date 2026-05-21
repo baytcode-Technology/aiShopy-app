@@ -4,6 +4,7 @@ import { getAccessToken } from '@src/lib/auth-storage'
 import type {
   CreateProductPayload,
   CreateProductResponse,
+  GetProductResponse,
   ListProductsResponse,
 } from '@src/types/product'
 
@@ -20,6 +21,35 @@ export async function fetchProducts(storeId: string): Promise<ListProductsRespon
   return authFetch<ListProductsResponse>(`${endpoints.products}?${qs.toString()}`)
 }
 
+export async function fetchProduct(
+  productId: string,
+  storeId?: string
+): Promise<GetProductResponse> {
+  try {
+    return await authFetch<GetProductResponse>(`${endpoints.products}/${productId}`)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : ''
+    const routeMissing =
+      message.includes('404') ||
+      message.includes('Cannot GET') ||
+      message.toLowerCase().includes('not found')
+
+    if (storeId && routeMissing) {
+      const list = await fetchProducts(storeId)
+      const product = list.data.products.find((p) => p.id === productId)
+      if (!product) {
+        throw new Error('Product not found')
+      }
+      return {
+        success: true,
+        message: 'Product fetched from list (detail API not deployed yet)',
+        data: { product, variants: [] },
+      }
+    }
+    throw e
+  }
+}
+
 export async function createProduct(
   payload: CreateProductPayload
 ): Promise<CreateProductResponse> {
@@ -31,6 +61,7 @@ export async function createProduct(
       sort_order: 0,
       metadata: {},
       stock_qty: 0,
+      variants: [],
       ...payload,
     }),
   })

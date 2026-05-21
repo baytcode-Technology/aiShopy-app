@@ -5,5 +5,6 @@ export const endpoints = {
   stores: "/api/stores",
   products: "/api/products",
   categories: "/api/categories",
+  orders: "/api/orders",
   uploadProductImages: "/api/uploads/product-images",
 } as const;

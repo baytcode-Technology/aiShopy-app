@@ -1,31 +1,51 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet, Text } from 'react-native'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { FormModal } from '@/components/store/FormModal'
 import { ProductImagePicker, type PickedImage } from '@/components/store/ProductImagePicker'
+import { ProductVariantEditor, type VariantDraft } from '@/components/store/ProductVariantEditor'
+import { CategoryPicker } from '@/components/store/CategoryPicker'
 import { createProduct } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
 import { showError, showSuccess } from '@src/lib/toast'
+import type { Category } from '@src/types/category'
 import { theme } from '@src/theme/colors'
 
 type Props = {
   visible: boolean
   storeId: string
+  categories: Category[]
+  initialCategoryId?: string
   onClose: () => void
   onCreated: () => void
 }
 
-export function CreateProductModal({ visible, storeId, onClose, onCreated }: Props) {
+export function CreateProductModal({
+  visible,
+  storeId,
+  categories,
+  initialCategoryId,
+  onClose,
+  onCreated,
+}: Props) {
   const [name, setName] = useState('')
   const [basePrice, setBasePrice] = useState('')
   const [stockQty, setStockQty] = useState('0')
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
+  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [variants, setVariants] = useState<VariantDraft[]>([])
   const [images, setImages] = useState<PickedImage[]>([])
   const [thumbnailId, setThumbnailId] = useState<string | null>(null)
   const [imageError, setImageError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (visible && initialCategoryId) {
+      setCategoryId(initialCategoryId)
+    }
+  }, [visible, initialCategoryId])
 
   const reset = () => {
     setName('')
@@ -33,6 +53,8 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
     setStockQty('0')
     setDescription('')
     setSku('')
+    setCategoryId(null)
+    setVariants([])
     setImages([])
     setThumbnailId(null)
     setImageError('')
@@ -67,6 +89,13 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
       return
     }
 
+    for (const v of variants) {
+      if (!v.name.trim()) {
+        showError('Each variant needs a name')
+        return
+      }
+    }
+
     setImageError('')
     setLoading(true)
 
@@ -82,16 +111,27 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
         throw new Error('Thumbnail URL is required')
       }
 
+      const hasVariants = variants.length > 0
+
       await createProduct({
         store_id: storeId,
         name: trimmedName,
         base_price: price,
-        stock_qty: Number.isFinite(stock) ? stock : 0,
-        track_inventory: stock > 0,
+        stock_qty: hasVariants ? 0 : Number.isFinite(stock) ? stock : 0,
+        track_inventory: hasVariants || stock > 0,
         description: description.trim() || undefined,
         sku: sku.trim() || undefined,
+        category_id: categoryId ?? undefined,
         images: urls,
         thumbnail_url: thumbnailUrl,
+        variants: variants.map((v, index) => ({
+          name: v.name.trim(),
+          price_delta: Number(v.priceDelta) || 0,
+          stock_qty: Number(v.stockQty) || 0,
+          sku: v.sku.trim() || undefined,
+          sort_order: index,
+          is_active: true,
+        })),
       })
       reset()
       onCreated()
@@ -123,6 +163,11 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
         }}
         error={imageError}
       />
+      <CategoryPicker
+        categories={categories}
+        selectedId={categoryId}
+        onSelect={setCategoryId}
+      />
       <AuthInput label="Product name *" value={name} onChangeText={setName} placeholder="Premium Headphones" />
       <AuthInput
         label="Base price *"
@@ -131,14 +176,17 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
         placeholder="299"
         keyboardType="decimal-pad"
       />
-      <AuthInput
-        label="Stock quantity"
-        value={stockQty}
-        onChangeText={setStockQty}
-        placeholder="0"
-        keyboardType="number-pad"
-      />
+      {variants.length === 0 ? (
+        <AuthInput
+          label="Stock quantity"
+          value={stockQty}
+          onChangeText={setStockQty}
+          placeholder="0"
+          keyboardType="number-pad"
+        />
+      ) : null}
       <AuthInput label="SKU" value={sku} onChangeText={setSku} placeholder="SKU-001" autoCapitalize="none" />
+      <ProductVariantEditor variants={variants} onChange={setVariants} />
       <AuthInput
         label="Description"
         value={description}
@@ -148,7 +196,7 @@ export function CreateProductModal({ visible, storeId, onClose, onCreated }: Pro
         numberOfLines={3}
         style={styles.multiline}
       />
-      <Text style={styles.note}>Images are uploaded to storage, then saved on the product.</Text>
+      <Text style={styles.note}>Images upload first, then product + variants are saved.</Text>
     </FormModal>
   )
 }

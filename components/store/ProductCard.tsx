@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import type { Product } from '@src/types/product'
 import { theme } from '@src/theme/colors'
 
@@ -13,14 +13,15 @@ function initials(name: string): string {
 type Props = {
   product: Product
   currency?: string
+  onPress?: () => void
 }
 
-export function ProductCard({ product, currency = 'INR' }: Props) {
+export function ProductCard({ product, currency = 'INR', onPress }: Props) {
   const symbol = currency === 'INR' ? '₹' : '$'
   const lowStock = product.track_inventory && product.stock_qty > 0 && product.stock_qty < 10
 
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       <View style={styles.image}>
         {product.thumbnail_url ? (
           <Image
@@ -44,8 +45,18 @@ export function ProductCard({ product, currency = 'INR' }: Props) {
           Stock: {product.stock_qty}
         </Text>
       </View>
-    </View>
+    </>
   )
+
+  if (onPress) {
+    return (
+      <Pressable style={styles.card} onPress={onPress}>
+        {content}
+      </Pressable>
+    )
+  }
+
+  return <View style={styles.card}>{content}</View>
 }
 
 const styles = StyleSheet.create({

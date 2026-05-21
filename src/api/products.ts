@@ -4,8 +4,12 @@ import { getAccessToken } from '@src/lib/auth-storage'
 import type {
   CreateProductPayload,
   CreateProductResponse,
+  CreateProductVariantPayload,
   GetProductResponse,
   ListProductsResponse,
+  Product,
+  ProductVariant,
+  UpdateProductVariantPayload,
 } from '@src/types/product'
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -48,6 +52,81 @@ export async function fetchProduct(
     }
     throw e
   }
+}
+
+export type UpdateProductPayload = Partial<{
+  name: string
+  base_price: number
+  description: string | null
+  sku: string | null
+  stock_qty: number
+  track_inventory: boolean
+  is_active: boolean
+  category_id: string | null
+  images: string[]
+  thumbnail_url: string
+}>
+
+export type UpdateProductResponse = {
+  success: boolean
+  message: string
+  data: Product
+}
+
+export async function updateProduct(
+  productId: string,
+  payload: UpdateProductPayload
+): Promise<UpdateProductResponse> {
+  return authFetch<UpdateProductResponse>(`${endpoints.products}/${productId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+type VariantResponse = {
+  success: boolean
+  message: string
+  data: { variant: ProductVariant }
+}
+
+export async function createProductVariant(
+  productId: string,
+  payload: CreateProductVariantPayload
+): Promise<VariantResponse> {
+  return authFetch<VariantResponse>(`${endpoints.products}/${productId}/variants`, {
+    method: 'POST',
+    body: JSON.stringify({
+      price_delta: 0,
+      stock_qty: 0,
+      is_active: true,
+      sort_order: 0,
+      options: {},
+      ...payload,
+    }),
+  })
+}
+
+export async function updateProductVariant(
+  productId: string,
+  variantId: string,
+  payload: UpdateProductVariantPayload
+): Promise<VariantResponse> {
+  return authFetch<VariantResponse>(
+    `${endpoints.products}/${productId}/variants/${variantId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  )
+}
+
+export async function deleteProductVariant(
+  productId: string,
+  variantId: string
+): Promise<{ success: boolean; message: string }> {
+  return authFetch(`${endpoints.products}/${productId}/variants/${variantId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function createProduct(

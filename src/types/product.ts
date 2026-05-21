@@ -41,6 +41,16 @@ export type CreateProductVariantPayload = {
   sort_order?: number
 }
 
+export type UpdateProductVariantPayload = Partial<{
+  name: string
+  price_delta: number
+  stock_qty: number
+  sku: string | null
+  options: Record<string, unknown>
+  is_active: boolean
+  sort_order: number
+}>
+
 export type ListProductsResponse = {
   success: boolean
   message: string

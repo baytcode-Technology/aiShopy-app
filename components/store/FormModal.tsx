@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scroll: {
-    maxHeight: 420,
+    maxHeight: 560,
   },
   scrollContent: {
     padding: 20,

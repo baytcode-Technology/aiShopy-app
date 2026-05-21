@@ -4,10 +4,12 @@ import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { FormModal } from '@/components/store/FormModal'
 import { ProductImagePicker, type PickedImage } from '@/components/store/ProductImagePicker'
-import { ProductVariantEditor, type VariantDraft } from '@/components/store/ProductVariantEditor'
+import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
 import { createProduct } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
+import { toCreateVariantPayload } from '@src/lib/variant-options'
+import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
 import { theme } from '@src/theme/colors'
@@ -35,7 +37,8 @@ export function CreateProductModal({
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [variants, setVariants] = useState<VariantDraft[]>([])
+  const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
+  const [variants, setVariants] = useState<GeneratedVariant[]>([])
   const [images, setImages] = useState<PickedImage[]>([])
   const [thumbnailId, setThumbnailId] = useState<string | null>(null)
   const [imageError, setImageError] = useState('')
@@ -54,6 +57,7 @@ export function CreateProductModal({
     setDescription('')
     setSku('')
     setCategoryId(null)
+    setVariantOptions([])
     setVariants([])
     setImages([])
     setThumbnailId(null)
@@ -89,13 +93,6 @@ export function CreateProductModal({
       return
     }
 
-    for (const v of variants) {
-      if (!v.name.trim()) {
-        showError('Each variant needs a name')
-        return
-      }
-    }
-
     setImageError('')
     setLoading(true)
 
@@ -125,12 +122,8 @@ export function CreateProductModal({
         images: urls,
         thumbnail_url: thumbnailUrl,
         variants: variants.map((v, index) => ({
-          name: v.name.trim(),
-          price_delta: Number(v.priceDelta) || 0,
-          stock_qty: Number(v.stockQty) || 0,
-          sku: v.sku.trim() || undefined,
+          ...toCreateVariantPayload(v),
           sort_order: index,
-          is_active: true,
         })),
       })
       reset()
@@ -163,11 +156,7 @@ export function CreateProductModal({
         }}
         error={imageError}
       />
-      <CategoryPicker
-        categories={categories}
-        selectedId={categoryId}
-        onSelect={setCategoryId}
-      />
+      <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
       <AuthInput label="Product name *" value={name} onChangeText={setName} placeholder="Premium Headphones" />
       <AuthInput
         label="Base price *"
@@ -186,7 +175,14 @@ export function CreateProductModal({
         />
       ) : null}
       <AuthInput label="SKU" value={sku} onChangeText={setSku} placeholder="SKU-001" autoCapitalize="none" />
-      <ProductVariantEditor variants={variants} onChange={setVariants} />
+      <ShopifyVariantEditor
+        options={variantOptions}
+        variants={variants}
+        onChange={(options, nextVariants) => {
+          setVariantOptions(options)
+          setVariants(nextVariants)
+        }}
+      />
       <AuthInput
         label="Description"
         value={description}
@@ -196,12 +192,10 @@ export function CreateProductModal({
         numberOfLines={3}
         style={styles.multiline}
       />
-      <Text style={styles.note}>Images upload first, then product + variants are saved.</Text>
     </FormModal>
   )
 }
 
 const styles = StyleSheet.create({
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  note: { fontSize: 12, color: theme.gray600 },
 })

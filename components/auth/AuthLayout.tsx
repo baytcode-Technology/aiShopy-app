@@ -3,12 +3,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
-  Text,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { theme } from '@src/theme/colors'
+import { Heading, SectionTitle, Subtitle } from '@/components/ui/Typography'
 
 type Props = {
   title: string
@@ -19,71 +17,28 @@ type Props = {
 
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView className="flex-1 bg-surface">
       <KeyboardAvoidingView
-        style={styles.flex}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.scroll}
+          contentContainerClassName="flex-grow px-7 py-10 justify-center"
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Text style={styles.brand}>Katlogue</Text>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
+          <View className="mb-9">
+            <SectionTitle className="text-[13px] tracking-[4px] mb-7">Katlogue</SectionTitle>
+            <Heading className="text-[32px] font-extrabold mb-2.5 tracking-[-0.8px]">
+              {title}
+            </Heading>
+            <Subtitle className="text-sm leading-[21px] font-medium">{subtitle}</Subtitle>
           </View>
 
-          <View style={styles.body}>{children}</View>
+          <View className="gap-[18px]">{children}</View>
 
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          {footer ? <View className="mt-9 items-center">{footer}</View> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: theme.white,
-  },
-  flex: {
-    flex: 1,
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
-  },
-  header: {
-    marginBottom: 32,
-  },
-  brand: {
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    color: theme.black,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: theme.black,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: theme.gray600,
-  },
-  body: {
-    gap: 16,
-  },
-  footer: {
-    marginTop: 32,
-    alignItems: 'center',
-  },
-})

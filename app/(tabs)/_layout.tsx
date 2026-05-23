@@ -4,7 +4,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name']
@@ -25,8 +25,8 @@ export default function TabLayout() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={theme.black} />
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={Colors.brand.primary} />
       </View>
     )
   }
@@ -37,8 +37,8 @@ export default function TabLayout() {
 
   if (storeLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={theme.black} />
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={Colors.brand.primary} />
       </View>
     )
   }
@@ -50,14 +50,14 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: theme.black,
-        tabBarInactiveTintColor: theme.gray400,
+        tabBarActiveTintColor: Colors.brand.primary,
+        tabBarInactiveTintColor: Colors.text.muted,
         tabBarStyle: {
-          backgroundColor: theme.white,
-          borderTopColor: theme.gray200,
+          backgroundColor: Colors.bg.primary,
+          borderTopColor: Colors.border.default,
         },
-        headerStyle: { backgroundColor: theme.white },
-        headerTintColor: theme.black,
+        headerStyle: { backgroundColor: Colors.bg.primary },
+        headerTintColor: Colors.text.primary,
         headerTitleStyle: { fontWeight: '600' },
       }}
     >

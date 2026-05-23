@@ -32,3 +32,23 @@ export async function createCategory(
     }),
   })
 }
+
+export type SyncCategoryProductsResponse = {
+  success: boolean
+  message: string
+  data: { assigned: number; removed: number }
+}
+
+export async function syncCategoryProducts(
+  storeId: string,
+  categoryId: string,
+  productIds: string[]
+): Promise<SyncCategoryProductsResponse> {
+  return authFetch<SyncCategoryProductsResponse>(
+    `${endpoints.categories}/${categoryId}/products`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ store_id: storeId, product_ids: productIds }),
+    }
+  )
+}

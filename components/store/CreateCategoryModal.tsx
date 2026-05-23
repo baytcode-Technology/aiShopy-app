@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { AuthInput } from '@/components/auth/AuthInput'
-import { AuthButton } from '@/components/auth/AuthButton'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { FormModal } from '@/components/store/FormModal'
 import { createCategory } from '@src/api/categories'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -81,10 +81,15 @@ export function CreateCategoryModal({ visible, storeId, onClose, onCreated }: Pr
       visible={visible}
       title="New category"
       onClose={handleClose}
-      footer={<AuthButton label="Create category" loading={loading} onPress={handleSubmit} />}
+      footer={<Button label="Create category" loading={loading} onPress={handleSubmit} />}
     >
-      <AuthInput label="Category name *" value={name} onChangeText={onNameChange} placeholder="Electronics" />
-      <AuthInput
+      <Input
+        label="Category name *"
+        value={name}
+        onChangeText={onNameChange}
+        placeholder="Electronics"
+      />
+      <Input
         label="Slug *"
         value={slug}
         onChangeText={(v) => {

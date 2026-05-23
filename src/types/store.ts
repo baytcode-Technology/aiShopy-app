@@ -15,6 +15,7 @@ export type Store = {
   payment_config: Record<string, unknown>;
   ai_system_prompt: string | null;
   ai_language: string | null;
+  industry: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -35,6 +36,7 @@ export type CreateStorePayload = {
   whatsapp_number: string;
   currency: string;
   description?: string | null;
+  industry?: string | null;
 };
 
 export type CreateStoreResponse = {

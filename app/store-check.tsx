@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
-import { router } from 'expo-router'
-import { ActivityIndicator, StyleSheet, View, Text } from 'react-native'
+import { router, type Href } from 'expo-router'
+import { ActivityIndicator, View } from 'react-native'
+import { Muted } from '@/components/ui/Typography'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 import { showError } from '@src/lib/toast'
 import { getErrorMessage } from '@src/lib/api-error'
 
@@ -25,7 +26,7 @@ export default function StoreCheckScreen() {
         if (cancelled) return
 
         if (hasStore) {
-          router.replace('/(tabs)')
+          router.replace('/(store)/chats' as Href)
         } else {
           router.replace('/create-store')
         }
@@ -42,23 +43,9 @@ export default function StoreCheckScreen() {
   }, [isAuthenticated, refreshStore])
 
   return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={theme.black} />
-      <Text style={styles.text}>Checking your store…</Text>
+    <View className="flex-1 items-center justify-center bg-surface gap-4">
+      <ActivityIndicator size="large" color={Colors.brand.primary} />
+      <Muted className="font-semibold tracking-wide">Checking your store…</Muted>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.white,
-    gap: 16,
-  },
-  text: {
-    fontSize: 14,
-    color: theme.gray600,
-  },
-})

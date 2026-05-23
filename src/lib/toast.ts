@@ -7,7 +7,8 @@ export function showSuccess(message: string, subtitle?: string) {
     text1: message,
     text2: subtitle,
     position: 'top',
-    visibilityTime: 3500,
+    visibilityTime: 4000,
+    topOffset: 56,
   })
 }
 

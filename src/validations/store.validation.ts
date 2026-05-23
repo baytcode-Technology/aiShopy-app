@@ -32,6 +32,7 @@ export const createStoreFormSchema = z.object({
       message: "Use a 3-letter currency code (e.g. INR)",
     }),
   description: z.string().trim().max(2000).optional().nullable(),
+  industry: z.string().trim().max(100).optional().nullable(),
 });
 
 export type CreateStoreFormValues = z.infer<typeof createStoreFormSchema>;
@@ -54,5 +55,6 @@ export function toCreateStorePayload(
     whatsapp_number: values.whatsapp_number,
     currency: values.currency,
     description: values.description?.trim() || null,
+    industry: values.industry?.trim() || null,
   };
 }

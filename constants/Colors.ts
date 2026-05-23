@@ -1,19 +1,32 @@
-const tintColorLight = '#2f95dc';
-const tintColorDark = '#fff';
+/**
+ * App colors + legacy Expo template shape (`light` / `dark`).
+ * Prefer `@src/theme/colors` or Tailwind classes in new code.
+ */
+import Colors, { theme } from '@src/theme/colors'
 
-export default {
+/** Maps semantic tokens for Themed.tsx and starter screens */
+const legacyThemes = {
   light: {
-    text: '#000',
-    background: '#fff',
-    tint: tintColorLight,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorLight,
+    text: Colors.text.primary,
+    background: Colors.bg.primary,
+    tint: Colors.brand.primary,
+    tabIconDefault: Colors.text.muted,
+    tabIconSelected: Colors.brand.primary,
   },
   dark: {
-    text: '#fff',
-    background: '#000',
-    tint: tintColorDark,
-    tabIconDefault: '#ccc',
-    tabIconSelected: tintColorDark,
+    text: Colors.text.inverse,
+    background: Colors.bg.inverse,
+    tint: Colors.brand.primary,
+    tabIconDefault: Colors.text.muted,
+    tabIconSelected: Colors.brand.primary,
   },
-};
+} as const
+
+const AppColors = {
+  ...Colors,
+  light: legacyThemes.light,
+  dark: legacyThemes.dark,
+}
+
+export default AppColors
+export { theme, Colors }

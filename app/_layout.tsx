@@ -4,13 +4,14 @@ import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { useEffect } from 'react'
+import '../global.css'
 import 'react-native-reanimated'
 
 import Toast from 'react-native-toast-message'
 import { AuthProvider } from '@src/contexts/auth-context'
 import { StoreProvider } from '@src/contexts/store-context'
 import { toastConfig } from '@/components/ui/ToastConfig'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 export { ErrorBoundary } from 'expo-router'
 
@@ -18,11 +19,11 @@ const AppTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: theme.black,
-    background: theme.white,
-    card: theme.white,
-    text: theme.black,
-    border: theme.gray200,
+    primary: Colors.brand.primary,
+    background: Colors.bg.primary,
+    card: Colors.bg.primary,
+    text: Colors.text.primary,
+    border: Colors.border.default,
   },
 }
 
@@ -57,6 +58,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="store-check" />
             <Stack.Screen name="create-store" />
+            <Stack.Screen name="(store)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>

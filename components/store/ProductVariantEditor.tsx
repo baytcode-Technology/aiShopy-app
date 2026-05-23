@@ -1,7 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AuthInput } from '@/components/auth/AuthInput'
-import { theme } from '@src/theme/colors'
+import { SectionTitle } from '@/components/ui/Typography'
+import Colors from '@src/theme/colors'
 
 export type VariantDraft = {
   id: string
@@ -39,21 +40,29 @@ export function ProductVariantEditor({ variants, onChange }: Props) {
   }
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.header}>
-        <Text style={styles.label}>Variants (optional)</Text>
-        <Pressable onPress={addVariant} style={styles.addBtn}>
-          <FontAwesome name="plus" size={12} color={theme.black} />
-          <Text style={styles.addText}>Add variant</Text>
+    <View className="gap-2">
+      <View className="flex-row items-center justify-between">
+        <SectionTitle>Variants (optional)</SectionTitle>
+        <Pressable
+          onPress={addVariant}
+          className="flex-row items-center gap-1 border border-ink px-2 py-1 rounded-md"
+        >
+          <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
+          <Text className="text-xs font-semibold text-ink">Add variant</Text>
         </Pressable>
       </View>
-      <Text style={styles.hint}>Use variants for size, color, etc. Each has its own stock.</Text>
+      <Text className="text-xs text-gray-600">
+        Use variants for size, color, etc. Each has its own stock.
+      </Text>
       {variants.map((v, index) => (
-        <View key={v.id} style={styles.row}>
-          <View style={styles.rowHeader}>
-            <Text style={styles.rowTitle}>Variant {index + 1}</Text>
+        <View
+          key={v.id}
+          className="border border-gray-200 rounded-xl p-2.5 gap-1 bg-gray-100"
+        >
+          <View className="flex-row justify-between items-center">
+            <Text className="text-[13px] font-bold text-ink">Variant {index + 1}</Text>
             <Pressable onPress={() => remove(v.id)} hitSlop={8}>
-              <FontAwesome name="trash-o" size={16} color={theme.gray600} />
+              <FontAwesome name="trash-o" size={16} color={Colors.text.secondary} />
             </Pressable>
           </View>
           <AuthInput
@@ -62,8 +71,8 @@ export function ProductVariantEditor({ variants, onChange }: Props) {
             onChangeText={(name) => update(v.id, { name })}
             placeholder="Large / Red"
           />
-          <View style={styles.inline}>
-            <View style={styles.half}>
+          <View className="flex-row gap-2">
+            <View className="flex-1">
               <AuthInput
                 label="Price +/−"
                 value={v.priceDelta}
@@ -72,7 +81,7 @@ export function ProductVariantEditor({ variants, onChange }: Props) {
                 keyboardType="decimal-pad"
               />
             </View>
-            <View style={styles.half}>
+            <View className="flex-1">
               <AuthInput
                 label="Stock"
                 value={v.stockQty}
@@ -94,39 +103,3 @@ export function ProductVariantEditor({ variants, onChange }: Props) {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.black,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  hint: { fontSize: 12, color: theme.gray600 },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderColor: theme.black,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  addText: { fontSize: 12, fontWeight: '600', color: theme.black },
-  row: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
-    backgroundColor: theme.gray100,
-  },
-  rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowTitle: { fontSize: 13, fontWeight: '700', color: theme.black },
-  inline: { flexDirection: 'row', gap: 8 },
-  half: { flex: 1 },
-})

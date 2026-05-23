@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -13,8 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, useLocalSearchParams } from 'expo-router'
 import { MessageBubble } from '@/components/chat/MessageBubble'
+import { IconButton } from '@/components/ui/IconButton'
+import { LinkText, Muted } from '@/components/ui/Typography'
 import { DUMMY_MESSAGES, getConversation } from '@src/data/dummy-chats'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 export default function ChatDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -26,10 +27,10 @@ export default function ChatDetailScreen() {
 
   if (!conversation) {
     return (
-      <SafeAreaView style={styles.safe}>
-        <Text style={styles.error}>Conversation not found</Text>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.backLink}>Go back</Text>
+      <SafeAreaView className="flex-1 bg-gray-100 items-center">
+        <Text className="text-center mt-10 text-ink font-semibold">Conversation not found</Text>
+        <Pressable className="mt-4" onPress={() => router.back()}>
+          <LinkText>Go back</LinkText>
         </Pressable>
       </SafeAreaView>
     )
@@ -48,29 +49,31 @@ export default function ChatDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={12}>
-          <FontAwesome name="chevron-left" size={18} color={theme.white} />
+    <SafeAreaView className="flex-1 bg-gray-100" edges={['top']}>
+      <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
+        <Pressable className="p-1" onPress={() => router.back()} hitSlop={12}>
+          <FontAwesome name="chevron-left" size={18} color={Colors.brand.onPrimary} />
         </Pressable>
-        <View style={styles.headerAvatar}>
-          <Text style={styles.headerInitials}>{conversation.initials}</Text>
-        </View>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{conversation.name}</Text>
-          <Text style={styles.headerStatus}>
-            {conversation.online ? 'Online' : conversation.phone}
+        <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
+          <Text className="text-brand-on-primary font-bold text-sm">
+            {conversation.initials}
           </Text>
         </View>
-        <View style={styles.headerActions}>
-          <FontAwesome name="phone" size={18} color={theme.white} style={styles.headerIcon} />
-          <FontAwesome name="video-camera" size={18} color={theme.white} style={styles.headerIcon} />
-          <FontAwesome name="ellipsis-v" size={18} color={theme.white} />
+        <View className="flex-1">
+          <Text className="text-brand-on-primary text-base font-bold">{conversation.name}</Text>
+          <Muted className="text-gray-400 text-xs mt-0.5">
+            {conversation.online ? 'Online' : conversation.phone}
+          </Muted>
+        </View>
+        <View className="flex-row items-center gap-3.5">
+          <FontAwesome name="phone" size={18} color={Colors.brand.onPrimary} />
+          <FontAwesome name="video-camera" size={18} color={Colors.brand.onPrimary} />
+          <FontAwesome name="ellipsis-v" size={18} color={Colors.brand.onPrimary} />
         </View>
       </View>
 
       <KeyboardAvoidingView
-        style={styles.flex}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
@@ -78,91 +81,27 @@ export default function ChatDetailScreen() {
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <MessageBubble message={item} />}
-          contentContainerStyle={styles.messages}
-          inverted={false}
+          contentContainerClassName="p-4 pb-2 flex-grow"
         />
 
-        <View style={styles.composer}>
+        <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">
           <TextInput
-            style={styles.input}
+            className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
             placeholder="Type a message"
-            placeholderTextColor={theme.gray400}
+            placeholderTextColor={Colors.text.muted}
             value={draft}
             onChangeText={setDraft}
             multiline
             maxLength={2000}
           />
-          <Pressable style={styles.sendBtn} onPress={sendMessage}>
-            <FontAwesome name="send" size={16} color={theme.white} />
-          </Pressable>
+          <IconButton
+            className="bg-brand-primary border-0 w-11 h-11"
+            onPress={sendMessage}
+          >
+            <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
+          </IconButton>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: theme.gray100 },
-  flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: theme.black,
-    gap: 10,
-  },
-  backBtn: { padding: 4 },
-  headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: theme.gray600,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerInitials: { color: theme.white, fontWeight: '700', fontSize: 14 },
-  headerInfo: { flex: 1 },
-  headerName: { color: theme.white, fontSize: 16, fontWeight: '700' },
-  headerStatus: { color: theme.gray400, fontSize: 12, marginTop: 2 },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
-  headerIcon: { marginRight: 14 },
-  messages: {
-    padding: 16,
-    paddingBottom: 8,
-    flexGrow: 1,
-  },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: theme.white,
-    borderTopWidth: 1,
-    borderTopColor: theme.gray200,
-  },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    backgroundColor: theme.gray100,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.black,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  error: { textAlign: 'center', marginTop: 40, color: theme.black },
-  backLink: { textAlign: 'center', marginTop: 16, color: theme.gray600 },
-})

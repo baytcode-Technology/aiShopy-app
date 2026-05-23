@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, Text } from 'react-native'
-import { AuthInput } from '@/components/auth/AuthInput'
-import { AuthButton } from '@/components/auth/AuthButton'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { SectionTitle } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
 import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
@@ -20,7 +20,6 @@ import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
 import type { Product, ProductVariant } from '@src/types/product'
-import { theme } from '@src/theme/colors'
 
 function isNewVariantId(id: string): boolean {
   return id.startsWith('gen-')
@@ -156,35 +155,38 @@ export function EditProductModal({
       visible={visible}
       title="Edit product"
       onClose={handleClose}
-      footer={<AuthButton label="Save changes" loading={loading} onPress={handleSubmit} />}
+      footer={<Button label="Save changes" loading={loading} onPress={handleSubmit} />}
     >
-      <AuthInput label="Product name *" value={name} onChangeText={setName} />
-      <AuthInput
+      <Input label="Product name *" value={name} onChangeText={setName} />
+      <Input
         label="Base price *"
         value={basePrice}
         onChangeText={setBasePrice}
         keyboardType="decimal-pad"
       />
       {showProductStock ? (
-        <AuthInput
+        <Input
           label="Stock quantity"
           value={stockQty}
           onChangeText={setStockQty}
           keyboardType="number-pad"
         />
       ) : null}
-      <AuthInput label="SKU" value={sku} onChangeText={setSku} autoCapitalize="none" />
+      <Input label="SKU" value={sku} onChangeText={setSku} autoCapitalize="none" />
       <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
-      <AuthInput
+      <Input
         label="Description"
         value={description}
         onChangeText={setDescription}
         multiline
         numberOfLines={3}
-        style={styles.multiline}
+        inputClassName="min-h-20"
+        style={{ textAlignVertical: 'top' }}
       />
-      <AuthButton
-        label={isActive ? 'Status: Active (tap to deactivate)' : 'Status: Inactive (tap to activate)'}
+      <Button
+        label={
+          isActive ? 'Status: Active (tap to deactivate)' : 'Status: Inactive (tap to activate)'
+        }
         variant="outline"
         onPress={() => setIsActive((a) => !a)}
       />
@@ -197,7 +199,7 @@ export function EditProductModal({
         />
       ) : null}
 
-      <Text style={styles.sectionTitle}>Add new variants</Text>
+      <SectionTitle className="mt-1">Add new variants</SectionTitle>
       <ShopifyVariantEditor
         options={variantOptions}
         variants={newVariants.filter((v) => isNewVariantId(v.id))}
@@ -209,15 +211,3 @@ export function EditProductModal({
     </FormModal>
   )
 }
-
-const styles = StyleSheet.create({
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.black,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginTop: 4,
-  },
-})

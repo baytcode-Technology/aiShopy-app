@@ -1,33 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native'
-import { theme } from '@src/theme/colors'
+import { Text, View } from 'react-native'
 
 export function Divider() {
   return (
-    <View style={styles.row}>
-      <View style={styles.line} />
-      <Text style={styles.text}>or</Text>
-      <View style={styles.line} />
+    <View className="flex-row items-center gap-4 my-2">
+      <View className="flex-1 h-px bg-gray-200" />
+      <Text className="text-[11px] text-gray-400 uppercase tracking-[1.5px] font-bold">
+        or
+      </Text>
+      <View className="flex-1 h-px bg-gray-200" />
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginVertical: 8,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.gray200,
-  },
-  text: {
-    fontSize: 11,
-    color: theme.gray400,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    fontWeight: '700',
-  },
-})

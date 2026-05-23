@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, Text } from 'react-native'
-import { AuthInput } from '@/components/auth/AuthInput'
-import { AuthButton } from '@/components/auth/AuthButton'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { FormModal } from '@/components/store/FormModal'
 import { ProductImagePicker, type PickedImage } from '@/components/store/ProductImagePicker'
 import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
@@ -12,7 +11,6 @@ import { toCreateVariantPayload } from '@src/lib/variant-options'
 import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
-import { theme } from '@src/theme/colors'
 
 type Props = {
   visible: boolean
@@ -142,7 +140,7 @@ export function CreateProductModal({
       visible={visible}
       title="New product"
       onClose={handleClose}
-      footer={<AuthButton label="Create product" loading={loading} onPress={handleSubmit} />}
+      footer={<Button label="Create product" loading={loading} onPress={handleSubmit} />}
     >
       <ProductImagePicker
         images={images}
@@ -157,8 +155,13 @@ export function CreateProductModal({
         error={imageError}
       />
       <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
-      <AuthInput label="Product name *" value={name} onChangeText={setName} placeholder="Premium Headphones" />
-      <AuthInput
+      <Input
+        label="Product name *"
+        value={name}
+        onChangeText={setName}
+        placeholder="Premium Headphones"
+      />
+      <Input
         label="Base price *"
         value={basePrice}
         onChangeText={setBasePrice}
@@ -166,7 +169,7 @@ export function CreateProductModal({
         keyboardType="decimal-pad"
       />
       {variants.length === 0 ? (
-        <AuthInput
+        <Input
           label="Stock quantity"
           value={stockQty}
           onChangeText={setStockQty}
@@ -174,7 +177,13 @@ export function CreateProductModal({
           keyboardType="number-pad"
         />
       ) : null}
-      <AuthInput label="SKU" value={sku} onChangeText={setSku} placeholder="SKU-001" autoCapitalize="none" />
+      <Input
+        label="SKU"
+        value={sku}
+        onChangeText={setSku}
+        placeholder="SKU-001"
+        autoCapitalize="none"
+      />
       <ShopifyVariantEditor
         options={variantOptions}
         variants={variants}
@@ -183,19 +192,16 @@ export function CreateProductModal({
           setVariants(nextVariants)
         }}
       />
-      <AuthInput
+      <Input
         label="Description"
         value={description}
         onChangeText={setDescription}
         placeholder="Product details"
         multiline
         numberOfLines={3}
-        style={styles.multiline}
+        inputClassName="min-h-20"
+        style={{ textAlignVertical: 'top' }}
       />
     </FormModal>
   )
 }
-
-const styles = StyleSheet.create({
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
-})

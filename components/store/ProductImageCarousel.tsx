@@ -1,24 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native'
+import { Image, Pressable, ScrollView, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { theme } from '@src/theme/colors'
+import { Caption } from '@/components/ui/Typography'
+import { cn } from '@src/lib/cn'
+import Colors from '@src/theme/colors'
 
 type Props = {
   images: string[]
   initialUri?: string | null
-  style?: StyleProp<ViewStyle>
+  className?: string
 }
 
-export function ProductImageCarousel({ images, initialUri, style }: Props) {
+export function ProductImageCarousel({ images, initialUri, className }: Props) {
   const gallery = useMemo(() => {
     const list = images.filter(Boolean)
     if (list.length === 0) return []
@@ -56,34 +49,39 @@ export function ProductImageCarousel({ images, initialUri, style }: Props) {
 
   if (gallery.length === 0) {
     return (
-      <View style={[styles.hero, styles.placeholder, style]}>
-        <Text style={styles.placeholderText}>No image</Text>
+      <View
+        className={cn(
+          'h-[300px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 items-center justify-center',
+          className
+        )}
+      >
+        <Caption className="text-base font-semibold">No image</Caption>
       </View>
     )
   }
 
   return (
-    <View style={[styles.wrap, style]}>
-      <View style={styles.hero}>
-        <Image source={{ uri: currentUri }} style={styles.heroImage} resizeMode="cover" />
+    <View className={cn('gap-3', className)}>
+      <View className="h-[300px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+        <Image source={{ uri: currentUri }} className="w-full h-full" resizeMode="cover" />
         {canNavigate ? (
           <>
             <Pressable
-              style={({ pressed }) => [styles.navBtn, styles.navLeft, pressed && styles.navPressed]}
+              className="absolute top-1/2 -mt-[22px] left-3 w-11 h-11 rounded-full bg-ink/55 items-center justify-center border border-surface/25 active:opacity-85 active:scale-95"
               onPress={goPrev}
               accessibilityLabel="Previous image"
             >
-              <FontAwesome name="chevron-left" size={18} color={theme.white} />
+              <FontAwesome name="chevron-left" size={18} color={Colors.brand.onPrimary} />
             </Pressable>
             <Pressable
-              style={({ pressed }) => [styles.navBtn, styles.navRight, pressed && styles.navPressed]}
+              className="absolute top-1/2 -mt-[22px] right-3 w-11 h-11 rounded-full bg-ink/55 items-center justify-center border border-surface/25 active:opacity-85 active:scale-95"
               onPress={goNext}
               accessibilityLabel="Next image"
             >
-              <FontAwesome name="chevron-right" size={18} color={theme.white} />
+              <FontAwesome name="chevron-right" size={18} color={Colors.brand.onPrimary} />
             </Pressable>
-            <View style={styles.counter}>
-              <Text style={styles.counterText}>
+            <View className="absolute bottom-3 self-center left-1/2 -ml-9 w-[72px] bg-ink/60 py-1 px-2.5 rounded-[14px] items-center">
+              <Text className="text-brand-on-primary text-xs font-bold">
                 {safeIndex + 1} / {gallery.length}
               </Text>
             </View>
@@ -92,24 +90,19 @@ export function ProductImageCarousel({ images, initialUri, style }: Props) {
       </View>
 
       {gallery.length > 1 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.strip}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2.5 py-1">
           {gallery.map((uri, index) => {
             const selected = index === safeIndex
             return (
               <Pressable
                 key={`${uri}-${index}`}
                 onPress={() => setSelectedIndex(index)}
-                style={({ pressed }) => [
-                  styles.thumbWrap,
-                  selected && styles.thumbWrapSelected,
-                  pressed && styles.thumbPressed,
-                ]}
+                className={cn(
+                  'w-[72px] h-[72px] rounded-[10px] overflow-hidden border-2 border-transparent active:opacity-90',
+                  selected && 'border-ink'
+                )}
               >
-                <Image source={{ uri }} style={styles.thumb} resizeMode="cover" />
+                <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
               </Pressable>
             )
           })}
@@ -118,60 +111,3 @@ export function ProductImageCarousel({ images, initialUri, style }: Props) {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 12 },
-  hero: {
-    height: 300,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: theme.gray100,
-    borderWidth: 1,
-    borderColor: theme.gray200,
-  },
-  heroImage: { width: '100%', height: '100%' },
-  placeholder: { alignItems: 'center', justifyContent: 'center' },
-  placeholderText: { fontSize: 16, color: theme.gray600, fontWeight: '600' },
-  navBtn: {
-    position: 'absolute',
-    top: '50%',
-    marginTop: -22,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  navLeft: { left: 12 },
-  navRight: { right: 12 },
-  navPressed: { opacity: 0.85, transform: [{ scale: 0.96 }] },
-  counter: {
-    position: 'absolute',
-    bottom: 12,
-    alignSelf: 'center',
-    left: '50%',
-    marginLeft: -36,
-    width: 72,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    alignItems: 'center',
-  },
-  counterText: { color: theme.white, fontSize: 12, fontWeight: '700' },
-  strip: { gap: 10, paddingVertical: 4 },
-  thumbWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  thumbWrapSelected: { borderColor: theme.black },
-  thumbPressed: { opacity: 0.9 },
-  thumb: { width: '100%', height: '100%' },
-})

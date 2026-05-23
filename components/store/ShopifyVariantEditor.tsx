@@ -1,12 +1,17 @@
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { IconButton } from '@/components/ui/IconButton'
+import { Caption, Label, Muted, SectionTitle } from '@/components/ui/Typography'
 import {
   generateVariantsFromOptions,
   type GeneratedVariant,
   type VariantOption,
 } from '@src/lib/variant-options'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 type Props = {
   options: VariantOption[]
@@ -14,14 +19,16 @@ type Props = {
   onChange: (options: VariantOption[], variants: GeneratedVariant[]) => void
 }
 
+const inputClass =
+  'border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] text-ink bg-gray-100'
+const miniInputClass =
+  'border border-gray-200 rounded-md px-2 py-1.5 text-[13px] text-ink bg-gray-100'
+
 export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
   const [expanded, setExpanded] = useState(true)
 
   const addOption = () => {
-    onChange(
-      [...options, { id: `${Date.now()}`, name: '', values: [''] }],
-      variants
-    )
+    onChange([...options, { id: `${Date.now()}`, name: '', values: [''] }], variants)
   }
 
   const updateOption = (id: string, patch: Partial<VariantOption>) => {
@@ -66,107 +73,109 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
   const comboCount = useMemo(() => variants.length, [variants.length])
 
   return (
-    <View style={styles.wrap}>
-      <Pressable style={styles.titleRow} onPress={() => setExpanded((e) => !e)}>
-        <Text style={styles.title}>Options & variants</Text>
-        <View style={styles.titleRight}>
-          {comboCount > 0 ? (
-            <View style={styles.countBadge}>
-              <Text style={styles.countText}>{comboCount} variants</Text>
-            </View>
-          ) : null}
-          <FontAwesome name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={theme.black} />
+    <View className="gap-2.5">
+      <Pressable className="flex-row items-center justify-between" onPress={() => setExpanded((e) => !e)}>
+        <SectionTitle>Options & variants</SectionTitle>
+        <View className="flex-row items-center gap-2">
+          {comboCount > 0 ? <Badge label={`${comboCount} variants`} tone="active" /> : null}
+          <FontAwesome
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={14}
+            color={Colors.brand.primary}
+          />
         </View>
       </Pressable>
 
       {expanded ? (
         <>
-          <Text style={styles.hint}>
+          <Muted className="text-xs leading-[18px]">
             Like Shopify: add options (Size, Color), then set price and stock per combination.
-          </Text>
+          </Muted>
 
           {options.map((opt, optIndex) => (
-            <View key={opt.id} style={styles.optionCard}>
-              <View style={styles.optionHeader}>
-                <Text style={styles.optionLabel}>Option {optIndex + 1}</Text>
-                <Pressable onPress={() => removeOption(opt.id)} hitSlop={8}>
-                  <FontAwesome name="trash-o" size={14} color={theme.gray600} />
-                </Pressable>
+            <Card key={opt.id} className="gap-2">
+              <View className="flex-row justify-between">
+                <Text className="text-xs font-bold text-ink">Option {optIndex + 1}</Text>
+                <IconButton size="sm" onPress={() => removeOption(opt.id)}>
+                  <FontAwesome name="trash-o" size={14} color={Colors.text.secondary} />
+                </IconButton>
               </View>
               <TextInput
-                style={styles.input}
+                className={inputClass}
                 placeholder="e.g. Size"
-                placeholderTextColor={theme.gray400}
+                placeholderTextColor={Colors.text.muted}
                 value={opt.name}
                 onChangeText={(name) => updateOption(opt.id, { name })}
               />
-              <Text style={styles.valuesLabel}>Values</Text>
+              <Caption>Values</Caption>
               {opt.values.map((val, vi) => (
-                <View key={vi} style={styles.valueRow}>
+                <View key={vi} className="flex-row items-center gap-2">
                   <TextInput
-                    style={[styles.input, styles.valueInput]}
+                    className={`${inputClass} flex-1`}
                     placeholder="e.g. Medium"
-                    placeholderTextColor={theme.gray400}
+                    placeholderTextColor={Colors.text.muted}
                     value={val}
                     onChangeText={(v) => setValue(opt.id, vi, v)}
                   />
                   {opt.values.length > 1 ? (
-                    <Pressable onPress={() => removeValue(opt.id, vi)} style={styles.valueRemove}>
-                      <FontAwesome name="minus-circle" size={18} color={theme.gray400} />
+                    <Pressable onPress={() => removeValue(opt.id, vi)} className="p-1">
+                      <FontAwesome name="minus-circle" size={18} color={Colors.text.muted} />
                     </Pressable>
                   ) : null}
                 </View>
               ))}
-              <Pressable onPress={() => addValue(opt.id)} style={styles.addValueBtn}>
-                <FontAwesome name="plus" size={10} color={theme.black} />
-                <Text style={styles.addValueText}>Add value</Text>
+              <Pressable onPress={() => addValue(opt.id)} className="flex-row items-center gap-1.5">
+                <FontAwesome name="plus" size={10} color={Colors.brand.primary} />
+                <Text className="text-xs font-semibold text-ink">Add value</Text>
               </Pressable>
-            </View>
+            </Card>
           ))}
 
-          <Pressable style={styles.addOptionBtn} onPress={addOption}>
-            <FontAwesome name="plus" size={12} color={theme.white} />
-            <Text style={styles.addOptionText}>Add option</Text>
-          </Pressable>
+          <Button
+            label="Add option"
+            variant="primary"
+            className="py-3 min-h-0"
+            onPress={addOption}
+          />
 
           {variants.length > 0 ? (
-            <View style={styles.variantTable}>
-              <Text style={styles.tableTitle}>Variant combinations</Text>
+            <View className="gap-2 mt-1">
+              <Text className="text-xs font-bold text-ink">Variant combinations</Text>
               {variants.map((v) => (
-                <View key={v.id} style={styles.variantRow}>
-                  <Text style={styles.variantName} numberOfLines={2}>
+                <Card key={v.id} className="gap-2">
+                  <Text className="text-sm font-bold text-ink" numberOfLines={2}>
                     {v.name}
                   </Text>
-                  <View style={styles.variantFields}>
-                    <View style={styles.miniField}>
-                      <Text style={styles.miniLabel}>+Price</Text>
+                  <View className="flex-row gap-2">
+                    <View className="flex-1">
+                      <Label className="mb-1 normal-case tracking-normal text-[10px]">+Price</Label>
                       <TextInput
-                        style={styles.miniInput}
+                        className={miniInputClass}
                         value={v.priceDelta}
                         onChangeText={(priceDelta) => updateVariant(v.id, { priceDelta })}
                         keyboardType="decimal-pad"
                       />
                     </View>
-                    <View style={styles.miniField}>
-                      <Text style={styles.miniLabel}>Stock</Text>
+                    <View className="flex-1">
+                      <Label className="mb-1 normal-case tracking-normal text-[10px]">Stock</Label>
                       <TextInput
-                        style={styles.miniInput}
+                        className={miniInputClass}
                         value={v.stockQty}
                         onChangeText={(stockQty) => updateVariant(v.id, { stockQty })}
                         keyboardType="number-pad"
                       />
                     </View>
-                    <View style={[styles.miniField, styles.skuField]}>
-                      <Text style={styles.miniLabel}>SKU</Text>
+                    <View className="flex-[1.2]">
+                      <Label className="mb-1 normal-case tracking-normal text-[10px]">SKU</Label>
                       <TextInput
-                        style={styles.miniInput}
+                        className={miniInputClass}
                         value={v.sku}
                         onChangeText={(sku) => updateVariant(v.id, { sku })}
                         autoCapitalize="none"
                       />
                     </View>
                   </View>
-                </View>
+                </Card>
               ))}
             </View>
           ) : null}
@@ -175,89 +184,3 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.black,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  titleRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  countBadge: {
-    backgroundColor: theme.black,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  countText: { fontSize: 11, fontWeight: '700', color: theme.white },
-  hint: { fontSize: 12, color: theme.gray600, lineHeight: 18 },
-  optionCard: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 12,
-    padding: 12,
-    backgroundColor: theme.white,
-    gap: 8,
-  },
-  optionHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  optionLabel: { fontSize: 12, fontWeight: '700', color: theme.black },
-  valuesLabel: { fontSize: 11, color: theme.gray600, fontWeight: '600' },
-  input: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.black,
-    backgroundColor: theme.gray100,
-  },
-  valueRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  valueInput: { flex: 1 },
-  valueRemove: { padding: 4 },
-  addValueBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  addValueText: { fontSize: 12, fontWeight: '600', color: theme.black },
-  addOptionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: theme.black,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  addOptionText: { fontSize: 14, fontWeight: '700', color: theme.white },
-  variantTable: { gap: 8, marginTop: 4 },
-  tableTitle: { fontSize: 12, fontWeight: '700', color: theme.black },
-  variantRow: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: theme.white,
-    gap: 8,
-  },
-  variantName: { fontSize: 14, fontWeight: '700', color: theme.black },
-  variantFields: { flexDirection: 'row', gap: 8 },
-  miniField: { flex: 1 },
-  skuField: { flex: 1.2 },
-  miniLabel: { fontSize: 10, color: theme.gray600, marginBottom: 4, fontWeight: '600' },
-  miniInput: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    fontSize: 13,
-    color: theme.black,
-    backgroundColor: theme.gray100,
-  },
-})

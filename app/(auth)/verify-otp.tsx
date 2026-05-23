@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Alert, Pressable, StyleSheet, Text } from 'react-native'
+import { Alert, Pressable, Text } from 'react-native'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { useAuth } from '@src/contexts/auth-context'
-import { theme } from '@src/theme/colors'
 
 export default function VerifyOtpScreen() {
   const { email } = useLocalSearchParams<{ email: string }>()
@@ -60,7 +59,9 @@ export default function VerifyOtpScreen() {
       subtitle={`We sent a verification code to ${emailValue || 'your email'}.`}
       footer={
         <Pressable onPress={() => router.back()} disabled={loading}>
-          <Text style={styles.back}>Change email</Text>
+          <Text className="text-sm text-gray-600 font-semibold underline mt-2">
+            Change email
+          </Text>
         </Pressable>
       }
     >
@@ -84,13 +85,3 @@ export default function VerifyOtpScreen() {
     </AuthLayout>
   )
 }
-
-const styles = StyleSheet.create({
-  back: {
-    fontSize: 14,
-    color: theme.gray600,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
-    marginTop: 8,
-  },
-})

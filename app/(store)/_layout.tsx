@@ -3,7 +3,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 function TabIcon({
   name,
@@ -21,8 +21,8 @@ export default function StoreLayout() {
 
   if (isLoading || storeLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={theme.black} />
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color={Colors.brand.primary} />
       </View>
     )
   }
@@ -39,11 +39,11 @@ export default function StoreLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: theme.black,
-        tabBarInactiveTintColor: theme.gray400,
+        tabBarActiveTintColor: Colors.brand.primary,
+        tabBarInactiveTintColor: Colors.text.muted,
         tabBarStyle: {
-          backgroundColor: theme.white,
-          borderTopColor: theme.gray200,
+          backgroundColor: Colors.bg.primary,
+          borderTopColor: Colors.border.default,
           height: 64,
           paddingBottom: 8,
           paddingTop: 8,

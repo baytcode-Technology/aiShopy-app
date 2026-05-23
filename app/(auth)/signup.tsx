@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { Link, router } from 'expo-router'
-import { Alert, StyleSheet, Text } from 'react-native'
+import { Alert, Text } from 'react-native'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { Divider } from '@/components/auth/Divider'
 import { useAuth } from '@src/contexts/auth-context'
-import { theme } from '@src/theme/colors'
 
 export default function SignupScreen() {
   const { sendOtp } = useAuth()
@@ -42,9 +41,9 @@ export default function SignupScreen() {
       title="Create account"
       subtitle="Enter your email to get started. We will send you a verification code."
       footer={
-        <Text style={styles.footer}>
+        <Text className="text-sm text-gray-600 font-medium">
           Already have an account?{' '}
-          <Link href="/(auth)/login" style={styles.link}>
+          <Link href="/(auth)/login" className="text-sm font-bold text-ink underline">
             Sign in
           </Link>
         </Text>
@@ -67,16 +66,3 @@ export default function SignupScreen() {
     </AuthLayout>
   )
 }
-
-const styles = StyleSheet.create({
-  footer: {
-    fontSize: 14,
-    color: theme.gray600,
-    fontWeight: '500',
-  },
-  link: {
-    color: theme.black,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
-})

@@ -1,6 +1,7 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Label, Muted } from '@/components/ui/Typography'
+import { cn } from '@src/lib/cn'
 import type { Category } from '@src/types/category'
-import { theme } from '@src/theme/colors'
 
 type Props = {
   categories: Category[]
@@ -11,60 +12,56 @@ type Props = {
 export function CategoryPicker({ categories, selectedId, onSelect }: Props) {
   if (categories.length === 0) {
     return (
-      <View style={styles.wrap}>
-        <Text style={styles.label}>Category</Text>
-        <Text style={styles.empty}>No categories yet — create one first (optional).</Text>
+      <View className="gap-2">
+        <Label>Category</Label>
+        <Muted className="text-xs pl-1">No categories yet — create one first (optional).</Muted>
       </View>
     )
   }
 
   return (
-    <View style={styles.wrap}>
-      <Text style={styles.label}>Category</Text>
+    <View className="gap-2">
+      <Label>Category</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <Pressable
-          style={[styles.chip, !selectedId && styles.chipActive]}
+          className={cn(
+            'border rounded-full px-3.5 py-2 mr-2',
+            !selectedId ? 'bg-brand-primary border-ink' : 'bg-surface border-gray-200'
+          )}
           onPress={() => onSelect(null)}
         >
-          <Text style={[styles.chipText, !selectedId && styles.chipTextActive]}>None</Text>
-        </Pressable>
-        {categories.map((cat) => (
-          <Pressable
-            key={cat.id}
-            style={[styles.chip, selectedId === cat.id && styles.chipActive]}
-            onPress={() => onSelect(cat.id)}
+          <Text
+            className={cn(
+              'text-[13px] font-bold',
+              !selectedId ? 'text-brand-on-primary' : 'text-gray-600'
+            )}
           >
-            <Text style={[styles.chipText, selectedId === cat.id && styles.chipTextActive]}>
-              {cat.name}
-            </Text>
-          </Pressable>
-        ))}
+            None
+          </Text>
+        </Pressable>
+        {categories.map((cat) => {
+          const active = selectedId === cat.id
+          return (
+            <Pressable
+              key={cat.id}
+              className={cn(
+                'border rounded-full px-3.5 py-2 mr-2',
+                active ? 'bg-brand-primary border-ink' : 'bg-surface border-gray-200'
+              )}
+              onPress={() => onSelect(cat.id)}
+            >
+              <Text
+                className={cn(
+                  'text-[13px] font-bold',
+                  active ? 'text-brand-on-primary' : 'text-gray-600'
+                )}
+              >
+                {cat.name}
+              </Text>
+            </Pressable>
+          )
+        })}
       </ScrollView>
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  label: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: theme.gray600,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    paddingLeft: 4,
-  },
-  empty: { fontSize: 12, color: theme.gray600, paddingLeft: 4 },
-  chip: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
-    backgroundColor: theme.white,
-  },
-  chipActive: { backgroundColor: theme.black, borderColor: theme.black },
-  chipText: { fontSize: 13, fontWeight: '700', color: theme.gray600 },
-  chipTextActive: { color: theme.white },
-})

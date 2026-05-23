@@ -1,8 +1,11 @@
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, ScrollView, Text, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { theme } from '@src/theme/colors'
+import { IconButton } from '@/components/ui/IconButton'
+import { Caption, Label, Muted } from '@/components/ui/Typography'
+import { cn } from '@src/lib/cn'
 import { showError } from '@src/lib/toast'
+import Colors from '@src/theme/colors'
 
 export type PickedImage = {
   id: string
@@ -75,98 +78,48 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
   }
 
   return (
-    <View style={styles.wrap}>
-      <Text style={styles.label}>Product images *</Text>
-      <Text style={styles.hint}>Add at least one image. Tap an image to set it as thumbnail.</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}>
-        <Pressable style={styles.addBtn} onPress={pickImages}>
-          <FontAwesome name="plus" size={24} color={theme.black} />
-          <Text style={styles.addText}>Add</Text>
+    <View className="gap-2">
+      <Label>Product images *</Label>
+      <Muted className="text-xs">Add at least one image. Tap an image to set it as thumbnail.</Muted>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0">
+        <Pressable
+          className="w-[88px] h-[88px] rounded-xl border border-dashed border-ink items-center justify-center mr-2.5 gap-1"
+          onPress={pickImages}
+        >
+          <FontAwesome name="plus" size={24} color={Colors.brand.primary} />
+          <Text className="text-xs font-semibold text-ink">Add</Text>
         </Pressable>
         {images.map((img) => {
           const isThumb = thumbnailId === img.id
           return (
             <Pressable
               key={img.id}
-              style={[styles.thumbWrap, isThumb && styles.thumbWrapActive]}
+              className={cn(
+                'w-[88px] h-[88px] mr-2.5 rounded-xl overflow-hidden border-2',
+                isThumb ? 'border-ink' : 'border-transparent'
+              )}
               onPress={() => setThumbnail(img.id)}
             >
-              <Image source={{ uri: img.uri }} style={styles.thumb} />
+              <Image source={{ uri: img.uri }} className="w-full h-full" />
               {isThumb ? (
-                <View style={styles.thumbBadge}>
-                  <Text style={styles.thumbBadgeText}>Thumbnail</Text>
+                <View className="absolute bottom-0 left-0 right-0 bg-brand-primary py-0.5">
+                  <Text className="text-brand-on-primary text-[9px] font-bold text-center uppercase">
+                    Thumbnail
+                  </Text>
                 </View>
               ) : null}
-              <Pressable style={styles.removeBtn} onPress={() => removeImage(img.id)} hitSlop={8}>
-                <FontAwesome name="times-circle" size={20} color={theme.black} />
-              </Pressable>
+              <IconButton
+                size="sm"
+                className="absolute top-1 right-1 w-7 h-7 border-0 bg-surface"
+                onPress={() => removeImage(img.id)}
+              >
+                <FontAwesome name="times-circle" size={18} color={Colors.brand.primary} />
+              </IconButton>
             </Pressable>
           )
         })}
       </ScrollView>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Caption className="text-danger mt-0.5">{error}</Caption> : null}
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.black,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  hint: { fontSize: 12, color: theme.gray600 },
-  scroll: { flexGrow: 0 },
-  addBtn: {
-    width: 88,
-    height: 88,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.black,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-    gap: 4,
-  },
-  addText: { fontSize: 12, fontWeight: '600', color: theme.black },
-  thumbWrap: {
-    width: 88,
-    height: 88,
-    marginRight: 10,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  thumbWrapActive: {
-    borderColor: theme.black,
-  },
-  thumb: { width: '100%', height: '100%' },
-  thumbBadge: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.black,
-    paddingVertical: 2,
-  },
-  thumbBadgeText: {
-    color: theme.white,
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-  },
-  removeBtn: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: theme.white,
-    borderRadius: 10,
-  },
-  error: { fontSize: 13, color: theme.gray600 },
-})

@@ -1,6 +1,8 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, Text, View } from 'react-native'
+import { PressableCard, Card } from '@/components/ui/Card'
+import { Caption } from '@/components/ui/Typography'
+import { cn } from '@src/lib/cn'
 import type { Product } from '@src/types/product'
-import { theme } from '@src/theme/colors'
 
 function initials(name: string): string {
   return name
@@ -22,102 +24,39 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
 
   const content = (
     <>
-      <View style={styles.image}>
+      <View className="h-28 rounded-[10px] bg-gray-100 items-center justify-center mb-2.5 overflow-hidden">
         {product.thumbnail_url ? (
           <Image
             source={{ uri: product.thumbnail_url }}
-            style={styles.thumbImage}
+            className="w-full h-full"
             resizeMode="cover"
           />
         ) : (
-          <Text style={styles.initials}>{initials(product.name)}</Text>
+          <Text className="text-[26px] font-extrabold text-gray-400 tracking-wide">
+            {initials(product.name)}
+          </Text>
         )}
       </View>
-      <Text style={styles.name} numberOfLines={2}>
+      <Text className="text-sm font-bold text-ink mb-2 min-h-9 leading-[18px]" numberOfLines={2}>
         {product.name}
       </Text>
-      <View style={styles.row}>
-        <Text style={styles.price}>
+      <View className="flex-row justify-between items-center">
+        <Text className="text-base font-extrabold text-ink tracking-tight">
           {symbol}
           {product.base_price}
         </Text>
-        <Text style={[styles.stock, lowStock && styles.stockLow]}>
-          Stock: {product.stock_qty}
-        </Text>
+        <Caption className={cn(lowStock && 'text-warning')}>Stock: {product.stock_qty}</Caption>
       </View>
     </>
   )
 
   if (onPress) {
     return (
-      <Pressable style={styles.card} onPress={onPress}>
+      <PressableCard className="flex-1 m-1.5" onPress={onPress}>
         {content}
-      </Pressable>
+      </PressableCard>
     )
   }
 
-  return <View style={styles.card}>{content}</View>
+  return <Card className="flex-1 m-1.5">{content}</Card>
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: theme.white,
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 16,
-    padding: 12,
-    margin: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  image: {
-    height: 112,
-    borderRadius: 10,
-    backgroundColor: theme.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    overflow: 'hidden',
-  },
-  thumbImage: {
-    width: '100%',
-    height: '100%',
-  },
-  initials: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: theme.gray400,
-    letterSpacing: 1,
-  },
-  name: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: theme.black,
-    marginBottom: 8,
-    minHeight: 36,
-    lineHeight: 18,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: theme.black,
-    letterSpacing: -0.2,
-  },
-  stock: {
-    fontSize: 11,
-    color: theme.gray400,
-    fontWeight: '600',
-  },
-  stockLow: {
-    color: '#D97706',
-  },
-})

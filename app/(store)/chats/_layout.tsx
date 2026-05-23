@@ -1,12 +1,12 @@
 import { Stack } from 'expo-router'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 export default function ChatsLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: theme.gray100 },
+        contentStyle: { backgroundColor: Colors.bg.secondary },
       }}
     >
       <Stack.Screen name="index" />

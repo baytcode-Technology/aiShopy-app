@@ -1,6 +1,6 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { theme } from '@src/theme/colors'
+import Colors from '@src/theme/colors'
 
 export function GoogleButton() {
   const onPress = () => {
@@ -9,44 +9,15 @@ export function GoogleButton() {
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      className="flex-row items-center justify-center border border-gray-200 bg-surface py-3.5 px-4 rounded-[14px] gap-3 min-h-[52px] active:bg-gray-100 active:scale-[0.98]"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"
     >
-      <View style={styles.iconWrap}>
-        <FontAwesome name="google" size={18} color={theme.black} />
+      <View className="w-6 items-center">
+        <FontAwesome name="google" size={18} color={Colors.brand.primary} />
       </View>
-      <Text style={styles.label}>Continue with Google</Text>
+      <Text className="text-[15px] font-semibold text-ink">Continue with Google</Text>
     </Pressable>
   )
 }
-
-const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    backgroundColor: theme.white,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    gap: 12,
-    minHeight: 52,
-  },
-  pressed: {
-    backgroundColor: theme.gray100,
-    transform: [{ scale: 0.98 }],
-  },
-  iconWrap: {
-    width: 24,
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.black,
-  },
-})

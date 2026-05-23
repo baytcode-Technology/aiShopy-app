@@ -1,21 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { Image, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { AuthButton } from '@/components/auth/AuthButton'
+import { Button } from '@/components/ui/Button'
+import { Caption, Muted } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { syncCategoryProducts } from '@src/api/categories'
+import { cn } from '@src/lib/cn'
 import { showError, showSuccess } from '@src/lib/toast'
+import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
-import { theme } from '@src/theme/colors'
 
 type Mode = 'assign' | 'edit'
 
@@ -51,11 +44,7 @@ export function CategoryProductPickerModal({
 
   useEffect(() => {
     if (!visible) return
-    if (mode === 'edit') {
-      setSelected(new Set(inCategoryIds))
-    } else {
-      setSelected(new Set(inCategoryIds))
-    }
+    setSelected(new Set(inCategoryIds))
     setSearch('')
   }, [visible, mode, categoryId, inCategoryIds])
 
@@ -99,121 +88,73 @@ export function CategoryProductPickerModal({
       visible={visible}
       title={title}
       onClose={onClose}
-      footer={<AuthButton label={submitLabel} loading={loading} onPress={handleSubmit} />}
+      footer={<Button label={submitLabel} loading={loading} onPress={handleSubmit} />}
     >
-      <Text style={styles.subtitle}>
+      <Muted className="text-[13px] leading-[18px]">
         {mode === 'edit'
           ? 'Uncheck products to remove them from this category.'
           : 'Select existing products to include in this category.'}
-      </Text>
+      </Muted>
 
-      <View style={styles.searchWrap}>
-        <FontAwesome name="search" size={14} color={theme.gray400} />
+      <View className="flex-row items-center gap-2.5 border border-gray-200 rounded-[10px] px-3 bg-gray-100">
+        <FontAwesome name="search" size={14} color={Colors.text.muted} />
         <TextInput
-          style={styles.search}
+          className="flex-1 py-2.5 text-[15px] text-ink"
           placeholder="Search your catalog..."
-          placeholderTextColor={theme.gray400}
+          placeholderTextColor={Colors.text.muted}
           value={search}
           onChangeText={setSearch}
         />
       </View>
 
-      <ScrollView style={styles.list} nestedScrollEnabled>
+      <ScrollView className="max-h-[360px]" nestedScrollEnabled>
         {filtered.map((product) => {
           const isSelected = selected.has(product.id)
           const wasInCategory = inCategoryIds.has(product.id)
           return (
             <Pressable
               key={product.id}
-              style={({ pressed }) => [
-                styles.row,
-                isSelected && styles.rowSelected,
-                pressed && styles.rowPressed,
-              ]}
+              className={cn(
+                'flex-row items-center p-3 border rounded-xl mb-2 bg-surface gap-3 active:opacity-90',
+                isSelected ? 'border-ink border-2' : 'border-gray-200'
+              )}
               onPress={() => toggle(product.id)}
             >
-              <View style={styles.thumb}>
+              <View className="w-[52px] h-[52px] rounded-lg bg-gray-100 overflow-hidden items-center justify-center">
                 {product.thumbnail_url ? (
-                  <Image source={{ uri: product.thumbnail_url }} style={styles.thumbImg} />
+                  <Image source={{ uri: product.thumbnail_url }} className="w-full h-full" />
                 ) : (
-                  <Text style={styles.thumbLetter}>{product.name[0]?.toUpperCase()}</Text>
+                  <Text className="text-xl font-bold text-gray-400">
+                    {product.name[0]?.toUpperCase()}
+                  </Text>
                 )}
               </View>
-              <View style={styles.info}>
-                <Text style={styles.name} numberOfLines={1}>
+              <View className="flex-1">
+                <Text className="text-[15px] font-bold text-ink" numberOfLines={1}>
                   {product.name}
                 </Text>
-                <Text style={styles.meta}>
+                <Caption className="mt-1">
                   ₹{product.base_price} · Stock {product.stock_qty}
                   {wasInCategory && !isSelected ? ' · was in category' : ''}
-                </Text>
+                </Caption>
               </View>
-              <View style={[styles.check, isSelected && styles.checkOn]}>
+              <View
+                className={cn(
+                  'w-7 h-7 rounded-full border-2 items-center justify-center',
+                  isSelected ? 'bg-brand-primary border-ink' : 'border-gray-200'
+                )}
+              >
                 {isSelected ? (
-                  <FontAwesome name="check" size={14} color={theme.white} />
+                  <FontAwesome name="check" size={14} color={Colors.brand.onPrimary} />
                 ) : null}
               </View>
             </Pressable>
           )
         })}
         {filtered.length === 0 ? (
-          <Text style={styles.empty}>No products match your search.</Text>
+          <Muted className="text-center py-6">No products match your search.</Muted>
         ) : null}
       </ScrollView>
     </FormModal>
   )
 }
-
-const styles = StyleSheet.create({
-  subtitle: { fontSize: 13, color: theme.gray600, lineHeight: 18 },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    backgroundColor: theme.gray100,
-  },
-  search: { flex: 1, paddingVertical: 10, fontSize: 15, color: theme.black },
-  list: { maxHeight: 360 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: theme.white,
-    gap: 12,
-  },
-  rowSelected: { borderColor: theme.black, borderWidth: 2 },
-  rowPressed: { opacity: 0.92 },
-  thumb: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
-    backgroundColor: theme.gray100,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbImg: { width: '100%', height: '100%' },
-  thumbLetter: { fontSize: 20, fontWeight: '700', color: theme.gray400 },
-  info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '700', color: theme.black },
-  meta: { fontSize: 12, color: theme.gray600, marginTop: 4 },
-  check: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: theme.gray200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkOn: { backgroundColor: theme.black, borderColor: theme.black },
-  empty: { textAlign: 'center', color: theme.gray600, padding: 24 },
-})

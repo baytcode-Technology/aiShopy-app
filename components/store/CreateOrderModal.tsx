@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { AuthInput } from '@/components/auth/AuthInput'
-import { AuthButton } from '@/components/auth/AuthButton'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Caption, SectionTitle } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { createOrder } from '@src/api/orders'
 import { fetchProducts } from '@src/api/products'
+import { cn } from '@src/lib/cn'
 import { showError, showSuccess } from '@src/lib/toast'
+import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
-import { theme } from '@src/theme/colors'
 
 type LineItem = {
   productId: string
@@ -125,60 +128,71 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
       visible={visible}
       title="New order"
       onClose={handleClose}
-      footer={<AuthButton label="Create order (COD)" loading={loading} onPress={handleSubmit} />}
+      footer={<Button label="Create order (COD)" loading={loading} onPress={handleSubmit} />}
     >
-      <AuthInput
+      <Input
         label="Customer WhatsApp *"
         value={whatsapp}
         onChangeText={setWhatsapp}
         placeholder="+919876543210"
         keyboardType="phone-pad"
       />
-      <AuthInput label="Customer name *" value={customerName} onChangeText={setCustomerName} placeholder="John Doe" />
+      <Input
+        label="Customer name *"
+        value={customerName}
+        onChangeText={setCustomerName}
+        placeholder="John Doe"
+      />
 
-      <Text style={styles.section}>Shipping address *</Text>
-      <AuthInput label="City" value={city} onChangeText={setCity} placeholder="Mumbai" />
-      <AuthInput label="District" value={district} onChangeText={setDistrict} placeholder="Mumbai Suburban" />
-      <AuthInput label="State" value={state} onChangeText={setState} placeholder="Maharashtra" />
-      <AuthInput label="Region" value={region} onChangeText={setRegion} placeholder="West" />
-      <AuthInput label="Postcode" value={postcode} onChangeText={setPostcode} placeholder="400001" />
+      <SectionTitle className="mt-1">Shipping address *</SectionTitle>
+      <Input label="City" value={city} onChangeText={setCity} placeholder="Mumbai" />
+      <Input label="District" value={district} onChangeText={setDistrict} placeholder="Mumbai Suburban" />
+      <Input label="State" value={state} onChangeText={setState} placeholder="Maharashtra" />
+      <Input label="Region" value={region} onChangeText={setRegion} placeholder="West" />
+      <Input label="Postcode" value={postcode} onChangeText={setPostcode} placeholder="400001" />
 
-      <View style={styles.lineHeader}>
-        <Text style={styles.section}>Line items *</Text>
-        <Pressable onPress={addLine} style={styles.addLine}>
-          <FontAwesome name="plus" size={12} color={theme.black} />
-          <Text style={styles.addLineText}>Add item</Text>
+      <View className="flex-row items-center justify-between">
+        <SectionTitle>Line items *</SectionTitle>
+        <Pressable onPress={addLine} className="flex-row items-center gap-1">
+          <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
+          <Text className="text-xs font-semibold text-ink">Add item</Text>
         </Pressable>
       </View>
 
-      <ScrollView style={styles.lines} nestedScrollEnabled>
+      <ScrollView className="max-h-[220px]" nestedScrollEnabled>
         {lines.map((line, index) => (
-          <View key={index} style={styles.lineRow}>
-            <Text style={styles.lineLabel}>Product</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productPick}>
-              {products.map((p) => (
-                <Pressable
-                  key={p.id}
-                  style={[styles.productChip, line.productId === p.id && styles.productChipActive]}
-                  onPress={() => {
-                    const next = [...lines]
-                    next[index] = { ...line, productId: p.id }
-                    setLines(next)
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.productChipText,
-                      line.productId === p.id && styles.productChipTextActive,
-                    ]}
-                    numberOfLines={1}
+          <Card key={index} className="mb-2 gap-1.5" padded>
+            <Caption>Product</Caption>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0 mb-1">
+              {products.map((p) => {
+                const active = line.productId === p.id
+                return (
+                  <Pressable
+                    key={p.id}
+                    className={cn(
+                      'border rounded-lg px-2.5 py-1.5 mr-1.5 max-w-[140px]',
+                      active ? 'bg-brand-primary border-ink' : 'border-gray-200'
+                    )}
+                    onPress={() => {
+                      const next = [...lines]
+                      next[index] = { ...line, productId: p.id }
+                      setLines(next)
+                    }}
                   >
-                    {p.name}
-                  </Text>
-                </Pressable>
-              ))}
+                    <Text
+                      className={cn(
+                        'text-xs',
+                        active ? 'text-brand-on-primary font-semibold' : 'text-gray-600'
+                      )}
+                      numberOfLines={1}
+                    >
+                      {p.name}
+                    </Text>
+                  </Pressable>
+                )
+              })}
             </ScrollView>
-            <AuthInput
+            <Input
               label="Qty"
               value={line.quantity}
               onChangeText={(quantity) => {
@@ -188,55 +202,20 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
               }}
               keyboardType="number-pad"
             />
-          </View>
+          </Card>
         ))}
       </ScrollView>
 
-      <AuthInput
+      <Input
         label="Notes"
         value={notes}
         onChangeText={setNotes}
         placeholder="Delivery instructions"
         multiline
         numberOfLines={2}
+        inputClassName="min-h-16"
+        style={{ textAlignVertical: 'top' }}
       />
     </FormModal>
   )
 }
-
-const styles = StyleSheet.create({
-  section: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.black,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 4,
-  },
-  lineHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  addLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  addLineText: { fontSize: 12, fontWeight: '600', color: theme.black },
-  lines: { maxHeight: 220 },
-  lineRow: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-    gap: 6,
-  },
-  lineLabel: { fontSize: 12, color: theme.gray600 },
-  productPick: { flexGrow: 0, marginBottom: 4 },
-  productChip: {
-    borderWidth: 1,
-    borderColor: theme.gray200,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginRight: 6,
-    maxWidth: 140,
-  },
-  productChipActive: { backgroundColor: theme.black, borderColor: theme.black },
-  productChipText: { fontSize: 12, color: theme.gray600 },
-  productChipTextActive: { color: theme.white },
-})

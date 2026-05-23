@@ -1,9 +1,11 @@
 import { Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Heading, Label, Muted } from '@/components/ui/Typography'
+import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
+import { MenuRow } from '@/components/ui/MenuRow'
+import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { Heading, Muted } from '@/components/ui/Typography'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import { env } from '@src/config/env'
@@ -19,37 +21,39 @@ export default function MoreScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100" edges={['top']}>
-      <View className="px-6 py-4.5 bg-surface border-b border-gray-200">
-        <Heading>More</Heading>
-      </View>
+    <Screen>
+      <ScreenHeader title="Account" subtitle="Store & profile" />
+      <ScreenBody className="px-4 pt-4 gap-4">
+        <AnimatedFadeIn>
+          <View className="bg-brand-primary rounded-3xl p-6 border-2 border-ink">
+            <View className="w-14 h-14 rounded-2xl bg-charcoal border border-gray-700 items-center justify-center mb-4">
+              <Text className="text-xl font-extrabold text-brand-on-primary">
+                {store?.name?.slice(0, 1).toUpperCase() ?? 'S'}
+              </Text>
+            </View>
+            <Heading className="text-brand-on-primary text-xl tracking-tight">
+              {store?.name ?? 'Your store'}
+            </Heading>
+            <Muted className="text-gray-400 mt-1.5">{user?.email ?? ''}</Muted>
+          </View>
+        </AnimatedFadeIn>
 
-      <View className="m-4 p-6 rounded-2xl bg-brand-primary flex-row items-center gap-4 shadow-lg shadow-ink/15">
-        <View className="w-[52px] h-[52px] rounded-full bg-gray-600 border-2 border-white/15" />
-        <View className="flex-1">
-          <Text className="text-brand-on-primary text-lg font-extrabold tracking-tight">
-            {store?.name ?? 'Your store'}
-          </Text>
-          <Muted className="text-gray-400 mt-1">{user?.email ?? ''}</Muted>
-        </View>
-      </View>
+        <AnimatedFadeIn delay={80}>
+          <MenuRow
+            label="Storefront"
+            value={`${store?.slug}.${env.storefrontBaseDomain}`}
+            icon="globe"
+          />
+        </AnimatedFadeIn>
 
-      <View className="px-4 gap-2.5">
-        <Label>Store</Label>
-        <Card>
-          <Text className="text-[15px] font-bold text-ink">Domain</Text>
-          <Muted className="mt-1.5">
-            {store?.slug}.{env.storefrontBaseDomain}
-          </Muted>
-        </Card>
-      </View>
+        <AnimatedFadeIn delay={120}>
+          <MenuRow label="Currency" value={store?.currency ?? 'INR'} icon="money" />
+        </AnimatedFadeIn>
 
-      <Button
-        label="Sign out"
-        variant="danger"
-        className="w-auto self-center mt-9 px-7"
-        onPress={handleSignOut}
-      />
-    </SafeAreaView>
+        <AnimatedFadeIn delay={160} className="pt-4">
+          <Button label="Sign out" variant="outline" onPress={handleSignOut} />
+        </AnimatedFadeIn>
+      </ScreenBody>
+    </Screen>
   )
 }

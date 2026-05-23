@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { router, type Href } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
-import { Muted } from '@/components/ui/Typography'
+import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
+import { DisplayBrand, Muted } from '@/components/ui/Typography'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import Colors from '@src/theme/colors'
@@ -43,9 +44,14 @@ export default function StoreCheckScreen() {
   }, [isAuthenticated, refreshStore])
 
   return (
-    <View className="flex-1 items-center justify-center bg-surface gap-4">
-      <ActivityIndicator size="large" color={Colors.brand.primary} />
-      <Muted className="font-semibold tracking-wide">Checking your store…</Muted>
+    <View className="flex-1 items-center justify-center bg-gray-100 gap-6 px-8">
+      <AnimatedFadeIn className="items-center">
+        <DisplayBrand className="mb-8">Katlogue</DisplayBrand>
+        <ActivityIndicator size="large" color={Colors.brand.primary} />
+        <Muted className="font-semibold tracking-wide mt-5 text-gray-500">
+          Preparing your workspace…
+        </Muted>
+      </AnimatedFadeIn>
     </View>
   )
 }

@@ -10,17 +10,18 @@ type Props = {
 
 export function Chip({ label, active = false, onPress, className }: Props) {
   return (
-    <Pressable onPress={onPress} className="mr-1">
+    <View className="mr-2">
+    <Pressable onPress={onPress}>
       <View
         className={cn(
-          'border rounded-full px-4 py-2',
+          'border rounded-full px-4 py-2.5',
           active ? 'bg-brand-primary border-brand-primary' : 'bg-surface border-gray-200',
           className
         )}
       >
         <Text
           className={cn(
-            'text-[13px] font-bold',
+            'text-[13px] font-semibold',
             active ? 'text-brand-on-primary' : 'text-gray-600'
           )}
         >
@@ -28,5 +29,6 @@ export function Chip({ label, active = false, onPress, className }: Props) {
         </Text>
       </View>
     </Pressable>
+    </View>
   )
 }

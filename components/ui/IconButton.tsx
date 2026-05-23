@@ -3,17 +3,35 @@ import { cn } from '@src/lib/cn'
 
 type Props = Omit<PressableProps, 'style'> & {
   className?: string
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
+  variant?: 'default' | 'filled' | 'ghost'
 }
 
-export function IconButton({ className, size = 'md', children, ...props }: Props) {
+export function IconButton({
+  className,
+  size = 'md',
+  variant = 'default',
+  children,
+  ...props
+}: Props) {
+  const sizeClass =
+    size === 'sm' ? 'w-9 h-9' : size === 'lg' ? 'w-12 h-12 rounded-2xl' : 'w-10 h-10'
+
+  const variantClass =
+    variant === 'filled'
+      ? 'bg-brand-primary border-brand-primary'
+      : variant === 'ghost'
+        ? 'bg-transparent border-transparent'
+        : 'bg-surface border-gray-200'
+
   return (
     <Pressable hitSlop={8} {...props}>
       {({ pressed }) => (
         <View
           className={cn(
-            'items-center justify-center rounded-full border border-gray-200 bg-surface',
-            size === 'sm' ? 'w-9 h-9' : 'w-10 h-10',
+            'items-center justify-center rounded-full border',
+            sizeClass,
+            variantClass,
             pressed && 'opacity-80',
             className
           )}

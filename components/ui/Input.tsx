@@ -26,15 +26,15 @@ export function Input({
   const [focused, setFocused] = useState(false)
 
   return (
-    <View className={cn('gap-1.5 mb-1 w-full', containerClassName)} style={containerStyle}>
+    <View className={cn('gap-2 mb-0.5 w-full', containerClassName)} style={containerStyle}>
       <Label>{label}</Label>
       <TextInput
         placeholderTextColor={Colors.text.muted}
         selectionColor={Colors.brand.primary}
         className={cn(
-          'w-full border rounded-2xl px-4 py-3.5 text-[15px] font-medium text-ink bg-gray-100 border-gray-200',
+          'w-full border rounded-2xl px-4 py-3.5 text-[15px] font-medium text-ink bg-gray-50 border-gray-200',
           focused && 'border-ink bg-surface',
-          error && 'border-danger bg-danger-bg',
+          error && 'border-gray-400 bg-gray-100',
           inputClassName,
           className
         )}
@@ -49,7 +49,9 @@ export function Input({
         {...props}
       />
       {error ? (
-        <Text className="text-xs font-bold text-danger uppercase pl-1 mt-0.5">{error}</Text>
+        <Text className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide pl-0.5 mt-0.5">
+          {error}
+        </Text>
       ) : null}
     </View>
   )

@@ -1,27 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from 'react-native'
 import { AppPressable } from '@/components/ui/AppPressable'
 import { Chip } from '@/components/ui/Chip'
 import { Fab } from '@/components/ui/Fab'
+import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
+import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { SearchField } from '@/components/ui/SearchField'
+import { LinkText, Subtitle } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
-import { SafeAreaView } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
 import { ProductCard } from '@/components/store/ProductCard'
 import { CreateProductModal } from '@/components/store/CreateProductModal'
 import { CreateCategoryModal } from '@/components/store/CreateCategoryModal'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
-import { Button } from '@/components/ui/Button'
-import { Heading, LinkText, Subtitle } from '@/components/ui/Typography'
-import { cn } from '@src/lib/cn'
 import { fetchProducts } from '@src/api/products'
 import { fetchCategories } from '@src/api/categories'
 import { useStore } from '@src/contexts/store-context'
@@ -92,33 +87,27 @@ export default function ProductsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100" edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 pt-5 pb-3.5">
-        <View>
-          <Heading>Catalog</Heading>
-          <Subtitle className="mt-1">
-            {products.length} products · {categories.length} categories
-          </Subtitle>
-        </View>
-        <AppPressable
-          containerClassName="flex-row items-center gap-1.5 border border-gray-200 bg-surface px-3 py-2 rounded-xl shadow-sm"
-          onPress={() => setCategoryModalOpen(true)}
-        >
-          <FontAwesome name="folder-open-o" size={14} color={Colors.brand.primary} />
-          <Text className="text-xs font-bold text-ink">Category</Text>
-        </AppPressable>
-      </View>
+    <Screen>
+      <ScreenHeader
+        title="Catalog"
+        subtitle={`${products.length} products · ${categories.length} categories`}
+        right={
+          <AppPressable
+            containerClassName="flex-row items-center gap-2 border border-gray-200 bg-gray-50 px-3 py-2.5 rounded-xl"
+            onPress={() => setCategoryModalOpen(true)}
+          >
+            <FontAwesome name="folder-open-o" size={14} color={Colors.brand.primary} />
+            <Text className="text-xs font-bold text-ink">Category</Text>
+          </AppPressable>
+        }
+      />
 
-      <View className="flex-row items-center gap-2.5 mx-6 mb-4 px-3.5 py-3 bg-surface rounded-2xl border border-gray-200 shadow-sm">
-        <FontAwesome name="search" size={15} color={Colors.text.muted} />
-        <TextInput
-          className="flex-1 text-[15px] font-medium text-ink"
-          placeholder="Search catalog..."
-          placeholderTextColor={Colors.text.muted}
-          value={search}
-          onChangeText={setSearch}
-        />
-      </View>
+      <SearchField
+        placeholder="Search catalog..."
+        value={search}
+        onChangeText={setSearch}
+        className="mt-1"
+      />
 
       <ScrollView
         horizontal
@@ -141,7 +130,8 @@ export default function ProductsScreen() {
       </ScrollView>
 
       {selectedCategoryId && selectedCategory ? (
-        <View className="mx-6 mb-4 p-4 rounded-2xl border border-gray-200 bg-surface gap-3 shadow-sm">
+        <AnimatedFadeIn className="mx-4 mb-4">
+        <View className="p-4 rounded-3xl border border-gray-200 bg-surface gap-3">
           <Text className="text-base font-extrabold text-ink tracking-tight">
             {selectedCategory.name}
           </Text>
@@ -161,8 +151,10 @@ export default function ProductsScreen() {
             </AppPressable>
           </View>
         </View>
+        </AnimatedFadeIn>
       ) : null}
 
+      <ScreenBody>
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={Colors.brand.primary} />
@@ -219,10 +211,11 @@ export default function ProductsScreen() {
             </View>
           ) : null}
           {products.length === 0 ? (
-            <View className="items-center justify-center p-8">
-              <Text className="text-lg font-extrabold text-ink mb-2">No products yet</Text>
-              <Subtitle className="text-center">Tap + to create your first product.</Subtitle>
-            </View>
+            <EmptyState
+              icon="cube"
+              title="No products yet"
+              description="Tap + to add your first product to the catalog."
+            />
           ) : null}
         </ScrollView>
       ) : filtered.length === 0 ? (
@@ -288,6 +281,7 @@ export default function ProductsScreen() {
           ) : null}
         </>
       ) : null}
-    </SafeAreaView>
+      </ScreenBody>
+    </Screen>
   )
 }

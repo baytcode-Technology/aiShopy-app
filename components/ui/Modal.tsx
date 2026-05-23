@@ -5,6 +5,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native'
@@ -33,33 +34,39 @@ export function SleekModal({
   return (
     <RNModal visible={isOpen} animationType="slide" transparent onRequestClose={onClose}>
       <View className="flex-1 justify-end">
-        <Pressable className="absolute inset-0" onPress={onClose} accessibilityLabel="Close modal">
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel="Close modal"
+        >
           <View className="flex-1 bg-ink-overlay" />
         </Pressable>
         <KeyboardAvoidingView
-          className="max-h-[90%]"
+          className="max-h-[92%]"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View className="bg-surface rounded-t-[24px] border border-gray-200 border-b-0 max-h-full">
-            <View className="self-center w-9 h-1 rounded-full bg-gray-200 mt-3" />
-            <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-100">
+          <View className="bg-surface rounded-t-[32px] border border-gray-200 border-b-0 max-h-full overflow-hidden">
+            <View className="self-center w-10 h-1 rounded-full bg-gray-200 mt-3" />
+            <View className="flex-row items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
               <View className="flex-1 pr-4">
-                <Heading className="text-xl">{title}</Heading>
-                {subtitle ? <Subtitle className="mt-1 text-sm">{subtitle}</Subtitle> : null}
+                <Heading className="text-[22px]">{title}</Heading>
+                {subtitle ? <Subtitle className="mt-1 text-sm text-gray-500">{subtitle}</Subtitle> : null}
               </View>
               <Pressable onPress={onClose} hitSlop={12}>
-                <Text className="text-lg font-bold text-ink">✕</Text>
+                <View className="w-9 h-9 rounded-full bg-gray-100 items-center justify-center">
+                  <Text className="text-base font-bold text-ink">✕</Text>
+                </View>
               </Pressable>
             </View>
             <ScrollView
               className={cn('max-h-[560px]', scrollClassName)}
-              contentContainerClassName="px-6 py-5 gap-4"
+              contentContainerClassName="px-6 py-5 gap-5"
               keyboardShouldPersistTaps="handled"
             >
               {children}
             </ScrollView>
             {footer ? (
-              <View className="px-6 pt-3 pb-6 border-t border-gray-100">{footer}</View>
+              <View className="px-6 pt-3 pb-7 border-t border-gray-100 bg-gray-50">{footer}</View>
             ) : null}
           </View>
         </KeyboardAvoidingView>

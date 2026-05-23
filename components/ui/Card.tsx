@@ -4,14 +4,16 @@ import { cn } from '@src/lib/cn'
 type CardProps = ViewProps & {
   className?: string
   padded?: boolean
+  elevated?: boolean
 }
 
-export function Card({ className, padded = true, children, ...props }: CardProps) {
+export function Card({ className, padded = true, elevated = false, children, ...props }: CardProps) {
   return (
     <View
       className={cn(
-        'bg-surface border border-gray-200 rounded-2xl shadow-sm',
-        padded && 'p-3.5',
+        'bg-surface border border-gray-200 rounded-3xl',
+        elevated && 'border-gray-300',
+        padded && 'p-4',
         className
       )}
       {...props}
@@ -37,9 +39,9 @@ export function PressableCard({
       {({ pressed }) => (
         <View
           className={cn(
-            'bg-surface border border-gray-200 rounded-2xl shadow-sm',
-            padded && 'p-3.5',
-            pressed && 'opacity-92',
+            'bg-surface border border-gray-200 rounded-3xl',
+            padded && 'p-4',
+            pressed && 'opacity-90 border-gray-300',
             className
           )}
         >

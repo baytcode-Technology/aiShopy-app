@@ -10,7 +10,7 @@ export function GoogleButton() {
 
   return (
     <AppPressable
-      containerClassName="flex-row items-center justify-center border border-gray-200 bg-surface py-3.5 px-4 rounded-[14px] gap-3 min-h-[52px]"
+      containerClassName="flex-row items-center justify-center border border-gray-200 bg-gray-50 py-4 px-4 rounded-2xl gap-3 min-h-[52px]"
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"

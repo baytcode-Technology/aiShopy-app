@@ -153,9 +153,11 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
 
       <View className="flex-row items-center justify-between">
         <SectionTitle>Line items *</SectionTitle>
-        <Pressable onPress={addLine} className="flex-row items-center gap-1">
-          <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
-          <Text className="text-xs font-semibold text-ink">Add item</Text>
+        <Pressable onPress={addLine}>
+          <View className="flex-row items-center gap-1">
+            <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
+            <Text className="text-xs font-semibold text-ink">Add item</Text>
+          </View>
         </Pressable>
       </View>
 

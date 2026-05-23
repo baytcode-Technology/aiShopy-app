@@ -77,7 +77,7 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
       <Pressable className="flex-row items-center justify-between" onPress={() => setExpanded((e) => !e)}>
         <SectionTitle>Options & variants</SectionTitle>
         <View className="flex-row items-center gap-2">
-          {comboCount > 0 ? <Badge label={`${comboCount} variants`} tone="active" /> : null}
+          {comboCount > 0 ? <Badge label={`${comboCount} variants`} tone="emphasis" /> : null}
           <FontAwesome
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={14}

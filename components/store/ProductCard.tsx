@@ -1,4 +1,4 @@
-import { Image, Pressable, Text, View } from 'react-native'
+import { Image, Text, View } from 'react-native'
 import { PressableCard, Card } from '@/components/ui/Card'
 import { Caption } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
@@ -24,7 +24,7 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
 
   const content = (
     <>
-      <View className="h-28 rounded-[10px] bg-gray-100 items-center justify-center mb-2.5 overflow-hidden">
+      <View className="h-[120px] rounded-2xl bg-gray-100 items-center justify-center mb-3 overflow-hidden border border-gray-100">
         {product.thumbnail_url ? (
           <Image
             source={{ uri: product.thumbnail_url }}
@@ -32,31 +32,33 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
             resizeMode="cover"
           />
         ) : (
-          <Text className="text-[26px] font-extrabold text-gray-400 tracking-wide">
+          <Text className="text-2xl font-extrabold text-gray-300 tracking-wider">
             {initials(product.name)}
           </Text>
         )}
       </View>
-      <Text className="text-sm font-bold text-ink mb-2 min-h-9 leading-[18px]" numberOfLines={2}>
+      <Text className="text-[15px] font-bold text-ink mb-2 min-h-10 leading-5" numberOfLines={2}>
         {product.name}
       </Text>
-      <View className="flex-row justify-between items-center">
-        <Text className="text-base font-extrabold text-ink tracking-tight">
+      <View className="flex-row justify-between items-center pt-1 border-t border-gray-100">
+        <Text className="text-[17px] font-extrabold text-ink tracking-tight">
           {symbol}
           {product.base_price}
         </Text>
-        <Caption className={cn(lowStock && 'text-warning')}>Stock: {product.stock_qty}</Caption>
+        <Caption className={cn(lowStock && 'text-gray-700 font-bold')}>
+          {product.track_inventory ? `${product.stock_qty} left` : '—'}
+        </Caption>
       </View>
     </>
   )
 
   if (onPress) {
     return (
-      <PressableCard className="flex-1 m-1.5" onPress={onPress}>
+      <PressableCard className="flex-1 m-1.5 p-3.5" onPress={onPress}>
         {content}
       </PressableCard>
     )
   }
 
-  return <Card className="flex-1 m-1.5">{content}</Card>
+  return <Card className="flex-1 m-1.5 p-3.5">{content}</Card>
 }

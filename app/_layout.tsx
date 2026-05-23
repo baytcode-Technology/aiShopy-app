@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import '../global.css'
 import 'react-native-reanimated'
 
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import { AuthProvider } from '@src/contexts/auth-context'
 import { StoreProvider } from '@src/contexts/store-context'
@@ -50,6 +51,7 @@ export default function RootLayout() {
   }
 
   return (
+    <SafeAreaProvider>
     <AuthProvider>
       <StoreProvider>
         <ThemeProvider value={AppTheme}>
@@ -66,5 +68,6 @@ export default function RootLayout() {
         </ThemeProvider>
       </StoreProvider>
     </AuthProvider>
+    </SafeAreaProvider>
   )
 }

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Text, View } from 'react-native'
+import { Fab } from '@/components/ui/Fab'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect } from 'expo-router'
@@ -64,12 +65,9 @@ export default function OrdersScreen() {
         />
       )}
 
-      <Pressable
-        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-brand-primary items-center justify-center shadow-lg shadow-ink/25"
-        onPress={() => setModalOpen(true)}
-      >
+      <Fab onPress={() => setModalOpen(true)}>
         <FontAwesome name="plus" size={22} color={Colors.brand.onPrimary} />
-      </Pressable>
+      </Fab>
 
       {store?.id ? (
         <CreateOrderModal

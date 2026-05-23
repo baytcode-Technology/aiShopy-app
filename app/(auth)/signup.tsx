@@ -41,7 +41,7 @@ export default function SignupScreen() {
       title="Create account"
       subtitle="Enter your email to get started. We will send you a verification code."
       footer={
-        <Text className="text-sm text-gray-600 font-medium">
+        <Text className="text-sm text-gray-600 font-medium text-center">
           Already have an account?{' '}
           <Link href="/(auth)/login" className="text-sm font-bold text-ink underline">
             Sign in

@@ -10,7 +10,7 @@ export function Card({ className, padded = true, children, ...props }: CardProps
   return (
     <View
       className={cn(
-        'bg-surface border border-gray-200 rounded-2xl shadow-sm shadow-ink/5',
+        'bg-surface border border-gray-200 rounded-2xl shadow-sm',
         padded && 'p-3.5',
         className
       )}
@@ -33,15 +33,19 @@ export function PressableCard({
   ...props
 }: PressableCardProps) {
   return (
-    <Pressable
-      className={cn(
-        'bg-surface border border-gray-200 rounded-2xl shadow-sm shadow-ink/5 active:opacity-90',
-        padded && 'p-3.5',
-        className
+    <Pressable {...props}>
+      {({ pressed }) => (
+        <View
+          className={cn(
+            'bg-surface border border-gray-200 rounded-2xl shadow-sm',
+            padded && 'p-3.5',
+            pressed && 'opacity-92',
+            className
+          )}
+        >
+          {children}
+        </View>
       )}
-      {...props}
-    >
-      {children}
     </Pressable>
   )
 }

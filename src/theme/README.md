@@ -2,22 +2,26 @@
 
 ## Change colors app-wide
 
-1. Edit **`src/theme/palette.cjs`** — raw hex values (ink, surface, grays, success, danger, etc.).
-2. Tailwind classes (`text-ink`, `bg-surface`, `border-gray-200`, …) pick up automatically via `tailwind.config.js`.
-3. Semantic tokens in **`src/theme/colors.ts`** (`Colors.text.primary`, `Colors.brand.primary`, …) are used for icons, spinners, and navigation `contentStyle` where `className` is not available.
+1. Edit **`src/theme/palette.ts`** (and keep **`palette.cjs`** in sync for Tailwind).
+2. Use Tailwind classes: `text-ink`, `bg-surface`, `bg-brand-primary`, `text-brand-on-primary`, etc.
+3. Use **`Colors`** from `@src/theme/colors` only for icon colors, `ActivityIndicator`, and navigation `contentStyle`.
 
-Example: swap black/white for gray/cream by changing `ink` and `surface` in `palette.cjs` only.
+## Styling with NativeWind
 
-## UI components
+Prefer **`className`** on `View`, `Text`, `TextInput`, `ScrollView`, `SafeAreaView`.
 
-Use `@/components/ui`:
+### Pressable / buttons
 
-- `Button`, `Input`, `SleekModal`, `Card`, `Badge`, `IconButton`
-- `Heading`, `Subtitle`, `SectionTitle`, `Label`, `Muted`, `Caption`
+Do **not** put `shadow-*`, `opacity-*`, `active:*`, or **conditional** `className` directly on `Pressable` — it can break Expo Router.
 
-Prefer Tailwind `className` on layout; use `Colors` only when a prop requires a color string (e.g. `FontAwesome` `color`).
+Use:
 
-## Legacy
+| Component | Pattern |
+|-----------|---------|
+| `Button` | Inner `View` + `Text` with `className` |
+| `AppPressable` | `containerClassName` on inner `View` |
+| `IconButton`, `Fab`, `Chip` | Pressable + styled inner `View` |
 
-- `theme` export in `colors.ts` is deprecated but kept for any remaining imports.
-- `constants/Colors.ts` re-exports the same module.
+### Reusable UI
+
+`@/components/ui` — `Button`, `Input`, `Chip`, `Fab`, `Card`, `SleekModal`, typography helpers.

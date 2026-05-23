@@ -8,6 +8,10 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { AppPressable } from '@/components/ui/AppPressable'
+import { Chip } from '@/components/ui/Chip'
+import { Fab } from '@/components/ui/Fab'
+import Colors from '@src/theme/colors'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
@@ -24,7 +28,6 @@ import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Product } from '@src/types/product'
 import type { Category } from '@src/types/category'
-import Colors from '@src/theme/colors'
 
 export default function ProductsScreen() {
   const router = useRouter()
@@ -97,16 +100,16 @@ export default function ProductsScreen() {
             {products.length} products · {categories.length} categories
           </Subtitle>
         </View>
-        <Pressable
-          className="flex-row items-center gap-1.5 border border-gray-200 bg-surface px-3 py-2 rounded-xl shadow-sm shadow-ink/5 active:opacity-90"
+        <AppPressable
+          containerClassName="flex-row items-center gap-1.5 border border-gray-200 bg-surface px-3 py-2 rounded-xl shadow-sm"
           onPress={() => setCategoryModalOpen(true)}
         >
           <FontAwesome name="folder-open-o" size={14} color={Colors.brand.primary} />
           <Text className="text-xs font-bold text-ink">Category</Text>
-        </Pressable>
+        </AppPressable>
       </View>
 
-      <View className="flex-row items-center gap-2.5 mx-6 mb-4 px-3.5 py-3 bg-surface rounded-2xl border border-gray-200 shadow-sm shadow-ink/5">
+      <View className="flex-row items-center gap-2.5 mx-6 mb-4 px-3.5 py-3 bg-surface rounded-2xl border border-gray-200 shadow-sm">
         <FontAwesome name="search" size={15} color={Colors.text.muted} />
         <TextInput
           className="flex-1 text-[15px] font-medium text-ink"
@@ -138,24 +141,24 @@ export default function ProductsScreen() {
       </ScrollView>
 
       {selectedCategoryId && selectedCategory ? (
-        <View className="mx-6 mb-4 p-4 rounded-2xl border border-gray-200 bg-surface gap-3 shadow-sm shadow-ink/5">
+        <View className="mx-6 mb-4 p-4 rounded-2xl border border-gray-200 bg-surface gap-3 shadow-sm">
           <Text className="text-base font-extrabold text-ink tracking-tight">
             {selectedCategory.name}
           </Text>
           <View className="flex-row gap-2.5">
-            <Pressable
-              className="flex-row items-center gap-1.5 bg-brand-primary px-3.5 py-2.5 rounded-xl active:opacity-90"
+            <AppPressable
+              containerClassName="flex-row items-center gap-1.5 bg-brand-primary px-3.5 py-2.5 rounded-xl"
               onPress={() => openPicker('assign')}
             >
               <FontAwesome name="plus" size={12} color={Colors.brand.onPrimary} />
               <Text className="text-xs font-bold text-brand-on-primary">Add products</Text>
-            </Pressable>
-            <Pressable
-              className="px-3.5 py-2.5 rounded-xl border-2 border-ink bg-surface active:opacity-90"
+            </AppPressable>
+            <AppPressable
+              containerClassName="px-3.5 py-2.5 rounded-xl border-2 border-ink bg-surface"
               onPress={() => openPicker('edit')}
             >
               <Text className="text-xs font-bold text-ink">Edit products</Text>
-            </Pressable>
+            </AppPressable>
           </View>
         </View>
       ) : null}
@@ -227,7 +230,7 @@ export default function ProductsScreen() {
           <Text className="text-lg font-extrabold text-ink">No products in this category</Text>
           <Button
             label="Add products here"
-            className="w-auto px-5"
+            className="self-center px-5"
             onPress={() => openPicker('assign')}
           />
         </View>
@@ -248,12 +251,9 @@ export default function ProductsScreen() {
         />
       )}
 
-      <Pressable
-        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-brand-primary items-center justify-center shadow-lg shadow-ink/25 active:scale-95"
-        onPress={() => setProductModalOpen(true)}
-      >
+      <Fab onPress={() => setProductModalOpen(true)}>
         <FontAwesome name="plus" size={22} color={Colors.brand.onPrimary} />
-      </Pressable>
+      </Fab>
 
       {store?.id ? (
         <>
@@ -289,31 +289,5 @@ export default function ProductsScreen() {
         </>
       ) : null}
     </SafeAreaView>
-  )
-}
-
-function Chip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string
-  active: boolean
-  onPress: () => void
-}) {
-  return (
-    <Pressable
-      className={cn(
-        'border rounded-full px-4 py-2 mr-1 active:opacity-90',
-        active ? 'bg-brand-primary border-ink' : 'bg-surface border-gray-200'
-      )}
-      onPress={onPress}
-    >
-      <Text
-        className={cn('text-[13px] font-bold', active ? 'text-brand-on-primary' : 'text-gray-600')}
-      >
-        {label}
-      </Text>
-    </Pressable>
   )
 }

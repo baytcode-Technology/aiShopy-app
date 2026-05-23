@@ -11,7 +11,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: palette.ink,
+        ink: {
+          DEFAULT: palette.ink,
+          overlay: palette.overlay,
+          soft: palette.inkSoft,
+          counter: palette.inkCounter,
+        },
         surface: palette.surface,
         gray: {
           100: palette.gray100,

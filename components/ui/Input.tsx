@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Text, TextInput, View, type TextInputProps } from 'react-native'
+import { Text, TextInput, View, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native'
 import { cn } from '@src/lib/cn'
 import Colors from '@src/theme/colors'
 import { Label } from './Typography'
@@ -9,6 +9,7 @@ type Props = TextInputProps & {
   error?: string
   containerClassName?: string
   inputClassName?: string
+  containerStyle?: StyleProp<ViewStyle>
 }
 
 export function Input({
@@ -17,6 +18,7 @@ export function Input({
   className,
   containerClassName,
   inputClassName,
+  containerStyle,
   onFocus,
   onBlur,
   ...props
@@ -24,13 +26,13 @@ export function Input({
   const [focused, setFocused] = useState(false)
 
   return (
-    <View className={cn('gap-1.5 mb-2', containerClassName)}>
+    <View className={cn('gap-1.5 mb-1 w-full', containerClassName)} style={containerStyle}>
       <Label>{label}</Label>
       <TextInput
         placeholderTextColor={Colors.text.muted}
         selectionColor={Colors.brand.primary}
         className={cn(
-          'border rounded-2xl px-4 py-3.5 text-[15px] font-medium text-ink bg-gray-100 border-gray-200',
+          'w-full border rounded-2xl px-4 py-3.5 text-[15px] font-medium text-ink bg-gray-100 border-gray-200',
           focused && 'border-ink bg-surface',
           error && 'border-danger bg-danger-bg',
           inputClassName,

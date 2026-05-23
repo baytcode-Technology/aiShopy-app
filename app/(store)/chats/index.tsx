@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native'
+import { AppPressable } from '@/components/ui/AppPressable'
+import { Chip } from '@/components/ui/Chip'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, type Href } from 'expo-router'
 import { ConversationRow } from '@/components/chat/ConversationRow'
 import { Heading, Muted } from '@/components/ui/Typography'
-import { cn } from '@src/lib/cn'
 import {
   DUMMY_CONVERSATIONS,
   filterConversations,
@@ -48,8 +49,8 @@ export default function MessagesListScreen() {
         </Pressable>
       </View>
 
-      <Pressable
-        className="bg-brand-primary py-2.5 px-4 items-center active:opacity-90"
+      <AppPressable
+        containerClassName="bg-brand-primary py-2.5 px-4 items-center"
         onPress={() =>
           showSuccess('Coming soon', 'WhatsApp Business Cloud API will connect here')
         }
@@ -57,7 +58,7 @@ export default function MessagesListScreen() {
         <Text className="text-brand-on-primary text-xs font-semibold">
           Demo chats · Connect WhatsApp later
         </Text>
-      </Pressable>
+      </AppPressable>
 
       <View className="mx-4 mt-3 mb-2 relative">
         <FontAwesome
@@ -76,28 +77,14 @@ export default function MessagesListScreen() {
       </View>
 
       <View className="flex-row gap-2 px-4 pb-3">
-        {FILTERS.map((f) => {
-          const active = filter === f.key
-          return (
-            <Pressable
-              key={f.key}
-              className={cn(
-                'px-4 py-2 rounded-full border active:opacity-90',
-                active ? 'bg-brand-primary border-ink' : 'bg-surface border-gray-200'
-              )}
-              onPress={() => setFilter(f.key)}
-            >
-              <Text
-                className={cn(
-                  'text-[13px] font-semibold',
-                  active ? 'text-brand-on-primary' : 'text-gray-600'
-                )}
-              >
-                {f.label}
-              </Text>
-            </Pressable>
-          )
-        })}
+        {FILTERS.map((f) => (
+          <Chip
+            key={f.key}
+            label={f.label}
+            active={filter === f.key}
+            onPress={() => setFilter(f.key)}
+          />
+        ))}
       </View>
 
       <FlatList

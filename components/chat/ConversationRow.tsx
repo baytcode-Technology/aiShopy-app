@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
+import { AppPressable } from '@/components/ui/AppPressable'
 import { Badge } from '@/components/ui/Badge'
 import { Caption, Muted } from '@/components/ui/Typography'
 import type { Conversation } from '@src/data/dummy-chats'
@@ -10,8 +11,8 @@ type Props = {
 
 export function ConversationRow({ conversation, onPress }: Props) {
   return (
-    <Pressable
-      className="flex-row items-center px-4 py-3.5 gap-3 bg-surface border-b border-gray-200 active:opacity-90"
+    <AppPressable
+      containerClassName="flex-row items-center px-4 py-3.5 gap-3 bg-surface border-b border-gray-200"
       onPress={onPress}
     >
       <View className="relative">
@@ -38,6 +39,6 @@ export function ConversationRow({ conversation, onPress }: Props) {
           ) : null}
         </View>
       </View>
-    </Pressable>
+    </AppPressable>
   )
 }

@@ -33,12 +33,14 @@ export function SleekModal({
   return (
     <RNModal visible={isOpen} animationType="slide" transparent onRequestClose={onClose}>
       <View className="flex-1 justify-end">
-        <Pressable className="absolute inset-0 bg-ink/40" onPress={onClose} />
+        <Pressable className="absolute inset-0" onPress={onClose} accessibilityLabel="Close modal">
+          <View className="flex-1 bg-ink-overlay" />
+        </Pressable>
         <KeyboardAvoidingView
           className="max-h-[90%]"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View className="bg-surface rounded-t-[24px] border border-gray-200 border-b-0 max-h-full shadow-2xl">
+          <View className="bg-surface rounded-t-[24px] border border-gray-200 border-b-0 max-h-full">
             <View className="self-center w-9 h-1 rounded-full bg-gray-200 mt-3" />
             <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-100">
               <View className="flex-1 pr-4">

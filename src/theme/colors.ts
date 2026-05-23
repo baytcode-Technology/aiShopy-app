@@ -1,4 +1,4 @@
-import palette from './palette.cjs'
+import { palette } from './palette'
 
 /**
  * Semantic color tokens — use these in components (icons, ActivityIndicator, etc.).

@@ -1,5 +1,5 @@
-/** Raw hex values — single source for Tailwind + Colors. Change here to retheme the app. */
-module.exports = {
+/** Raw hex values — single source for app + Tailwind. */
+export const palette = {
   ink: '#0E0E12',
   surface: '#FFFFFF',
   gray100: '#F4F4F6',
@@ -16,4 +16,4 @@ module.exports = {
   overlay: 'rgba(14,14,18,0.4)',
   inkSoft: 'rgba(14,14,18,0.55)',
   inkCounter: 'rgba(14,14,18,0.6)',
-}
+} as const

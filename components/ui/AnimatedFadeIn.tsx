@@ -1,29 +1,17 @@
 import type { ReactNode } from 'react'
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated'
+import { View } from 'react-native'
 import { cn } from '@src/lib/cn'
 
 type Props = {
   children: ReactNode
   className?: string
+  /** @deprecated No animation — kept for API compatibility */
   delay?: number
-  /** Subtle slide-up (default) or fade only */
+  /** @deprecated No animation — kept for API compatibility */
   variant?: 'slide' | 'fade'
 }
 
-export function AnimatedFadeIn({
-  children,
-  className,
-  delay = 0,
-  variant = 'slide',
-}: Props) {
-  const entering =
-    variant === 'fade'
-      ? FadeIn.delay(delay).duration(380)
-      : FadeInDown.delay(delay).duration(420).springify().damping(18)
-
-  return (
-    <Animated.View entering={entering} className={className}>
-      {children}
-    </Animated.View>
-  )
+/** Static wrapper (animations disabled). */
+export function AnimatedFadeIn({ children, className }: Props) {
+  return <View className={className}>{children}</View>
 }

@@ -4,7 +4,6 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect } from 'expo-router'
 import { OrderCard } from '@/components/store/OrderCard'
 import { CreateOrderModal } from '@/components/store/CreateOrderModal'
-import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Fab } from '@/components/ui/Fab'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
@@ -55,18 +54,15 @@ export default function OrdersScreen() {
             description="Create your first order when a customer buys via chat or in person."
           />
         ) : (
-          <AnimatedFadeIn className="flex-1">
-            <FlatList
-              data={orders}
-              keyExtractor={(item) => item.id}
-              contentContainerClassName="px-4 pt-4 pb-28"
-              renderItem={({ item, index }) => (
-                <AnimatedFadeIn delay={index * 40}>
-                  <OrderCard order={item} currency={store?.currency} />
-                </AnimatedFadeIn>
-              )}
-            />
-          </AnimatedFadeIn>
+          <FlatList
+            className="flex-1"
+            data={orders}
+            keyExtractor={(item) => item.id}
+            contentContainerClassName="px-4 pt-4 pb-28"
+            renderItem={({ item }) => (
+              <OrderCard order={item} currency={store?.currency} />
+            )}
+          />
         )}
       </ScreenBody>
 

@@ -16,27 +16,28 @@ type Props = {
 
 export function ScreenHeader({ title, subtitle, right, onBack, className, large = true }: Props) {
   return (
-    <View
-      className={cn(
-        'flex-row items-start justify-between px-6 pt-5 pb-4 bg-surface border-b border-gray-200',
-        className
-      )}
-    >
-      <View className="flex-1 pr-4">
-        {onBack ? (
-          <Pressable onPress={onBack} className="flex-row items-center gap-2 mb-2 -ml-1" hitSlop={8}>
-            <FontAwesome name="chevron-left" size={14} color={Colors.brand.primary} />
-            <Subtitle className="text-ink font-semibold text-sm">Back</Subtitle>
-          </Pressable>
-        ) : null}
-        <Heading className={cn(large ? 'text-[28px]' : 'text-xl', 'tracking-tight')}>
-          {title}
-        </Heading>
-        {subtitle ? (
-          <Subtitle className="mt-1.5 text-gray-500 text-[15px]">{subtitle}</Subtitle>
-        ) : null}
+    <View className={cn('px-5 pt-4 pb-3 bg-surface', className)}>
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1 min-w-0 pr-2">
+          {onBack ? (
+            <Pressable
+              onPress={onBack}
+              className="flex-row items-center gap-1.5 mb-3 self-start py-1 -ml-1"
+              hitSlop={10}
+            >
+              <FontAwesome name="chevron-left" size={13} color={Colors.text.secondary} />
+              <Subtitle className="text-gray-500 font-semibold text-[13px]">Back</Subtitle>
+            </Pressable>
+          ) : null}
+          <Heading className={cn(large ? 'text-[32px] leading-tight' : 'text-xl', 'tracking-tight')}>
+            {title}
+          </Heading>
+          {subtitle ? (
+            <Subtitle className="mt-2 text-gray-500 text-[15px] font-medium leading-5">{subtitle}</Subtitle>
+          ) : null}
+        </View>
+        {right ? <View className="pt-1 shrink-0">{right}</View> : null}
       </View>
-      {right ? <View className="pt-1">{right}</View> : null}
     </View>
   )
 }

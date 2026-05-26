@@ -24,6 +24,14 @@ export const shadows = {
     shadowRadius: 16,
     elevation: 8,
   },
+  /** White cards on gray shell */
+  card: {
+    shadowColor: Colors.brand.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
 } satisfies Record<string, ViewStyle>
 
 export const fabStyle: ViewStyle = {

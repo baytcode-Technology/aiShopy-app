@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
-import { AppPressable } from '@/components/ui/AppPressable'
+import { PressableScale } from '@/components/ui/PressableScale'
+import { shadows } from '@src/lib/shadows'
 import type { Product } from '@src/types/product'
 
 function initials(name: string): string {
@@ -21,55 +22,55 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
 
   return (
     <View className="w-full">
-      <AppPressable
-        onPress={onPress}
-        containerClassName="w-full rounded-[24px] overflow-hidden relative bg-gray-100"
-        containerStyle={styles.imageContainer}
-      >
-        {product.thumbnail_url ? (
-          <Image
-            source={{ uri: product.thumbnail_url }}
-            style={styles.productImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="w-full h-full items-center justify-center">
-            <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
-              {initials(product.name)}
+      <PressableScale onPress={onPress} disabled={!onPress}>
+        <View
+          className="bg-surface rounded-[26px] border border-gray-200 overflow-hidden"
+          style={shadows.card}
+        >
+          <View style={styles.media} className="w-full bg-gray-100 relative">
+            {product.thumbnail_url ? (
+              <Image
+                source={{ uri: product.thumbnail_url }}
+                style={StyleSheet.absoluteFillObject}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="flex-1 w-full h-full items-center justify-center">
+                <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
+                  {initials(product.name)}
+                </Text>
+              </View>
+            )}
+
+            <View className="absolute bottom-3 right-3 bg-ink rounded-full px-3.5 py-1.5">
+              <Text className="text-[12px] font-extrabold text-brand-on-primary tracking-tight">
+                {symbol}
+                {product.base_price}
+              </Text>
+            </View>
+          </View>
+
+          <View className="px-3.5 pt-3 pb-3.5">
+            <Text
+              className="text-[15px] font-bold text-ink leading-snug tracking-tight"
+              numberOfLines={2}
+            >
+              {product.name}
+            </Text>
+            <Text
+              className={`text-[12px] font-semibold mt-1.5 ${product.stock_qty > 0 ? 'text-gray-500' : 'text-gray-700'}`}
+            >
+              {product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Out of stock'}
             </Text>
           </View>
-        )}
-
-        <View className="absolute bottom-2.5 right-2.5 bg-black rounded-full px-3 py-1.5 shadow-sm">
-          <Text className="text-[12px] font-black text-white">
-            {symbol}
-            {product.base_price}
-          </Text>
         </View>
-      </AppPressable>
-
-      <View className="mt-2 px-1">
-        <Text
-          className="text-[14px] font-bold text-ink leading-tight"
-          numberOfLines={1}
-        >
-          {product.name}
-        </Text>
-        <Text className="text-[12px] font-medium text-gray-400 mt-0.5">
-          {product.stock_qty > 0 ? `Stock: ${product.stock_qty}` : 'Out of stock'}
-        </Text>
-      </View>
+      </PressableScale>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  imageContainer: {
-    width: '100%',
-    aspectRatio: 0.78,
-  },
-  productImage: {
-    width: '100%',
-    height: '100%',
+  media: {
+    aspectRatio: 0.82,
   },
 })

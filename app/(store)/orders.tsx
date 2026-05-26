@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, View } from 'react-native'
+import { FlatList, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect } from 'expo-router'
 import { OrderCard } from '@/components/store/OrderCard'
 import { CreateOrderModal } from '@/components/store/CreateOrderModal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Fab } from '@/components/ui/Fab'
+import { OrdersSkeletonList } from '@/components/ui/Skeleton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { fetchOrders } from '@src/api/orders'
@@ -42,11 +43,9 @@ export default function OrdersScreen() {
   return (
     <Screen>
       <ScreenHeader title="Orders" subtitle="Manage customer orders & COD" />
-      <ScreenBody>
+      <ScreenBody className="flex-1 px-5">
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={Colors.brand.primary} size="large" />
-          </View>
+          <OrdersSkeletonList />
         ) : orders.length === 0 ? (
           <EmptyState
             icon="shopping-cart"
@@ -58,7 +57,8 @@ export default function OrdersScreen() {
             className="flex-1"
             data={orders}
             keyExtractor={(item) => item.id}
-            contentContainerClassName="px-4 pt-4 pb-28"
+            contentContainerClassName="pt-3 pb-32"
+            showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <OrderCard order={item} currency={store?.currency} />
             )}

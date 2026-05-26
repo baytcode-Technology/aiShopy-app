@@ -1,16 +1,17 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Image, Text, View } from 'react-native'
+import { FlatList, Image, Text, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { AddGridTile } from '@/components/store/AddGridTile'
 import { AppPressable } from '@/components/ui/AppPressable'
-import { Button } from '@/components/ui/Button'
 import { Fab } from '@/components/ui/Fab'
 import { ProductCard } from '@/components/store/ProductCard'
 import { CreateProductModal } from '@/components/store/CreateProductModal'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { CatalogSkeletonGrid } from '@/components/ui/Skeleton'
 import { fetchCategories } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
 import { useStore } from '@src/contexts/store-context'
@@ -67,15 +68,66 @@ export default function CategoryDetailScreen() {
     }, [loadData])
   )
 
-  const openPicker = (mode: 'assign' | 'edit') => {
+  const openPicker = useCallback((mode: 'assign' | 'edit') => {
     setPickerMode(mode)
     setPickerOpen(true)
-  }
+  }, [])
 
   const productCountLabel = useMemo(() => {
     const n = products.length
-    return n === 1 ? '1 Product' : `${n} Products`
+    return n === 1 ? '1 product' : `${n} products`
   }, [products.length])
+
+  const listHeader = useMemo(() => {
+    if (!category) return null
+    return (
+      <View className="pt-1 pb-2">
+        <View className="rounded-[28px] overflow-hidden h-[200px] mb-5 bg-gray-100 border border-gray-200">
+          {category.image_url ? (
+            <Image
+              source={{ uri: category.image_url }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="w-full h-full items-center justify-center">
+              <Text className="text-4xl font-extrabold text-gray-300 tracking-wider">
+                {category.name
+                  .split(/\s+/)
+                  .slice(0, 2)
+                  .map((w) => w[0]?.toUpperCase() ?? '')
+                  .join('')}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View className="flex-row gap-3 mb-6">
+          <AppPressable
+            containerClassName="flex-1 flex-row items-center justify-center gap-2 bg-brand-primary py-4 rounded-[22px] border border-ink"
+            onPress={() => openPicker('assign')}
+          >
+            <FontAwesome name="plus" size={13} color={Colors.brand.onPrimary} />
+            <Text className="text-sm font-bold text-brand-on-primary">Add products</Text>
+          </AppPressable>
+          <AppPressable
+            containerClassName="flex-1 items-center justify-center py-4 rounded-[22px] border border-gray-200 bg-surface"
+            onPress={() => openPicker('edit')}
+          >
+            <Text className="text-sm font-bold text-ink">Edit list</Text>
+          </AppPressable>
+        </View>
+
+        <SectionHeader title="Products" subtitle={productCountLabel} className="mb-4" />
+
+        {products.length === 0 ? (
+          <View className="mb-6">
+            <AddGridTile onPress={() => openPicker('assign')} />
+          </View>
+        ) : null}
+      </View>
+    )
+  }, [category, products.length, productCountLabel, openPicker])
 
   return (
     <Screen>
@@ -83,82 +135,40 @@ export default function CategoryDetailScreen() {
         title={category?.name ?? 'Category'}
         subtitle={productCountLabel}
         onBack={() => router.back()}
+        large={false}
       />
-      <ScreenBody>
+      <ScreenBody className="flex-1 px-5">
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={Colors.brand.primary} />
+          <View className="flex-1 pt-2">
+            <View className="rounded-[28px] h-[200px] mb-5 bg-gray-100 border border-gray-200" />
+            <CatalogSkeletonGrid />
           </View>
         ) : !category ? null : (
           <>
-            <View className="mx-4 mt-3 mb-5 rounded-[24px] overflow-hidden bg-gray-100 h-40">
-              {category.image_url ? (
-                <Image
-                  source={{ uri: category.image_url }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
-              ) : (
-                <View className="w-full h-full items-center justify-center">
-                  <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
-                    {category.name
-                      .split(/\s+/)
-                      .slice(0, 2)
-                      .map((w) => w[0]?.toUpperCase() ?? '')
-                      .join('')}
-                  </Text>
+            <FlatList
+              style={{ flex: 1 }}
+              data={products}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              ListHeaderComponent={listHeader}
+              ListEmptyComponent={
+                products.length === 0 ? (
+                  <View className="h-2" />
+                ) : null
+              }
+              contentContainerClassName="pb-32 pt-1"
+              columnWrapperClassName="justify-between gap-y-5"
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <View className="w-[48%]">
+                  <ProductCard
+                    product={item}
+                    currency={store?.currency}
+                    onPress={() => router.push(`/(store)/products/${item.id}` as Href)}
+                  />
                 </View>
               )}
-            </View>
-
-            <View className="mx-4 mb-5 flex-row gap-3">
-              <AppPressable
-                containerClassName="flex-1 flex-row items-center justify-center gap-1.5 bg-ink py-3.5 rounded-2xl"
-                onPress={() => openPicker('assign')}
-              >
-                <FontAwesome name="plus" size={12} color="#FFFFFF" />
-                <Text className="text-sm font-bold text-white">Add products</Text>
-              </AppPressable>
-              <AppPressable
-                containerClassName="flex-1 items-center justify-center py-3.5 rounded-2xl border border-ink bg-surface"
-                onPress={() => openPicker('edit')}
-              >
-                <Text className="text-sm font-bold text-ink">Edit products</Text>
-              </AppPressable>
-            </View>
-
-            {products.length === 0 ? (
-              <EmptyState
-                icon="cube"
-                title="No products here"
-                description="Add existing products to this category or create a new one."
-                action={
-                  <Button
-                    label="Add products"
-                    className="self-center px-6"
-                    onPress={() => openPicker('assign')}
-                  />
-                }
-              />
-            ) : (
-              <FlatList
-                data={products}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                contentContainerClassName="px-3 pb-28"
-                columnWrapperClassName="justify-between gap-y-3"
-                showsVerticalScrollIndicator={false}
-                renderItem={({ item }) => (
-                  <View className="w-[48%]">
-                    <ProductCard
-                      product={item}
-                      currency={store?.currency}
-                      onPress={() => router.push(`/(store)/products/${item.id}` as Href)}
-                    />
-                  </View>
-                )}
-              />
-            )}
+            />
 
             <Fab onPress={() => setProductModalOpen(true)}>
               <FontAwesome name="plus" size={22} color={Colors.brand.onPrimary} />

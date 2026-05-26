@@ -6,9 +6,11 @@ import { EditProductModal } from '@/components/store/EditProductModal'
 import { ProductImageCarousel } from '@/components/store/ProductImageCarousel'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { StickyBottomBar } from '@/components/ui/StickyBottomBar'
 import { Body, Caption, Heading, Muted, SectionTitle } from '@/components/ui/Typography'
 import { fetchProduct } from '@src/api/products'
 import { fetchCategories } from '@src/api/categories'
@@ -59,18 +61,18 @@ export default function ProductDetailScreen() {
 
   return (
     <Screen variant="canvas" edges={['top']}>
-      <View className="flex-row items-center px-5 py-3 border-b border-gray-100 bg-surface">
+      <View className="flex-row items-center px-5 py-3.5 bg-surface border-b border-gray-100">
         <IconButton variant="ghost" onPress={() => router.back()}>
           <FontAwesome name="arrow-left" size={18} color={Colors.brand.primary} />
         </IconButton>
         <Text
-          className="flex-1 text-lg font-extrabold text-ink text-center mx-2 tracking-tight"
+          className="flex-1 text-[17px] font-extrabold text-ink text-center mx-3 tracking-tight"
           numberOfLines={1}
         >
           {product?.name ?? 'Product'}
         </Text>
         <IconButton variant="ghost" onPress={() => setEditOpen(true)} disabled={!product}>
-          <FontAwesome name="pencil" size={17} color={Colors.brand.primary} />
+          <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
         </IconButton>
       </View>
 
@@ -83,117 +85,121 @@ export default function ProductDetailScreen() {
           <Muted className="text-base font-semibold">Product not found</Muted>
         </ScreenBody>
       ) : (
-        <ScrollView
-          contentContainerClassName="px-6 pt-5 pb-16"
-          showsVerticalScrollIndicator={false}
-        >
-          <AnimatedFadeIn>
-            {(() => {
-              const galleryImages =
-                product.images.length > 0
-                  ? product.images
-                  : product.thumbnail_url
-                    ? [product.thumbnail_url]
-                    : []
-              return galleryImages.length > 0 ? (
-                <ProductImageCarousel
-                  images={galleryImages}
-                  initialUri={product.thumbnail_url}
-                  className="mb-6"
+        <View className="flex-1">
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="px-5 pt-5"
+            contentContainerStyle={{ paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <AnimatedFadeIn>
+              {(() => {
+                const galleryImages =
+                  product.images.length > 0
+                    ? product.images
+                    : product.thumbnail_url
+                      ? [product.thumbnail_url]
+                      : []
+                return galleryImages.length > 0 ? (
+                  <ProductImageCarousel
+                    images={galleryImages}
+                    initialUri={product.thumbnail_url}
+                    className="mb-7"
+                  />
+                ) : (
+                  <View className="h-[300px] rounded-[28px] items-center justify-center bg-gray-100 mb-7 border border-gray-200">
+                    <Text className="text-6xl font-extrabold text-gray-300">
+                      {product.name.slice(0, 1)}
+                    </Text>
+                  </View>
+                )
+              })()}
+
+              <View className="flex-row flex-wrap gap-2 mb-4">
+                <Badge
+                  label={product.is_active ? 'Active' : 'Inactive'}
+                  tone={product.is_active ? 'emphasis' : 'muted'}
                 />
+                <Badge label={categoryName} tone="outline" />
+              </View>
+
+              <Heading className="text-[30px] tracking-tighter mb-2 leading-tight">{product.name}</Heading>
+              <Text className="text-[32px] font-extrabold text-ink tracking-tighter mb-1">
+                {symbol}
+                {product.base_price}
+              </Text>
+              {product.compare_at_price ? (
+                <Caption className="line-through mb-7 text-gray-400">
+                  Compare {symbol}
+                  {product.compare_at_price}
+                </Caption>
               ) : (
-                <View className="h-[280px] rounded-3xl items-center justify-center bg-gray-100 mb-6 border border-gray-200">
-                  <Text className="text-6xl font-extrabold text-gray-300">
-                    {product.name.slice(0, 1)}
-                  </Text>
+                <View className="mb-7" />
+              )}
+
+              <View className="flex-row gap-3 mb-9">
+                <StatCard
+                  label="Stock"
+                  value={product.track_inventory ? String(product.stock_qty) : '—'}
+                />
+                <StatCard label="SKU" value={product.sku ?? '—'} />
+                <StatCard label="Variants" value={String(variants.length)} />
+              </View>
+
+              {product.description ? (
+                <View className="mb-9">
+                  <SectionTitle className="mb-3">About</SectionTitle>
+                  <Body className="text-gray-600 leading-6">{product.description}</Body>
                 </View>
-              )
-            })()}
+              ) : null}
 
-            <View className="flex-row flex-wrap gap-2 mb-4">
-              <Badge
-                label={product.is_active ? 'Active' : 'Inactive'}
-                tone={product.is_active ? 'emphasis' : 'muted'}
-              />
-              <Badge label={categoryName} tone="outline" />
-            </View>
+              {variants.length > 0 ? (
+                <View className="mb-8">
+                  <SectionTitle className="mb-4">Variants · {variants.length}</SectionTitle>
+                  {variants.map((v) => {
+                    const optionLabels = Object.entries(v.options ?? {})
+                      .map(([k, val]) => `${k}: ${val}`)
+                      .join(' · ')
+                    return (
+                      <Card key={v.id} className="mb-3 p-4">
+                        <View className="flex-row justify-between items-center mb-2">
+                          <Text className="flex-1 text-base font-extrabold text-ink">{v.name}</Text>
+                          <Badge
+                            label={v.is_active ? 'Active' : 'Off'}
+                            tone={v.is_active ? 'emphasis' : 'muted'}
+                            className="ml-2"
+                          />
+                        </View>
+                        {optionLabels ? <Caption className="mb-3">{optionLabels}</Caption> : null}
+                        <View className="flex-row flex-wrap gap-3">
+                          <Text className="text-[13px] font-bold text-ink">
+                            {symbol}
+                            {Number(product.base_price) + Number(v.price_delta)}
+                          </Text>
+                          <Text className="text-[13px] font-bold text-gray-600">
+                            Stock {v.stock_qty}
+                          </Text>
+                          {v.sku ? (
+                            <Text className="text-[13px] font-bold text-gray-600">SKU {v.sku}</Text>
+                          ) : null}
+                        </View>
+                      </Card>
+                    )
+                  })}
+                </View>
+              ) : (
+                <View className="mb-8">
+                  <SectionTitle className="mb-3">Variants</SectionTitle>
+                  <Muted>No variants — single SKU product.</Muted>
+                </View>
+              )}
+            </AnimatedFadeIn>
+          </ScrollView>
 
-            <Heading className="text-[32px] tracking-tighter mb-1">{product.name}</Heading>
-            <Text className="text-[34px] font-extrabold text-ink tracking-tighter mb-1">
-              {symbol}
-              {product.base_price}
-            </Text>
-            {product.compare_at_price ? (
-              <Caption className="line-through mb-6 text-gray-400">
-                Compare {symbol}
-                {product.compare_at_price}
-              </Caption>
-            ) : (
-              <View className="mb-6" />
-            )}
-
-            <View className="flex-row gap-2.5 mb-8">
-              <StatCard
-                label="Stock"
-                value={product.track_inventory ? String(product.stock_qty) : '—'}
-              />
-              <StatCard label="SKU" value={product.sku ?? '—'} />
-              <StatCard label="Variants" value={String(variants.length)} />
-            </View>
-
-            {product.description ? (
-              <View className="mb-8">
-                <SectionTitle className="mb-3">About</SectionTitle>
-                <Body className="text-gray-600 leading-6">{product.description}</Body>
-              </View>
-            ) : null}
-
-            {variants.length > 0 ? (
-              <View className="mb-8">
-                <SectionTitle className="mb-4">Variants · {variants.length}</SectionTitle>
-                {variants.map((v) => {
-                  const optionLabels = Object.entries(v.options ?? {})
-                    .map(([k, val]) => `${k}: ${val}`)
-                    .join(' · ')
-                  return (
-                    <Card key={v.id} className="mb-3 p-4" elevated>
-                      <View className="flex-row justify-between items-center mb-2">
-                        <Text className="flex-1 text-base font-extrabold text-ink">
-                          {v.name}
-                        </Text>
-                        <Badge
-                          label={v.is_active ? 'Active' : 'Off'}
-                          tone={v.is_active ? 'emphasis' : 'muted'}
-                          className="ml-2"
-                        />
-                      </View>
-                      {optionLabels ? (
-                        <Caption className="mb-3">{optionLabels}</Caption>
-                      ) : null}
-                      <View className="flex-row flex-wrap gap-3">
-                        <Text className="text-[13px] font-bold text-ink">
-                          {symbol}
-                          {Number(product.base_price) + Number(v.price_delta)}
-                        </Text>
-                        <Text className="text-[13px] font-bold text-gray-600">
-                          Stock {v.stock_qty}
-                        </Text>
-                        {v.sku ? (
-                          <Text className="text-[13px] font-bold text-gray-600">SKU {v.sku}</Text>
-                        ) : null}
-                      </View>
-                    </Card>
-                  )
-                })}
-              </View>
-            ) : (
-              <View className="mb-8">
-                <SectionTitle className="mb-3">Variants</SectionTitle>
-                <Muted>No variants — single SKU product.</Muted>
-              </View>
-            )}
-          </AnimatedFadeIn>
-        </ScrollView>
+          <StickyBottomBar>
+            <Button label="Edit product" size="lg" onPress={() => setEditOpen(true)} />
+          </StickyBottomBar>
+        </View>
       )}
 
       <EditProductModal
@@ -210,7 +216,7 @@ export default function ProductDetailScreen() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <View className="flex-1 rounded-2xl p-4 bg-gray-50 border border-gray-200">
+    <View className="flex-1 rounded-[20px] p-4 bg-surface border border-gray-200">
       <Caption className="uppercase tracking-widest mb-1.5 text-gray-400">{label}</Caption>
       <Text className="text-base font-extrabold text-ink tracking-tight" numberOfLines={1}>
         {value}

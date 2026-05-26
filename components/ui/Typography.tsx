@@ -14,6 +14,16 @@ export function Heading({ className, ...props }: TypographyProps) {
   )
 }
 
+/** Large screen titles (catalog, hero sections). */
+export function Title({ className, ...props }: TypographyProps) {
+  return (
+    <Text
+      className={cn('text-[32px] font-extrabold text-ink tracking-tight leading-tight', className)}
+      {...props}
+    />
+  )
+}
+
 export function Subtitle({ className, ...props }: TypographyProps) {
   return (
     <Text className={cn('text-base text-gray-500 leading-6 font-medium', className)} {...props} />

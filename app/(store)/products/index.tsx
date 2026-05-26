@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, ScrollView, Text, View } from 'react-native'
+import { FlatList, ScrollView, Text, View } from 'react-native'
 import { AppPressable } from '@/components/ui/AppPressable'
 import { Chip } from '@/components/ui/Chip'
 import { Fab } from '@/components/ui/Fab'
+import { CatalogSkeletonGrid } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { SearchField } from '@/components/ui/SearchField'
+import { SearchBar } from '@/components/ui/SearchBar'
 import Colors from '@src/theme/colors'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
@@ -73,6 +74,40 @@ export default function ProductsScreen() {
     })
   }, [products, search, selectedCategoryId])
 
+  const listHeader = useMemo(
+    () => (
+      <View className="pb-2">
+        <SearchBar
+          placeholder="Search catalog…"
+          value={search}
+          onChangeText={setSearch}
+          className="mt-1 mb-3"
+        />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="max-h-[56px]"
+          contentContainerClassName="px-5 pb-2 items-center"
+        >
+          <Chip
+            label="All"
+            active={!selectedCategoryId}
+            onPress={() => setSelectedCategoryId(null)}
+          />
+          {categories.map((cat) => (
+            <Chip
+              key={cat.id}
+              label={cat.name}
+              active={selectedCategoryId === cat.id}
+              onPress={() => setSelectedCategoryId(cat.id)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    ),
+    [search, categories, selectedCategoryId]
+  )
+
   return (
     <Screen>
       <ScreenHeader
@@ -80,75 +115,55 @@ export default function ProductsScreen() {
         subtitle={`${products.length} products · ${categories.length} categories`}
         right={
           <AppPressable
-            containerClassName="flex-row items-center gap-2 border border-gray-200 bg-gray-50 px-3 py-2.5 rounded-xl"
+            containerClassName="flex-row items-center gap-2 rounded-full border border-gray-200 bg-surface px-4 py-2.5"
             onPress={() => router.push('/(store)/products/categories' as Href)}
           >
-            <FontAwesome name="th-large" size={14} color={Colors.brand.primary} />
-            <Text className="text-xs font-bold text-ink">Categories</Text>
+            <FontAwesome name="th-large" size={13} color={Colors.brand.primary} />
+            <Text className="text-[12px] font-bold text-ink tracking-wide">Categories</Text>
           </AppPressable>
         }
       />
 
-      <SearchField
-        placeholder="Search products..."
-        value={search}
-        onChangeText={setSearch}
-        className="mt-1"
-      />
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="max-h-[52px] mb-1"
-        contentContainerClassName="px-6 py-2 items-center"
-      >
-        <Chip
-          label="All products"
-          active={!selectedCategoryId}
-          onPress={() => setSelectedCategoryId(null)}
-        />
-        {categories.map((cat) => (
-          <Chip
-            key={cat.id}
-            label={cat.name}
-            active={selectedCategoryId === cat.id}
-            onPress={() => setSelectedCategoryId(cat.id)}
-          />
-        ))}
-      </ScrollView>
-
-      <ScreenBody>
+      <ScreenBody className="flex-1">
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={Colors.brand.primary} />
+          <View className="flex-1 px-5 pt-2">
+            {listHeader}
+            <CatalogSkeletonGrid />
           </View>
         ) : products.length === 0 ? (
-          <View className="flex-1 px-2 pb-28">
-            <EmptyState
-              icon="cube"
-              title="No products yet"
-              description="Tap + to add your first product to the catalog."
-            />
+          <View className="flex-1">
+            {listHeader}
+            <View className="flex-1 px-2 pb-28">
+              <EmptyState
+                icon="cube"
+                title="No products yet"
+                description="Tap + to add your first product to the catalog."
+              />
+            </View>
           </View>
         ) : filtered.length === 0 ? (
-          <View className="flex-1 px-2 pb-28">
-            <EmptyState
-              icon={selectedCategoryId ? 'cube' : 'search'}
-              title={selectedCategoryId ? 'No products in this category' : 'No matches'}
-              description={
-                selectedCategoryId
-                  ? 'Assign products via the Categories screen.'
-                  : 'Try a different search term.'
-              }
-            />
+          <View className="flex-1">
+            {listHeader}
+            <View className="flex-1 px-2 pb-28">
+              <EmptyState
+                icon={selectedCategoryId ? 'cube' : 'search'}
+                title={selectedCategoryId ? 'No products in this category' : 'No matches'}
+                description={
+                  selectedCategoryId
+                    ? 'Assign products from the Categories screen.'
+                    : 'Try a different search term.'
+                }
+              />
+            </View>
           </View>
         ) : (
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.id}
             numColumns={2}
-            contentContainerClassName="px-2 pb-28 pt-2"
-            columnWrapperClassName="justify-between gap-y-3"
+            ListHeaderComponent={listHeader}
+            contentContainerClassName="px-5 pb-32 pt-1"
+            columnWrapperClassName="justify-between gap-y-5"
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
               <View className="w-[48%]">

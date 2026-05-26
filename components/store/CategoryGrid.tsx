@@ -6,9 +6,11 @@ type Props = {
   categories: Category[]
   selectedCategoryId?: string | null
   onPressCategory: (category: Category) => void
+  /** Larger tiles for the category index screen. */
+  variant?: 'default' | 'hero'
 }
 
-export function CategoryGrid({ categories, selectedCategoryId, onPressCategory }: Props) {
+export function CategoryGrid({ categories, selectedCategoryId, onPressCategory, variant = 'default' }: Props) {
   if (categories.length === 0) {
     return null
   }
@@ -16,9 +18,10 @@ export function CategoryGrid({ categories, selectedCategoryId, onPressCategory }
   return (
     <View className="flex-row flex-wrap -mx-1.5">
       {categories.map((cat) => (
-        <View key={cat.id} className="w-1/2 px-1.5 mb-4">
+        <View key={cat.id} className="w-1/2 px-1.5 mb-5">
           <CategoryCard
             category={cat}
+            variant={variant}
             selected={selectedCategoryId === cat.id}
             onPress={() => onPressCategory(cat)}
           />

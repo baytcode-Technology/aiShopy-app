@@ -22,6 +22,6 @@ Use **`AnimatedFadeIn`** (`react-native-reanimated`) for subtle entrance animati
 
 - **`Screen`** — gray shell background  
 - **`ScreenHeader`** — white header bar + title  
-- **`SearchField`**, **`EmptyState`**, **`MenuRow`**, **`Chip`**, **`Fab`**
+- **`SearchBar`** / **`SearchField`** (alias), **`EmptyState`**, **`MenuRow`**, **`Chip`**, **`Fab`**, **`SectionHeader`**, **`Skeleton`**, **`PressableScale`**, **`StickyBottomBar`**
 
 Chat UI is intentionally unchanged.

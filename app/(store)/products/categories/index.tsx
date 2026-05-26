@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ActivityIndicator, ScrollView, View } from 'react-native'
+import { ScrollView, View } from 'react-native'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
 import { Button } from '@/components/ui/Button'
 import { CategoryGrid } from '@/components/store/CategoryGrid'
@@ -7,11 +7,25 @@ import { CreateCategoryModal } from '@/components/store/CreateCategoryModal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import { CategoryCardSkeleton } from '@/components/ui/Skeleton'
 import { fetchCategories } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
 import { useStore } from '@src/contexts/store-context'
 import { showError } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
+
+function CategoriesSkeleton() {
+  return (
+    <View className="flex-row flex-wrap -mx-1.5">
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} className="w-1/2 px-1.5 mb-5">
+          <CategoryCardSkeleton />
+        </View>
+      ))}
+    </View>
+  )
+}
 
 export default function CategoriesScreen() {
   const router = useRouter()
@@ -57,8 +71,9 @@ export default function CategoriesScreen() {
   const headerAction = useMemo(
     () => (
       <Button
-        label="Create category"
-        className="px-4 py-3 min-h-[48px]"
+        label="New category"
+        size="md"
+        className="px-5 py-3 min-h-0 rounded-full self-start"
         onPress={() => setModalOpen(true)}
       />
     ),
@@ -68,15 +83,16 @@ export default function CategoriesScreen() {
   return (
     <Screen>
       <ScreenHeader
-        title="All categories"
-        subtitle={`${categories.length} in your store`}
+        title="Categories"
+        subtitle={`${categories.length} collections`}
         onBack={() => router.back()}
       />
-      <ScreenBody className="flex-1 px-3 pt-2">
+      <ScreenBody className="flex-1 px-5 pt-1">
         {loading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator />
-          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-12">
+            <SectionHeader title="Your categories" className="mt-2 mb-5" />
+            <CategoriesSkeleton />
+          </ScrollView>
         ) : categories.length === 0 ? (
           <EmptyState
             icon="folder-open-o"
@@ -87,11 +103,18 @@ export default function CategoriesScreen() {
         ) : (
           <ScrollView
             className="flex-1"
-            contentContainerClassName="pb-10"
+            contentContainerClassName="pb-12"
             showsVerticalScrollIndicator={false}
           >
-            <View className="mb-4">{headerAction}</View>
+            <SectionHeader
+              large
+              title="Your categories"
+              subtitle="Tap a card to manage products"
+              right={headerAction}
+              className="mt-2 mb-1"
+            />
             <CategoryGrid
+              variant="hero"
               categories={categories}
               onPressCategory={(cat) =>
                 router.push(`/(store)/products/categories/${cat.id}` as Href)

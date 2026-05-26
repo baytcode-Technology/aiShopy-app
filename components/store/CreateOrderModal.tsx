@@ -217,7 +217,6 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
         numberOfLines={2}
         inputClassName="min-h-16"
         style={{ textAlignVertical: 'top' }}
-        style={{ textAlignVertical: 'top' }}
       />
     </FormModal>
   )

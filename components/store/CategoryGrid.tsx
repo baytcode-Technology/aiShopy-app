@@ -16,7 +16,7 @@ export function CategoryGrid({ categories, selectedCategoryId, onPressCategory }
   return (
     <View className="flex-row flex-wrap -mx-1.5">
       {categories.map((cat) => (
-        <View key={cat.id} className="w-1/2 px-1.5 mb-3">
+        <View key={cat.id} className="w-1/2 px-1.5 mb-4">
           <CategoryCard
             category={cat}
             selected={selectedCategoryId === cat.id}

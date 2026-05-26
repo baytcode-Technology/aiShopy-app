@@ -20,53 +20,53 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
   const symbol = currency === 'INR' ? '₹' : '$'
 
   return (
-    <AppPressable
-      onPress={onPress}
-      containerClassName="w-full rounded-3xl overflow-hidden relative bg-gray-100"
-      containerStyle={styles.card}
-    >
-      <View style={styles.imageWrap} className="items-center justify-center">
+    <View className="w-full">
+      <AppPressable
+        onPress={onPress}
+        containerClassName="w-full rounded-[24px] overflow-hidden relative bg-gray-100"
+        containerStyle={styles.imageContainer}
+      >
         {product.thumbnail_url ? (
           <Image
             source={{ uri: product.thumbnail_url }}
             style={styles.productImage}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         ) : (
-          <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
-            {initials(product.name)}
-          </Text>
+          <View className="w-full h-full items-center justify-center">
+            <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
+              {initials(product.name)}
+            </Text>
+          </View>
         )}
-      </View>
 
-      <View className="absolute bottom-4 left-0 right-0 items-center px-3">
-        <View className="bg-white/95 rounded-full px-5 py-2.5 items-center min-w-[78%] border border-white/80">
-          <Text
-            className="text-[15px] font-extrabold text-ink tracking-tight text-center"
-            numberOfLines={1}
-          >
-            {product.name}
-          </Text>
-          <Text className="text-[13px] font-semibold text-gray-600 mt-0.5">
+        <View className="absolute bottom-2.5 right-2.5 bg-black rounded-full px-3 py-1.5 shadow-sm">
+          <Text className="text-[12px] font-black text-white">
             {symbol}
             {product.base_price}
           </Text>
         </View>
+      </AppPressable>
+
+      <View className="mt-2 px-1">
+        <Text
+          className="text-[14px] font-bold text-ink leading-tight"
+          numberOfLines={1}
+        >
+          {product.name}
+        </Text>
+        <Text className="text-[12px] font-medium text-gray-400 mt-0.5">
+          {product.stock_qty > 0 ? `Stock: ${product.stock_qty}` : 'Out of stock'}
+        </Text>
       </View>
-    </AppPressable>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: {
+  imageContainer: {
     width: '100%',
-    aspectRatio: 0.88,
-  },
-  imageWrap: {
-    ...StyleSheet.absoluteFillObject,
-    paddingBottom: 56,
-    paddingTop: 12,
-    paddingHorizontal: 12,
+    aspectRatio: 0.78,
   },
   productImage: {
     width: '100%',

@@ -91,27 +91,39 @@ export default function CategoryDetailScreen() {
           </View>
         ) : !category ? null : (
           <>
-            <View className="mx-4 mt-3 mb-4 rounded-3xl overflow-hidden border border-gray-200 h-40">
-              <Image
-                source={{ uri: category.image_url }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
+            <View className="mx-4 mt-3 mb-5 rounded-[24px] overflow-hidden bg-gray-100 h-40">
+              {category.image_url ? (
+                <Image
+                  source={{ uri: category.image_url }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="w-full h-full items-center justify-center">
+                  <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
+                    {category.name
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase() ?? '')
+                      .join('')}
+                  </Text>
+                </View>
+              )}
             </View>
 
-            <View className="mx-4 mb-4 flex-row gap-2.5">
+            <View className="mx-4 mb-5 flex-row gap-3">
               <AppPressable
-                containerClassName="flex-1 flex-row items-center justify-center gap-1.5 bg-brand-primary py-3 rounded-xl"
+                containerClassName="flex-1 flex-row items-center justify-center gap-1.5 bg-ink py-3.5 rounded-2xl"
                 onPress={() => openPicker('assign')}
               >
-                <FontAwesome name="plus" size={12} color={Colors.brand.onPrimary} />
-                <Text className="text-xs font-bold text-brand-on-primary">Add products</Text>
+                <FontAwesome name="plus" size={12} color="#FFFFFF" />
+                <Text className="text-sm font-bold text-white">Add products</Text>
               </AppPressable>
               <AppPressable
-                containerClassName="flex-1 items-center justify-center py-3 rounded-xl border-2 border-ink bg-surface"
+                containerClassName="flex-1 items-center justify-center py-3.5 rounded-2xl border border-ink bg-surface"
                 onPress={() => openPicker('edit')}
               >
-                <Text className="text-xs font-bold text-ink">Edit products</Text>
+                <Text className="text-sm font-bold text-ink">Edit products</Text>
               </AppPressable>
             </View>
 

@@ -3,6 +3,14 @@ import { AppPressable } from '@/components/ui/AppPressable'
 import { cn } from '@src/lib/cn'
 import type { Category } from '@src/types/category'
 
+function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
 type Props = {
   category: Category
   productCount?: number
@@ -15,35 +23,55 @@ export function CategoryCard({ category, productCount, onPress, selected }: Prop
   const label = count === 1 ? '1 Product' : `${count} Products`
 
   return (
-    <AppPressable
-      onPress={onPress}
-      containerClassName={cn(
-        'w-full rounded-3xl overflow-hidden relative border-2',
-        selected ? 'border-ink' : 'border-transparent'
-      )}
-      containerStyle={styles.card}
-    >
-      <Image
-        source={{ uri: category.image_url }}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      <View className="absolute inset-0 bg-black/10" />
-      <View className="absolute bottom-4 left-0 right-0 items-center px-3">
-        <View className="bg-white/95 rounded-full px-5 py-2.5 items-center min-w-[72%] border border-white/80">
-          <Text className="text-[15px] font-extrabold text-ink tracking-tight" numberOfLines={1}>
-            {category.name}
+    <View className="w-full">
+      <AppPressable
+        onPress={onPress}
+        containerClassName={cn(
+          'w-full rounded-[24px] overflow-hidden relative bg-gray-100 border-2',
+          selected ? 'border-ink' : 'border-transparent'
+        )}
+        containerStyle={styles.imageContainer}
+      >
+        {category.image_url ? (
+          <Image
+            source={{ uri: category.image_url }}
+            style={styles.categoryImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-full h-full items-center justify-center">
+            <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
+              {initials(category.name)}
+            </Text>
+          </View>
+        )}
+
+        <View className="absolute bottom-2.5 right-2.5 bg-black rounded-full px-3 py-1.5 shadow-sm">
+          <Text className="text-[12px] font-black text-white">
+            {label}
           </Text>
-          <Text className="text-[12px] font-medium text-gray-500 mt-0.5">{label}</Text>
         </View>
+      </AppPressable>
+
+      <View className="mt-2 px-1">
+        <Text
+          className="text-[14px] font-bold text-ink leading-tight"
+          numberOfLines={1}
+        >
+          {category.name}
+        </Text>
       </View>
-    </AppPressable>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
-  card: {
+  imageContainer: {
     width: '100%',
-    aspectRatio: 0.92,
+    aspectRatio: 0.78,
+  },
+  categoryImage: {
+    width: '100%',
+    height: '100%',
   },
 })

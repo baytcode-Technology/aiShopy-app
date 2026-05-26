@@ -4,10 +4,11 @@ export type Category = {
   parent_id: string | null
   name: string
   slug: string
-  image_url: string | null
+  image_url: string
   sort_order: number
   is_active: boolean
   created_at: string
+  product_count?: number
 }
 
 export type ListCategoriesResponse = {
@@ -24,6 +25,8 @@ export type CreateCategoryPayload = {
   store_id: string
   name: string
   slug: string
+  image_url: string
+  parent_id?: string
   sort_order?: number
   is_active?: boolean
 }

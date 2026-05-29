@@ -9,6 +9,7 @@ import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import { env } from '@src/config/env'
 import { shadows } from '@src/lib/shadows'
+import type { Href } from 'expo-router'
 
 export default function MoreScreen() {
   const { user, signOut } = useAuth()
@@ -44,6 +45,13 @@ export default function MoreScreen() {
             icon="globe"
           />
           <MenuRow label="Currency" value={store?.currency ?? 'INR'} icon="money" />
+          <MenuRow
+            label="WhatsApp"
+            value="Connect phone + inbox"
+            icon="whatsapp"
+            showChevron
+            onPress={() => router.push('/(store)/connect-whatsapp' as Href)}
+          />
         </View>
 
         <View className="pt-2">

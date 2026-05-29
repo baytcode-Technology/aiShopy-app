@@ -9,4 +9,5 @@ export const endpoints = {
   uploadProductImages: "/api/uploads/product-images",
   whatsappChats: "/api/whatsapp/chats",
   whatsappSend: "/api/whatsapp/send",
+  whatsappConnect: "/api/whatsapp/connect",
 } as const;

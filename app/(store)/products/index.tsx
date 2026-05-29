@@ -111,6 +111,7 @@ export default function ProductsScreen() {
   return (
     <Screen>
       <ScreenHeader
+        showLogo
         title="Catalog"
         subtitle={`${products.length} products · ${categories.length} categories`}
         right={

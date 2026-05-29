@@ -1,22 +1,24 @@
-import { Redirect } from 'expo-router'
-import { ActivityIndicator, View } from 'react-native'
-import { useAuth } from '@src/contexts/auth-context'
-import Colors from '@src/theme/colors'
+import { AppLogo } from "@/components/brand/AppLogo";
+import { useAuth } from "@src/contexts/auth-context";
+import Colors from "@src/theme/colors";
+import { Redirect } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
-  const { isLoading, isAuthenticated } = useAuth()
+  const { isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface">
+      <View className="flex-1 items-center justify-center bg-surface gap-6">
+        <AppLogo variant="wordmark" align="center" className="mb-6" />
         <ActivityIndicator size="large" color={Colors.brand.primary} />
       </View>
-    )
+    );
   }
 
   if (isAuthenticated) {
-    return <Redirect href="/store-check" />
+    return <Redirect href="/store-check" />;
   }
 
-  return <Redirect href="/(auth)/login" />
+  return <Redirect href="/(auth)/login" />;
 }

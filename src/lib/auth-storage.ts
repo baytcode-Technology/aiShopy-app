@@ -1,8 +1,8 @@
 import { Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 
-const ACCESS_TOKEN_KEY = 'katlogue_access_token'
-const REFRESH_TOKEN_KEY = 'katlogue_refresh_token'
+const ACCESS_TOKEN_KEY = 'aishopy_access_token'
+const REFRESH_TOKEN_KEY = 'aishopy_refresh_token'
 
 /** SecureStore is native-only; use localStorage on web. */
 const isWeb = Platform.OS === 'web'

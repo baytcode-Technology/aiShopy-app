@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Pressable, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { AppLogo } from '@/components/brand/AppLogo'
 import { cn } from '@src/lib/cn'
 import Colors from '@src/theme/colors'
 import { Heading, Subtitle } from './Typography'
@@ -12,13 +13,26 @@ type Props = {
   onBack?: () => void
   className?: string
   large?: boolean
+  /** Show AISHOPY logo above the title (main app screens). */
+  showLogo?: boolean
 }
 
-export function ScreenHeader({ title, subtitle, right, onBack, className, large = true }: Props) {
+export function ScreenHeader({
+  title,
+  subtitle,
+  right,
+  onBack,
+  className,
+  large = true,
+  showLogo = false,
+}: Props) {
   return (
     <View className={cn('px-5 pt-4 pb-3 bg-surface', className)}>
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 min-w-0 pr-2">
+          {showLogo && !onBack ? (
+            <AppLogo variant="wordmark" className="mb-3" />
+          ) : null}
           {onBack ? (
             <Pressable
               onPress={onBack}

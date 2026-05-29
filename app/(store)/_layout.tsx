@@ -1,5 +1,6 @@
 import { Redirect, Tabs } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
+import { AppLogo } from '@/components/brand/AppLogo'
 import { StoreTabBar } from '@/components/navigation/StoreTabBar'
 import { ChatSocketProvider } from '@src/contexts/chat-socket-context'
 import { useAuth } from '@src/contexts/auth-context'
@@ -12,7 +13,8 @@ export default function StoreLayout() {
 
   if (isLoading || storeLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-surface">
+      <View className="flex-1 items-center justify-center bg-surface gap-6">
+        <AppLogo variant="wordmark" align="center" className="mb-6" />
         <ActivityIndicator color={Colors.brand.primary} size="large" />
       </View>
     )

@@ -23,7 +23,7 @@ export default function MoreScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Account" subtitle="Store & profile" />
+      <ScreenHeader showLogo title="Account" subtitle="Store & profile" />
       <ScreenBody className="px-5 pt-2 gap-5">
         <View
           className="rounded-[28px] border border-gray-200 bg-surface p-6"

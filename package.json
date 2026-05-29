@@ -1,5 +1,5 @@
 {
-  "name": "aishopy-app",
+  "name": "aishopy",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {

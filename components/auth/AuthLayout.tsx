@@ -24,7 +24,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { DisplayBrand, Heading, Subtitle } from '@/components/ui/Typography'
+import { AppLogo } from '@/components/brand/AppLogo'
+import { Heading, Subtitle } from '@/components/ui/Typography'
 import { palette } from '@src/theme/palette'
 import { AuthKeyboardContext } from './auth-keyboard-context'
 
@@ -168,7 +169,7 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
             onLayout={onCardLayout}
             style={[animatedCardStyle, cardShadow, styles.card]}
           >
-            <DisplayBrand className="mb-8">Katlogue</DisplayBrand>
+            <AppLogo variant="wordmark" className="mb-8" />
             <Heading className="text-[30px] mb-2 tracking-tight">{title}</Heading>
             <Subtitle className="text-[15px] leading-[22px] text-gray-500 mb-7">
               {subtitle}

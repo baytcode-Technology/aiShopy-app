@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
 import { StoreTabBar } from '@/components/navigation/StoreTabBar'
+import { ChatSocketProvider } from '@src/contexts/chat-socket-context'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import Colors from '@src/theme/colors'
@@ -26,16 +27,18 @@ export default function StoreLayout() {
   }
 
   return (
-    <Tabs
-      tabBar={(props) => <StoreTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
-      <Tabs.Screen name="products" options={{ title: 'Catalog' }} />
-      <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
-      <Tabs.Screen name="more" options={{ title: 'Account' }} />
-    </Tabs>
+    <ChatSocketProvider>
+      <Tabs
+        tabBar={(props) => <StoreTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
+        <Tabs.Screen name="products" options={{ title: 'Catalog' }} />
+        <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
+        <Tabs.Screen name="more" options={{ title: 'Account' }} />
+      </Tabs>
+    </ChatSocketProvider>
   )
 }

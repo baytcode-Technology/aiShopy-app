@@ -1,3 +1,4 @@
+import type React from 'react'
 import { Pressable, View, type PressableProps, type ViewProps } from 'react-native'
 import { cn } from '@src/lib/cn'
 
@@ -26,6 +27,7 @@ export function Card({ className, padded = true, elevated = false, children, ...
 type PressableCardProps = Omit<PressableProps, 'style'> & {
   className?: string
   padded?: boolean
+  children?: React.ReactNode
 }
 
 export function PressableCard({

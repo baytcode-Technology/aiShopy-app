@@ -7,4 +7,6 @@ export const endpoints = {
   categories: "/api/categories",
   orders: "/api/orders",
   uploadProductImages: "/api/uploads/product-images",
+  whatsappChats: "/api/whatsapp/chats",
+  whatsappSend: "/api/whatsapp/send",
 } as const;

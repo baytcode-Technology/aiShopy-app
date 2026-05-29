@@ -1,3 +1,4 @@
+import type React from 'react'
 import { Pressable, View, type PressableProps } from 'react-native'
 import { cn } from '@src/lib/cn'
 
@@ -5,6 +6,7 @@ type Props = Omit<PressableProps, 'style'> & {
   className?: string
   size?: 'sm' | 'md' | 'lg'
   variant?: 'default' | 'filled' | 'ghost'
+  children?: React.ReactNode
 }
 
 export function IconButton({

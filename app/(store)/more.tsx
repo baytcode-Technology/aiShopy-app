@@ -46,11 +46,11 @@ export default function MoreScreen() {
           />
           <MenuRow label="Currency" value={store?.currency ?? 'INR'} icon="money" />
           <MenuRow
-            label="WhatsApp"
-            value="Connect phone + inbox"
-            icon="whatsapp"
+            label="Admin Dashboard"
+            value="WhatsApp · Instagram · Domain"
+            icon="cog"
             showChevron
-            onPress={() => router.push('/connect-whatsapp' as Href)}
+            onPress={() => router.push('/admin-dashboard' as Href)}
           />
         </View>
 

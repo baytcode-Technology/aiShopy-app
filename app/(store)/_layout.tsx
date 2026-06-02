@@ -40,7 +40,6 @@ export default function StoreLayout() {
         <Tabs.Screen name="products" options={{ title: 'Catalog' }} />
         <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
         <Tabs.Screen name="more" options={{ title: 'Account' }} />
-        <Tabs.Screen name="connect-whatsapp" options={{ href: null }} />
       </Tabs>
     </ChatSocketProvider>
   )

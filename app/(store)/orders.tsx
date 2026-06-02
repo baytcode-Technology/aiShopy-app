@@ -42,7 +42,7 @@ export default function OrdersScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Orders" subtitle="Manage customer orders & COD" />
+      <ScreenHeader showLogo variant="tab" title="Orders" subtitle="Manage customer orders & COD" />
       <ScreenBody className="flex-1 px-5">
         {loading ? (
           <OrdersSkeletonList />

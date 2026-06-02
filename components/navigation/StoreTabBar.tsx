@@ -20,6 +20,9 @@ const labels: Record<string, string> = {
   more: 'Account',
 }
 
+/** Only these routes appear in the bottom tab bar. */
+const VISIBLE_TAB_ROUTES = new Set(['chats', 'products', 'orders', 'more'])
+
 export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
   const bottom = Math.max(insets.bottom, 10)
@@ -30,8 +33,11 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
         className="flex-row items-center justify-between rounded-[26px] bg-surface px-2 py-2 border border-gray-200"
         style={shadows.card}
       >
-        {state.routes.map((route, index) => {
-          const focused = state.index === index
+        {state.routes
+          .filter((route) => VISIBLE_TAB_ROUTES.has(route.name))
+          .map((route) => {
+          const routeIndex = state.routes.findIndex((r) => r.key === route.key)
+          const focused = state.index === routeIndex
           const { options } = descriptors[route.key]
           const label =
             options.title !== undefined && options.title !== null
@@ -94,7 +100,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
               )}
             </Pressable>
           )
-        })}
+          })}
       </View>
     </View>
   )

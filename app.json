@@ -4,12 +4,12 @@
     "slug": "aishopy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/aishopy_logo.png",
+    "icon": "./assets/images/app_logo.jpg",
     "scheme": "aishopyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/aishopy_logo.png",
+      "image": "./assets/images/app_logo.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,7 +19,7 @@
     "android": {
       "package": "com.aishopy.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/aishopy_logo.png",
+        "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
@@ -32,7 +32,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/aishopy_logo.png"
+      "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
       "expo-router",

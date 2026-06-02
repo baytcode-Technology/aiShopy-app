@@ -149,7 +149,11 @@ export default function ConnectWhatsAppScreen() {
 
   return (
     <Screen>
-      <ScreenHeader title="Connect WhatsApp" subtitle={subtitle} />
+      <ScreenHeader
+        title="Connect WhatsApp"
+        subtitle={subtitle}
+        onBack={() => router.back()}
+      />
       <ScreenBody className="px-5 pt-10 gap-6">
         <View className="items-center justify-center gap-4">
           {phase !== 'connected' && phase !== 'error' ? (

@@ -23,7 +23,7 @@ export default function MoreScreen() {
 
   return (
     <Screen>
-      <ScreenHeader showLogo title="Account" subtitle="Store & profile" />
+      <ScreenHeader showLogo variant="tab" title="Account" subtitle="Store & profile" />
       <ScreenBody className="px-5 pt-2 gap-5">
         <View
           className="rounded-[28px] border border-gray-200 bg-surface p-6"
@@ -50,7 +50,7 @@ export default function MoreScreen() {
             value="Connect phone + inbox"
             icon="whatsapp"
             showChevron
-            onPress={() => router.push('/(store)/connect-whatsapp' as Href)}
+            onPress={() => router.push('/connect-whatsapp' as Href)}
           />
         </View>
 

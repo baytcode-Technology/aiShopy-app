@@ -15,7 +15,7 @@ const icons: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = 
 
 const labels: Record<string, string> = {
   chats: 'Chats',
-  products: 'Catalog',
+  products: 'Products',
   orders: 'Orders',
   more: 'Account',
 }

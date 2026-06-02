@@ -78,7 +78,7 @@ export default function ProductsScreen() {
     () => (
       <View className="pb-2">
         <SearchBar
-          placeholder="Search catalog…"
+          placeholder="Search products…"
           value={search}
           onChangeText={setSearch}
           className="mt-1 mb-3"
@@ -113,7 +113,7 @@ export default function ProductsScreen() {
       <ScreenHeader
         showLogo
         variant="tab"
-        title="Catalog"
+        title="Products"
         subtitle={`${products.length} products · ${categories.length} categories`}
         right={
           <AppPressable

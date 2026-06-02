@@ -37,7 +37,7 @@ export default function StoreLayout() {
         }}
       >
         <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
-        <Tabs.Screen name="products" options={{ title: 'Catalog' }} />
+        <Tabs.Screen name="products" options={{ title: 'Products' }} />
         <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
         <Tabs.Screen name="more" options={{ title: 'Account' }} />
       </Tabs>

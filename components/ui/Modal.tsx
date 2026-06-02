@@ -11,6 +11,8 @@ import {
 } from 'react-native'
 import { cn } from '@src/lib/cn'
 import { Heading, Subtitle } from './Typography'
+import type { ScrollView as RNScrollView } from 'react-native'
+import type { RefObject } from 'react'
 
 type Props = {
   isOpen: boolean
@@ -20,6 +22,11 @@ type Props = {
   children: ReactNode
   footer?: ReactNode
   scrollClassName?: string
+  /**
+   * Optional ref to the internal ScrollView so forms can auto-scroll to
+   * validation errors.
+   */
+  scrollViewRef?: RefObject<RNScrollView>
 }
 
 export function SleekModal({
@@ -30,6 +37,7 @@ export function SleekModal({
   children,
   footer,
   scrollClassName,
+  scrollViewRef,
 }: Props) {
   return (
     <RNModal visible={isOpen} animationType="slide" transparent onRequestClose={onClose}>
@@ -59,6 +67,7 @@ export function SleekModal({
               </Pressable>
             </View>
             <ScrollView
+              ref={scrollViewRef as any}
               className={cn('max-h-[560px]', scrollClassName)}
               contentContainerClassName="px-6 py-5 gap-5"
               keyboardShouldPersistTaps="handled"

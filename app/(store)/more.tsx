@@ -1,10 +1,10 @@
-import { ScrollView, Text, View } from 'react-native'
+import { Alert, ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { Button } from '@/components/ui/Button'
 import { MenuRow } from '@/components/ui/MenuRow'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { Heading, Muted } from '@/components/ui/Typography'
+import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import { env } from '@src/config/env'
@@ -19,6 +19,10 @@ export default function MoreScreen() {
     await clearStore()
     await signOut()
     router.replace('/(auth)/login')
+  }
+
+  const handleComingSoon = (feature: string) => {
+    Alert.alert('Coming soon', `${feature} will be available soon.`)
   }
 
   return (
@@ -95,10 +99,51 @@ export default function MoreScreen() {
             showChevron
             onPress={() => router.push('/admin-dashboard' as Href)}
           />
+
+          <View className="mt-2 gap-3">
+            <Caption className="text-[11px] text-gray-400 uppercase tracking-[0.2em]">
+              Support
+            </Caption>
+
+            <MenuRow
+              label="Send feedback"
+              value=""
+              icon="comment-o"
+              showChevron
+              onPress={() => handleComingSoon('Send feedback')}
+            />
+            <MenuRow
+              label="Help center"
+              value=""
+              icon="question-circle-o"
+              showChevron
+              onPress={() => handleComingSoon('Help center')}
+            />
+            <MenuRow
+              label="Privacy policy"
+              value=""
+              icon="lock"
+              showChevron
+              onPress={() => handleComingSoon('Privacy policy')}
+            />
+            <MenuRow
+              label="Terms"
+              value=""
+              icon="file-text-o"
+              showChevron
+              onPress={() => handleComingSoon('Terms')}
+            />
+          </View>
         </View>
 
           <View className="pt-2">
-            <Button label="Sign out" variant="outline" onPress={handleSignOut} />
+            <Button
+              label="Sign out"
+              variant="primary"
+              onPress={handleSignOut}
+              className="bg-[#E11D48] border-[#E11D48]"
+              labelClassName="text-white"
+            />
           </View>
         </ScrollView>
       </ScreenBody>

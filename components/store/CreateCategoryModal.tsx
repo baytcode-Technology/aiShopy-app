@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Switch, Text, View } from 'react-native'
+import { useRef, useState } from 'react'
+import { LayoutChangeEvent, ScrollView, Switch, Text, View } from 'react-native'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label, Muted } from '@/components/ui/Typography'
@@ -43,7 +43,22 @@ export function CreateCategoryModal({
   const [isActive, setIsActive] = useState(true)
   const [image, setImage] = useState<PickedImage | null>(null)
   const [imageError, setImageError] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [slugError, setSlugError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const scrollViewRef = useRef<ScrollView>(null)
+  const fieldY = useRef<Record<string, number | undefined>>({})
+
+  const registerFieldY = (key: string) => (e: LayoutChangeEvent) => {
+    fieldY.current[key] = e.nativeEvent.layout.y
+  }
+
+  const scrollToField = (key: string) => {
+    const y = fieldY.current[key]
+    if (typeof y !== 'number') return
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true })
+  }
 
   const onNameChange = (value: string) => {
     setName(value)
@@ -60,6 +75,8 @@ export function CreateCategoryModal({
     setIsActive(true)
     setImage(null)
     setImageError('')
+    setNameError('')
+    setSlugError('')
   }
 
   const handleClose = () => {
@@ -72,15 +89,20 @@ export function CreateCategoryModal({
     const trimmedSlug = slug.trim().toLowerCase()
 
     if (!trimmedName) {
-      showError('Category name is required')
+      setNameError('This field is required')
+      setSlugError('')
+      scrollToField('name')
       return
     }
     if (!trimmedSlug) {
-      showError('Category slug is required')
+      setSlugError('This field is required')
+      setNameError('')
+      scrollToField('slug')
       return
     }
     if (!image) {
       setImageError('Category image is required')
+      scrollToField('image')
       return
     }
     setLoading(true)
@@ -113,21 +135,26 @@ export function CreateCategoryModal({
       visible={visible}
       title="New category"
       onClose={handleClose}
+      scrollViewRef={scrollViewRef}
       footer={<Button label="Create category" loading={loading} onPress={handleSubmit} />}
     >
-      <CategoryImagePicker
-        image={image}
-        onChange={(next) => {
-          setImage(next)
-          if (next) setImageError('')
-        }}
-        error={imageError}
-      />
+      <View onLayout={registerFieldY('image')}>
+        <CategoryImagePicker
+          image={image}
+          onChange={(next) => {
+            setImage(next)
+            if (next) setImageError('')
+          }}
+          error={imageError}
+        />
+      </View>
       <Input
         label="Category name *"
         value={name}
         onChangeText={onNameChange}
         placeholder="Electronics"
+        error={nameError || undefined}
+        containerOnLayout={registerFieldY('name')}
       />
       <Input
         label="Slug *"
@@ -138,6 +165,8 @@ export function CreateCategoryModal({
         }}
         placeholder="electronics"
         autoCapitalize="none"
+        error={slugError || undefined}
+        containerOnLayout={registerFieldY('slug')}
       />
       <CategoryPicker
         label="Parent category"

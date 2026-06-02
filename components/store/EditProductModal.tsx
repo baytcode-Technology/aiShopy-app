@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionTitle } from '@/components/ui/Typography'
@@ -20,6 +20,7 @@ import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
 import type { Product, ProductVariant } from '@src/types/product'
+import type { LayoutChangeEvent, ScrollView } from 'react-native'
 
 function isNewVariantId(id: string): boolean {
   return id.startsWith('gen-')
@@ -54,6 +55,23 @@ export function EditProductModal({
   const [newVariants, setNewVariants] = useState<GeneratedVariant[]>([])
   const [loading, setLoading] = useState(false)
 
+  const [nameError, setNameError] = useState('')
+  const [priceError, setPriceError] = useState('')
+  const [stockError, setStockError] = useState('')
+
+  const scrollViewRef = useRef<ScrollView>(null)
+  const fieldY = useRef<Record<string, number | undefined>>({})
+
+  const registerFieldY = (key: string) => (e: LayoutChangeEvent) => {
+    fieldY.current[key] = e.nativeEvent.layout.y
+  }
+
+  const scrollToField = (key: string) => {
+    const y = fieldY.current[key]
+    if (typeof y !== 'number') return
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true })
+  }
+
   useEffect(() => {
     if (!product || !visible) return
     setName(product.name)
@@ -66,6 +84,9 @@ export function EditProductModal({
     setExistingVariants(variantsToEditable(initialVariants))
     setVariantOptions([])
     setNewVariants([])
+    setNameError('')
+    setPriceError('')
+    setStockError('')
   }, [product, visible, initialVariants])
 
   const handleClose = () => {
@@ -79,13 +100,31 @@ export function EditProductModal({
     const stock = Number(stockQty)
 
     if (!trimmedName) {
-      showError('Product name is required')
+      setNameError('This field is required')
+      setPriceError('')
+      setStockError('')
+      scrollToField('name')
       return
     }
     if (!Number.isFinite(price) || price < 0) {
-      showError('Enter a valid price')
+      setPriceError(basePrice.trim() ? 'Not a valid number' : 'This field is required')
+      setNameError('')
+      setStockError('')
+      scrollToField('basePrice')
       return
     }
+
+    if (showProductStock && (!Number.isFinite(stock) || stock < 0)) {
+      setStockError(stockQty.trim() ? 'Not a valid number' : 'This field is required')
+      setNameError('')
+      setPriceError('')
+      scrollToField('stockQty')
+      return
+    }
+
+    setNameError('')
+    setPriceError('')
+    setStockError('')
 
     for (const v of existingVariants) {
       if (!v.name.trim()) {
@@ -155,14 +194,23 @@ export function EditProductModal({
       visible={visible}
       title="Edit product"
       onClose={handleClose}
+      scrollViewRef={scrollViewRef}
       footer={<Button label="Save changes" loading={loading} onPress={handleSubmit} />}
     >
-      <Input label="Product name *" value={name} onChangeText={setName} />
+      <Input
+        label="Product name *"
+        value={name}
+        onChangeText={setName}
+        error={nameError || undefined}
+        containerOnLayout={registerFieldY('name')}
+      />
       <Input
         label="Base price *"
         value={basePrice}
         onChangeText={setBasePrice}
         keyboardType="decimal-pad"
+        error={priceError || undefined}
+        containerOnLayout={registerFieldY('basePrice')}
       />
       {showProductStock ? (
         <Input
@@ -170,6 +218,8 @@ export function EditProductModal({
           value={stockQty}
           onChangeText={setStockQty}
           keyboardType="number-pad"
+          error={stockError || undefined}
+          containerOnLayout={registerFieldY('stockQty')}
         />
       ) : null}
       <Input label="SKU" value={sku} onChangeText={setSku} autoCapitalize="none" />

@@ -10,4 +10,6 @@ export const endpoints = {
   whatsappChats: "/api/whatsapp/chats",
   whatsappSend: "/api/whatsapp/send",
   whatsappConnect: "/api/whatsapp/connect",
+  whatsappConnectionStatus: "/api/whatsapp/connection-status",
+  whatsappSync: "/api/whatsapp/sync",
 } as const;

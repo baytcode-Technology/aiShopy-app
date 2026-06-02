@@ -32,6 +32,20 @@ function initialsFromPhone(phone: string) {
   return (last2 || 'WA').toUpperCase()
 }
 
+function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
+  const seen = new Set<string>()
+  const out: ChatMessage[] = []
+
+  for (const m of list) {
+    const key = m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(m)
+  }
+
+  return out
+}
+
 export default function ChatDetailScreen() {
   const { store } = useStore()
   const { onMessageNew, onMessageStatus } = useChatSocket()
@@ -72,8 +86,18 @@ export default function ChatDetailScreen() {
     const unsubNew = onMessageNew((payload) => {
       if (payload.conversationId !== conversationId) return
       setMessages((prev) => {
-        if (prev.some((m) => m.id === payload.message.id)) return prev
-        return [...prev, mapSocketMessageToChatMessage(payload.message)]
+        const incoming = mapSocketMessageToChatMessage(payload.message)
+        // Dedupe against optimistic + API-response messages
+        if (
+          prev.some(
+            (m) =>
+              m.id === incoming.id ||
+              (incoming.metaMessageId && m.metaMessageId === incoming.metaMessageId)
+          )
+        ) {
+          return prev
+        }
+        return dedupeByIdAndMeta([...prev, incoming])
       })
     })
 
@@ -129,16 +153,18 @@ export default function ChatDetailScreen() {
       })
 
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === tempId
-            ? { ...mapApiMessageToChatMessage(res.data.message), pending: false }
-            : m
+        dedupeByIdAndMeta(
+          prev.map((m) =>
+            m.id === tempId
+              ? { ...mapApiMessageToChatMessage(res.data.message), pending: false }
+              : m
+          )
         )
       )
     } catch (e: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId))
       setDraft(text)
-      showError('Failed to send', e instanceof Error ? e.message : 'Unknown error')
+      showError(e, 'Failed to send')
     } finally {
       setIsSending(false)
     }

@@ -17,13 +17,17 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.aishopy.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/aishopy_logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +46,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "005f6373-309d-4dfa-bf83-aac91cb2205b"
+      }
+    },
+    "owner": "muhammed_nuaim"
   }
 }

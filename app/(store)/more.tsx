@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 import { router } from 'expo-router'
 import { Button } from '@/components/ui/Button'
 import { MenuRow } from '@/components/ui/MenuRow'
@@ -24,27 +24,70 @@ export default function MoreScreen() {
   return (
     <Screen>
       <ScreenHeader showLogo variant="tab" title="Account" subtitle="Store & profile" />
-      <ScreenBody className="px-5 pt-2 gap-5">
-        <View
-          className="rounded-[28px] border border-gray-200 bg-surface p-6"
-          style={shadows.card}
-        >
-          <View className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center mb-5">
-            <Text className="text-xl font-extrabold text-ink">
-              {store?.name?.slice(0, 1).toUpperCase() ?? 'S'}
-            </Text>
+      <ScreenBody className="flex-1">
+        <View className="px-5 pt-2 pb-4">
+          <View
+            className="rounded-[28px] border border-gray-200 bg-surface p-6"
+            style={shadows.card}
+          >
+            <View className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center mb-5">
+              <Text className="text-xl font-extrabold text-ink">
+                {store?.name?.slice(0, 1).toUpperCase() ?? 'S'}
+              </Text>
+            </View>
+            <Heading className="text-2xl tracking-tight">{store?.name ?? 'Your store'}</Heading>
+            <Muted className="mt-2 text-[15px]">{user?.email ?? ''}</Muted>
           </View>
-          <Heading className="text-2xl tracking-tight">{store?.name ?? 'Your store'}</Heading>
-          <Muted className="mt-2 text-[15px]">{user?.email ?? ''}</Muted>
         </View>
 
-        <View className="gap-3">
+        <ScrollView
+          className="flex-1"
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="px-5 pb-32 gap-3"
+        >
+          <View className="gap-3">
           <MenuRow
             label="Storefront"
             value={`${store?.slug}.${env.storefrontBaseDomain}`}
             icon="globe"
           />
           <MenuRow label="Currency" value={store?.currency ?? 'INR'} icon="money" />
+          <MenuRow
+            label="Payment methods"
+            value="COD, cards & more"
+            icon="credit-card"
+            showChevron
+            onPress={() =>
+              router.push({ pathname: '/account-coming-soon', params: { id: 'payment-methods' } })
+            }
+          />
+          <MenuRow
+            label="Notifications"
+            value="Orders, chats & alerts"
+            icon="bell"
+            showChevron
+            onPress={() =>
+              router.push({ pathname: '/account-coming-soon', params: { id: 'notifications' } })
+            }
+          />
+          <MenuRow
+            label="Printer"
+            value="Receipts & labels"
+            icon="print"
+            showChevron
+            onPress={() =>
+              router.push({ pathname: '/account-coming-soon', params: { id: 'printer' } })
+            }
+          />
+          <MenuRow
+            label="Subscription"
+            value="Plan & billing"
+            icon="calendar"
+            showChevron
+            onPress={() =>
+              router.push({ pathname: '/account-coming-soon', params: { id: 'subscription' } })
+            }
+          />
           <MenuRow
             label="Admin Dashboard"
             value="WhatsApp · Instagram · Domain"
@@ -54,9 +97,10 @@ export default function MoreScreen() {
           />
         </View>
 
-        <View className="pt-2">
-          <Button label="Sign out" variant="outline" onPress={handleSignOut} />
-        </View>
+          <View className="pt-2">
+            <Button label="Sign out" variant="outline" onPress={handleSignOut} />
+          </View>
+        </ScrollView>
       </ScreenBody>
     </Screen>
   )

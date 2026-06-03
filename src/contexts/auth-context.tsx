@@ -7,25 +7,50 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { sendSignInOtp, verifyOtp as verifyOtpApi } from '@src/api/auth'
+import {
+  sendSignInOtp,
+  signInWithGoogle as signInWithGoogleApi,
+  signInWithGoogleAuthCode as signInWithGoogleAuthCodeApi,
+  verifyOtp as verifyOtpApi,
+} from '@src/api/auth'
 import { getAccessToken, saveTokens, clearTokens } from '@src/lib/auth-storage'
+import { clearNativeGoogleSignInSession } from '@src/lib/google-native-session'
 import type { AuthUser } from '@src/types/auth'
 
 type AuthContextValue = {
   isLoading: boolean
   isAuthenticated: boolean
   user: AuthUser | null
+  googleAuthInProgress: boolean
+  setGoogleAuthInProgress: (value: boolean) => void
   sendOtp: (email: string) => Promise<void>
   verifyOtp: (email: string, otp: string) => Promise<void>
+  signInWithGoogle: (idToken: string) => Promise<void>
+  signInWithGoogleAuthCode: (input: {
+    code: string
+    redirectUri: string
+    codeVerifier: string
+  }) => Promise<void>
   signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+async function applyAuthSession(
+  data: { user: AuthUser; session: { accessToken: string; refreshToken: string } },
+  setUser: (user: AuthUser) => void,
+  setIsAuthenticated: (value: boolean) => void
+) {
+  await saveTokens(data.session.accessToken, data.session.refreshToken)
+  setUser(data.user)
+  setIsAuthenticated(true)
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [googleAuthInProgress, setGoogleAuthInProgress] = useState(false)
 
   useEffect(() => {
     getAccessToken()
@@ -41,12 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyOtp = useCallback(async (email: string, otp: string) => {
     const res = await verifyOtpApi(email, otp)
-    await saveTokens(res.data.session.accessToken, res.data.session.refreshToken)
-    setUser(res.data.user)
-    setIsAuthenticated(true)
+    await applyAuthSession(res.data, setUser, setIsAuthenticated)
   }, [])
 
+  const signInWithGoogle = useCallback(async (idToken: string) => {
+    const res = await signInWithGoogleApi(idToken)
+    await applyAuthSession(res.data, setUser, setIsAuthenticated)
+  }, [])
+
+  const signInWithGoogleAuthCode = useCallback(
+    async (input: { code: string; redirectUri: string; codeVerifier: string }) => {
+      const res = await signInWithGoogleAuthCodeApi(input)
+      await applyAuthSession(res.data, setUser, setIsAuthenticated)
+    },
+    []
+  )
+
   const signOut = useCallback(async () => {
+    setGoogleAuthInProgress(false)
+    await clearNativeGoogleSignInSession()
     await clearTokens()
     setUser(null)
     setIsAuthenticated(false)
@@ -57,11 +95,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated,
       user,
+      googleAuthInProgress,
+      setGoogleAuthInProgress,
       sendOtp,
       verifyOtp,
+      signInWithGoogle,
+      signInWithGoogleAuthCode,
       signOut,
     }),
-    [isLoading, isAuthenticated, user, sendOtp, verifyOtp, signOut]
+    [
+      isLoading,
+      isAuthenticated,
+      user,
+      googleAuthInProgress,
+      sendOtp,
+      verifyOtp,
+      signInWithGoogle,
+      signInWithGoogleAuthCode,
+      signOut,
+    ]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

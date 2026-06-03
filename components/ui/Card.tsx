@@ -1,17 +1,20 @@
+import type React from 'react'
 import { Pressable, View, type PressableProps, type ViewProps } from 'react-native'
 import { cn } from '@src/lib/cn'
 
 type CardProps = ViewProps & {
   className?: string
   padded?: boolean
+  elevated?: boolean
 }
 
-export function Card({ className, padded = true, children, ...props }: CardProps) {
+export function Card({ className, padded = true, elevated = false, children, ...props }: CardProps) {
   return (
     <View
       className={cn(
-        'bg-surface border border-gray-200 rounded-2xl shadow-sm shadow-ink/5',
-        padded && 'p-3.5',
+        'bg-surface border border-gray-200 rounded-3xl',
+        elevated && 'border-gray-300',
+        padded && 'p-4',
         className
       )}
       {...props}
@@ -24,6 +27,7 @@ export function Card({ className, padded = true, children, ...props }: CardProps
 type PressableCardProps = Omit<PressableProps, 'style'> & {
   className?: string
   padded?: boolean
+  children?: React.ReactNode
 }
 
 export function PressableCard({
@@ -33,15 +37,19 @@ export function PressableCard({
   ...props
 }: PressableCardProps) {
   return (
-    <Pressable
-      className={cn(
-        'bg-surface border border-gray-200 rounded-2xl shadow-sm shadow-ink/5 active:opacity-90',
-        padded && 'p-3.5',
-        className
+    <Pressable {...props}>
+      {({ pressed }) => (
+        <View
+          className={cn(
+            'bg-surface border border-gray-200 rounded-3xl',
+            padded && 'p-4',
+            pressed && 'opacity-90 border-gray-300',
+            className
+          )}
+        >
+          {children}
+        </View>
       )}
-      {...props}
-    >
-      {children}
     </Pressable>
   )
 }

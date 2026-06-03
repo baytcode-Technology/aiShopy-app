@@ -1,23 +1,27 @@
-# Theming (aiShopy)
+# Theming & UI (aiShopy)
 
-## Change colors app-wide
+## Colors
 
-1. Edit **`src/theme/palette.cjs`** — raw hex values (ink, surface, grays, success, danger, etc.).
-2. Tailwind classes (`text-ink`, `bg-surface`, `border-gray-200`, …) pick up automatically via `tailwind.config.js`.
-3. Semantic tokens in **`src/theme/colors.ts`** (`Colors.text.primary`, `Colors.brand.primary`, …) are used for icons, spinners, and navigation `contentStyle` where `className` is not available.
+Edit **`src/theme/palette.ts`** (+ sync **`palette.cjs`**). Monochrome palette: ink, charcoal, grays, white.
 
-Example: swap black/white for gray/cream by changing `ink` and `surface` in `palette.cjs` only.
+Tailwind: `bg-brand-primary`, `text-ink`, `bg-gray-100`, `bg-ink-overlay`, etc.
 
-## UI components
+## NativeWind
 
-Use `@/components/ui`:
+Use **`className`** on layout and text. Reusable pieces live in **`@/components/ui`**.
 
-- `Button`, `Input`, `SleekModal`, `Card`, `Badge`, `IconButton`
-- `Heading`, `Subtitle`, `SectionTitle`, `Label`, `Muted`, `Caption`
+## Pressables
 
-Prefer Tailwind `className` on layout; use `Colors` only when a prop requires a color string (e.g. `FontAwesome` `color`).
+Never put `shadow-*`, `opacity-*`, or conditional `className` on **`Pressable`**. Use **`Button`**, **`AppPressable`**, or an inner **`View`** with classes.
 
-## Legacy
+## Motion
 
-- `theme` export in `colors.ts` is deprecated but kept for any remaining imports.
-- `constants/Colors.ts` re-exports the same module.
+Use **`AnimatedFadeIn`** (`react-native-reanimated`) for subtle entrance animations — Framer Motion is web-only.
+
+## Screens
+
+- **`Screen`** — gray shell background  
+- **`ScreenHeader`** — white header bar + title  
+- **`SearchBar`** / **`SearchField`** (alias), **`EmptyState`**, **`MenuRow`**, **`Chip`**, **`Fab`**, **`SectionHeader`**, **`Skeleton`**, **`PressableScale`**, **`StickyBottomBar`**
+
+Chat UI is intentionally unchanged.

@@ -21,3 +21,27 @@ export async function verifyOtp(
     }),
   })
 }
+
+export async function signInWithGoogle(
+  idToken: string
+): Promise<ApiResponse<VerifyOtpData>> {
+  return apiFetch<ApiResponse<VerifyOtpData>>(endpoints.authGoogle, {
+    method: 'POST',
+    body: JSON.stringify({ idToken: idToken.trim() }),
+  })
+}
+
+export async function signInWithGoogleAuthCode(input: {
+  code: string
+  redirectUri: string
+  codeVerifier: string
+}): Promise<ApiResponse<VerifyOtpData>> {
+  return apiFetch<ApiResponse<VerifyOtpData>>(endpoints.authGoogleCode, {
+    method: 'POST',
+    body: JSON.stringify({
+      code: input.code.trim(),
+      redirectUri: input.redirectUri.trim(),
+      codeVerifier: input.codeVerifier.trim(),
+    }),
+  })
+}

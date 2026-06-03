@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native'
 import { Caption } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
-import type { ChatMessage } from '@src/data/dummy-chats'
+import type { ChatMessage } from '@src/types/chat'
 
 type Props = {
   message: ChatMessage
@@ -32,6 +32,8 @@ export function MessageBubble({ message }: Props) {
         </Text>
         <Caption className={cn('self-end', outgoing ? 'text-gray-400' : 'text-gray-400')}>
           {message.time}
+          {outgoing && message.status ? ` · ${message.status}` : ''}
+          {message.pending ? ' · sending…' : ''}
         </Caption>
       </View>
     </View>

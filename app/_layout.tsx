@@ -7,6 +7,7 @@ import { useEffect } from 'react'
 import '../global.css'
 import 'react-native-reanimated'
 
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import { AuthProvider } from '@src/contexts/auth-context'
 import { StoreProvider } from '@src/contexts/store-context'
@@ -50,6 +51,7 @@ export default function RootLayout() {
   }
 
   return (
+    <SafeAreaProvider>
     <AuthProvider>
       <StoreProvider>
         <ThemeProvider value={AppTheme}>
@@ -59,6 +61,10 @@ export default function RootLayout() {
             <Stack.Screen name="store-check" />
             <Stack.Screen name="create-store" />
             <Stack.Screen name="(store)" />
+            <Stack.Screen name="connect-whatsapp" />
+            <Stack.Screen name="admin-dashboard" />
+            <Stack.Screen name="instagram-connect" />
+            <Stack.Screen name="account-coming-soon" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
@@ -66,5 +72,6 @@ export default function RootLayout() {
         </ThemeProvider>
       </StoreProvider>
     </AuthProvider>
+    </SafeAreaProvider>
   )
 }

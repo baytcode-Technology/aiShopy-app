@@ -1,17 +1,18 @@
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
+import { AppPressable } from '@/components/ui/AppPressable'
 import { Badge } from '@/components/ui/Badge'
 import { Caption, Muted } from '@/components/ui/Typography'
-import type { Conversation } from '@src/data/dummy-chats'
+import type { ChatListItem } from '@src/types/chat'
 
 type Props = {
-  conversation: Conversation
+  conversation: ChatListItem
   onPress: () => void
 }
 
 export function ConversationRow({ conversation, onPress }: Props) {
   return (
-    <Pressable
-      className="flex-row items-center px-4 py-3.5 gap-3 bg-surface border-b border-gray-200 active:opacity-90"
+    <AppPressable
+      containerClassName="flex-row items-center px-4 py-3.5 gap-3 bg-surface border-b border-gray-200"
       onPress={onPress}
     >
       <View className="relative">
@@ -25,19 +26,19 @@ export function ConversationRow({ conversation, onPress }: Props) {
       <View className="flex-1 gap-1">
         <View className="flex-row justify-between items-center">
           <Text className="flex-1 text-base font-bold text-ink mr-2" numberOfLines={1}>
-            {conversation.name}
+            {conversation.title}
           </Text>
           <Caption>{conversation.time}</Caption>
         </View>
         <View className="flex-row items-center gap-2">
           <Muted className="flex-1" numberOfLines={1}>
-            {conversation.lastMessage}
+            {conversation.subtitle}
           </Muted>
           {conversation.unread > 0 ? (
             <Badge label={String(conversation.unread)} tone="active" className="min-w-[22px]" />
           ) : null}
         </View>
       </View>
-    </Pressable>
+    </AppPressable>
   )
 }

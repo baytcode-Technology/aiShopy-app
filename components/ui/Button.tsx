@@ -2,8 +2,10 @@ import {
   ActivityIndicator,
   Pressable,
   Text,
+  View,
   type PressableProps,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native'
 import { cn } from '@src/lib/cn'
@@ -19,29 +21,21 @@ type Props = Omit<PressableProps, 'style'> & {
   className?: string
   labelClassName?: string
   style?: StyleProp<ViewStyle>
+  labelStyle?: StyleProp<TextStyle>
 }
 
-const variantClasses: Record<Variant, { container: string; label: string; spinner: string }> = {
-  primary: {
-    container: 'bg-brand-primary shadow-lg shadow-ink/20',
-    label: 'text-brand-on-primary',
-    spinner: Colors.brand.onPrimary,
-  },
-  outline: {
-    container: 'bg-surface border-2 border-ink',
-    label: 'text-ink',
-    spinner: Colors.brand.primary,
-  },
-  ghost: {
-    container: 'bg-transparent',
-    label: 'text-gray-400 uppercase tracking-widest text-sm',
-    spinner: Colors.text.muted,
-  },
-  danger: {
-    container: 'bg-danger',
-    label: 'text-brand-on-primary',
-    spinner: Colors.brand.onPrimary,
-  },
+const containerClass: Record<Variant, string> = {
+  primary: 'bg-brand-primary border-2 border-brand-primary',
+  outline: 'bg-surface border-2 border-ink',
+  ghost: 'bg-transparent border-0',
+  danger: 'bg-charcoal border-2 border-charcoal',
+}
+
+const labelClass: Record<Variant, string> = {
+  primary: 'text-brand-on-primary',
+  outline: 'text-ink',
+  ghost: 'text-gray-500 uppercase tracking-[0.14em] text-xs',
+  danger: 'text-brand-on-primary',
 }
 
 export function Button({
@@ -52,38 +46,51 @@ export function Button({
   disabled,
   className,
   labelClassName,
+  labelStyle,
   style,
   ...props
 }: Props) {
-  const v = variantClasses[variant]
   const isDisabled = disabled || loading
+  const spinnerColor =
+    variant === 'outline' || variant === 'ghost'
+      ? Colors.brand.primary
+      : Colors.brand.onPrimary
 
   return (
     <Pressable
-      className={cn(
-        'w-full items-center justify-center rounded-2xl',
-        size === 'lg' ? 'py-5 min-h-[58px]' : 'py-4 min-h-[54px]',
-        v.container,
-        isDisabled && 'opacity-50 shadow-none',
-        className
-      )}
-      style={style}
+      style={[{ width: '100%', alignSelf: 'stretch' }, style]}
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       {...props}
     >
-      {loading ? (
-        <ActivityIndicator color={v.spinner} />
-      ) : (
-        <Text
+      {({ pressed }) => (
+        <View
           className={cn(
-            'font-bold text-[15px] tracking-wide',
-            size === 'lg' && 'text-lg',
-            v.label,
-            labelClassName
+            'w-full items-center justify-center rounded-2xl',
+            size === 'lg' ? 'py-[18px] min-h-[56px] px-6' : 'py-4 min-h-[52px] px-5',
+            containerClass[variant],
+            isDisabled && 'opacity-45',
+            pressed && !isDisabled && 'opacity-90',
+            className
           )}
         >
-          {label}
-        </Text>
+          {loading ? (
+            <ActivityIndicator color={spinnerColor} />
+          ) : (
+            <Text
+              className={cn(
+                'font-bold text-[15px] tracking-wide',
+                size === 'lg' && 'text-base',
+                labelClass[variant],
+                labelClassName
+              )}
+              style={labelStyle}
+            >
+              {label}
+            </Text>
+          )}
+        </View>
       )}
     </Pressable>
   )

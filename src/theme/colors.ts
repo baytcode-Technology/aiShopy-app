@@ -1,9 +1,5 @@
-import palette from './palette.cjs'
+import { palette } from './palette'
 
-/**
- * Semantic color tokens — use these in components (icons, ActivityIndicator, etc.).
- * For layout/spacing, prefer Tailwind classes mapped in tailwind.config.js.
- */
 export const Colors = {
   brand: {
     primary: palette.ink,
@@ -14,13 +10,14 @@ export const Colors = {
     secondary: palette.gray600,
     muted: palette.gray400,
     inverse: palette.surface,
-    danger: palette.danger,
-    success: palette.success,
-    warning: palette.warning,
+    danger: palette.ink,
+    success: palette.ink,
+    warning: palette.gray600,
   },
   bg: {
     primary: palette.surface,
     secondary: palette.gray100,
+    muted: palette.gray50,
     inverse: palette.ink,
     success: palette.successBg,
     danger: palette.dangerBg,
@@ -29,7 +26,7 @@ export const Colors = {
   border: {
     default: palette.gray200,
     strong: palette.ink,
-    danger: palette.danger,
+    danger: palette.gray300,
     success: palette.successBorder,
   },
   status: {
@@ -40,7 +37,6 @@ export const Colors = {
   overlay: palette.overlay,
 } as const
 
-/** @deprecated Use Colors or Tailwind classes. Kept for gradual migration. */
 export const theme = {
   black: palette.ink,
   white: palette.surface,

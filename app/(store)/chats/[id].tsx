@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -14,18 +14,111 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { MessageBubble } from '@/components/chat/MessageBubble'
 import { IconButton } from '@/components/ui/IconButton'
 import { LinkText, Muted } from '@/components/ui/Typography'
-import { DUMMY_MESSAGES, getConversation } from '@src/data/dummy-chats'
 import Colors from '@src/theme/colors'
+import type { ChatMessage } from '@src/types/chat'
+import {
+  fetchChatMessages,
+  mapApiMessageToChatMessage,
+  mapSocketMessageToChatMessage,
+  sendChatMessage,
+} from '@src/api/chats'
+import { useChatSocket } from '@src/contexts/chat-socket-context'
+import { useStore } from '@src/contexts/store-context'
+import { showError } from '@src/lib/toast'
+
+function initialsFromPhone(phone: string) {
+  const digits = phone.replace(/\D/g, '')
+  const last2 = digits.slice(-2)
+  return (last2 || 'WA').toUpperCase()
+}
+
+function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
+  const seen = new Set<string>()
+  const out: ChatMessage[] = []
+
+  for (const m of list) {
+    const key = m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(m)
+  }
+
+  return out
+}
 
 export default function ChatDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const conversation = getConversation(typeof id === 'string' ? id : '')
+  const { store } = useStore()
+  const { onMessageNew, onMessageStatus } = useChatSocket()
+  const { id, phone } = useLocalSearchParams<{ id: string; phone?: string }>()
   const [draft, setDraft] = useState('')
-  const [messages, setMessages] = useState(
-    () => DUMMY_MESSAGES[typeof id === 'string' ? id : ''] ?? []
-  )
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
 
-  if (!conversation) {
+  const conversationId = typeof id === 'string' ? id : ''
+  const customerPhone = typeof phone === 'string' ? phone : ''
+  const title = useMemo(() => customerPhone || 'Chat', [customerPhone])
+
+  const loadMessages = useCallback(async () => {
+    if (!store?.id || !conversationId) return
+    setIsLoading(true)
+    try {
+      const res = await fetchChatMessages({ storeId: store.id, conversationId, limit: 50 })
+      const mapped = res.data.messages
+        .slice()
+        .reverse()
+        .map((m) => mapApiMessageToChatMessage(m))
+      setMessages(mapped)
+    } catch (e: unknown) {
+      showError('Failed to load messages', e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [store?.id, conversationId])
+
+  useEffect(() => {
+    void loadMessages()
+  }, [loadMessages])
+
+  useEffect(() => {
+    if (!conversationId) return
+
+    const unsubNew = onMessageNew((payload) => {
+      if (payload.conversationId !== conversationId) return
+      setMessages((prev) => {
+        const incoming = mapSocketMessageToChatMessage(payload.message)
+        // Dedupe against optimistic + API-response messages
+        if (
+          prev.some(
+            (m) =>
+              m.id === incoming.id ||
+              (incoming.metaMessageId && m.metaMessageId === incoming.metaMessageId)
+          )
+        ) {
+          return prev
+        }
+        return dedupeByIdAndMeta([...prev, incoming])
+      })
+    })
+
+    const unsubStatus = onMessageStatus((payload) => {
+      if (payload.conversationId !== conversationId) return
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.metaMessageId === payload.metaMessageId || m.id === payload.metaMessageId
+            ? { ...m, status: payload.status as ChatMessage['status'], pending: false }
+            : m
+        )
+      )
+    })
+
+    return () => {
+      unsubNew()
+      unsubStatus()
+    }
+  }, [conversationId, onMessageNew, onMessageStatus])
+
+  if (!conversationId) {
     return (
       <SafeAreaView className="flex-1 bg-gray-100 items-center">
         <Text className="text-center mt-10 text-ink font-semibold">Conversation not found</Text>
@@ -36,16 +129,45 @@ export default function ChatDetailScreen() {
     )
   }
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = draft.trim()
-    if (!text) return
+    if (!text || !store?.id || isSending) return
+
+    const tempId = `local-${Date.now()}`
     const now = new Date()
     const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
     setMessages((prev) => [
       ...prev,
-      { id: `local-${Date.now()}`, text, time, outgoing: true },
+      { id: tempId, text, time, outgoing: true, status: 'pending', pending: true },
     ])
     setDraft('')
+    setIsSending(true)
+
+    try {
+      const res = await sendChatMessage({
+        storeId: store.id,
+        to: customerPhone,
+        message: text,
+        conversationId,
+      })
+
+      setMessages((prev) =>
+        dedupeByIdAndMeta(
+          prev.map((m) =>
+            m.id === tempId
+              ? { ...mapApiMessageToChatMessage(res.data.message), pending: false }
+              : m
+          )
+        )
+      )
+    } catch (e: unknown) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
+      setDraft(text)
+      showError(e, 'Failed to send')
+    } finally {
+      setIsSending(false)
+    }
   }
 
   return (
@@ -56,19 +178,14 @@ export default function ChatDetailScreen() {
         </Pressable>
         <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
           <Text className="text-brand-on-primary font-bold text-sm">
-            {conversation.initials}
+            {initialsFromPhone(customerPhone)}
           </Text>
         </View>
         <View className="flex-1">
-          <Text className="text-brand-on-primary text-base font-bold">{conversation.name}</Text>
+          <Text className="text-brand-on-primary text-base font-bold">{title}</Text>
           <Muted className="text-gray-400 text-xs mt-0.5">
-            {conversation.online ? 'Online' : conversation.phone}
+            {isLoading ? 'Loading…' : customerPhone}
           </Muted>
-        </View>
-        <View className="flex-row items-center gap-3.5">
-          <FontAwesome name="phone" size={18} color={Colors.brand.onPrimary} />
-          <FontAwesome name="video-camera" size={18} color={Colors.brand.onPrimary} />
-          <FontAwesome name="ellipsis-v" size={18} color={Colors.brand.onPrimary} />
         </View>
       </View>
 
@@ -93,10 +210,11 @@ export default function ChatDetailScreen() {
             onChangeText={setDraft}
             multiline
             maxLength={2000}
+            editable={!isSending}
           />
           <IconButton
             className="bg-brand-primary border-0 w-11 h-11"
-            onPress={sendMessage}
+            onPress={() => void sendMessage()}
           >
             <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
           </IconButton>

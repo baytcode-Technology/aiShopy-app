@@ -1,11 +1,14 @@
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { FlatList, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect } from 'expo-router'
 import { OrderCard } from '@/components/store/OrderCard'
 import { CreateOrderModal } from '@/components/store/CreateOrderModal'
-import { Heading, Subtitle } from '@/components/ui/Typography'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Fab } from '@/components/ui/Fab'
+import { OrdersSkeletonList } from '@/components/ui/Skeleton'
+import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { fetchOrders } from '@src/api/orders'
 import { useStore } from '@src/contexts/store-context'
 import { showError } from '@src/lib/toast'
@@ -38,38 +41,34 @@ export default function OrdersScreen() {
   )
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100" edges={['top']}>
-      <View className="px-6 py-4.5 bg-surface border-b border-gray-200">
-        <Heading>Orders</Heading>
-        <Subtitle className="mt-1">Take orders & track inventory</Subtitle>
-      </View>
+    <Screen>
+      <ScreenHeader showLogo variant="tab" title="Orders" subtitle="Manage customer orders & COD" />
+      <ScreenBody className="flex-1 px-5">
+        {loading ? (
+          <OrdersSkeletonList />
+        ) : orders.length === 0 ? (
+          <EmptyState
+            icon="shopping-cart"
+            title="No orders yet"
+            description="Create your first order when a customer buys via chat or in person."
+          />
+        ) : (
+          <FlatList
+            className="flex-1"
+            data={orders}
+            keyExtractor={(item) => item.id}
+            contentContainerClassName="pt-3 pb-32"
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <OrderCard order={item} currency={store?.currency} />
+            )}
+          />
+        )}
+      </ScreenBody>
 
-      {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color={Colors.brand.primary} />
-        </View>
-      ) : orders.length === 0 ? (
-        <View className="flex-1 items-center justify-center p-8">
-          <Text className="text-lg font-extrabold text-ink mb-2">No orders yet</Text>
-          <Subtitle className="text-center">
-            Tap + to create an order for a customer.
-          </Subtitle>
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id}
-          contentContainerClassName="p-4 pb-24"
-          renderItem={({ item }) => <OrderCard order={item} currency={store?.currency} />}
-        />
-      )}
-
-      <Pressable
-        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-brand-primary items-center justify-center shadow-lg shadow-ink/25"
-        onPress={() => setModalOpen(true)}
-      >
-        <FontAwesome name="plus" size={22} color={Colors.brand.onPrimary} />
-      </Pressable>
+      <Fab onPress={() => setModalOpen(true)}>
+        <FontAwesome name="plus" size={20} color={Colors.brand.onPrimary} />
+      </Fab>
 
       {store?.id ? (
         <CreateOrderModal
@@ -79,6 +78,6 @@ export default function OrdersScreen() {
           onCreated={loadOrders}
         />
       ) : null}
-    </SafeAreaView>
+    </Screen>
   )
 }

@@ -1,33 +1,39 @@
 {
   "expo": {
-    "name": "aiShopy-app",
-    "slug": "aiShopy-app",
+    "name": "AISHOPY",
+    "slug": "aishopy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/app_logo.jpg",
     "scheme": "aishopyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/app_logo.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aishopy.app"
     },
     "android": {
+      "package": "com.aishopy.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
       "expo-router",
@@ -35,12 +41,25 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Katlogue to access your photos for product images."
+          "photosPermission": "Allow AISHOPY to access your photos for product images."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "005f6373-309d-4dfa-bf83-aac91cb2205b"
+      }
+    },
+    "owner": "muhammed_nuaim"
   }
 }

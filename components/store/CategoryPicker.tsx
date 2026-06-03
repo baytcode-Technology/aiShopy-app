@@ -7,21 +7,29 @@ type Props = {
   categories: Category[]
   selectedId: string | null
   onSelect: (id: string | null) => void
+  label?: string
+  emptyHint?: string
 }
 
-export function CategoryPicker({ categories, selectedId, onSelect }: Props) {
+export function CategoryPicker({
+  categories,
+  selectedId,
+  onSelect,
+  label = 'Category',
+  emptyHint = 'No categories yet — create one first (optional).',
+}: Props) {
   if (categories.length === 0) {
     return (
       <View className="gap-2">
-        <Label>Category</Label>
-        <Muted className="text-xs pl-1">No categories yet — create one first (optional).</Muted>
+        <Label>{label}</Label>
+        <Muted className="text-xs pl-1">{emptyHint}</Muted>
       </View>
     )
   }
 
   return (
     <View className="gap-2">
-      <Label>Category</Label>
+      <Label>{label}</Label>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <Pressable
           className={cn(

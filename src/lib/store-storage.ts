@@ -2,7 +2,7 @@ import { Platform } from 'react-native'
 import * as SecureStore from 'expo-secure-store'
 import type { StoreSession } from '@src/types/store'
 
-const STORE_SESSION_KEY = 'katlogue_store_session'
+const STORE_SESSION_KEY = 'aishopy_store_session'
 
 const isWeb = Platform.OS === 'web'
 

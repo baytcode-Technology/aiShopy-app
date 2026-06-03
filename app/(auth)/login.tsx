@@ -41,7 +41,7 @@ export default function LoginScreen() {
       title="Welcome back"
       subtitle="Sign in with your email. We will send you a one-time code."
       footer={
-        <Text className="text-sm text-gray-600 font-medium">
+        <Text className="text-sm text-gray-600 font-medium text-center">
           New here?{' '}
           <Link href="/(auth)/signup" className="text-sm font-bold text-ink underline">
             Create account

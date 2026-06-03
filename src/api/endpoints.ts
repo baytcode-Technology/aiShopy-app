@@ -1,10 +1,17 @@
 export const endpoints = {
   authSignIn: "/api/auth/signin",
   authVerify: "/api/auth/verify",
+  authGoogle: "/api/auth/google",
+  authGoogleCode: "/api/auth/google/code",
   storesMe: "/api/stores/me",
   stores: "/api/stores",
   products: "/api/products",
   categories: "/api/categories",
   orders: "/api/orders",
   uploadProductImages: "/api/uploads/product-images",
+  whatsappChats: "/api/whatsapp/chats",
+  whatsappSend: "/api/whatsapp/send",
+  whatsappConnect: "/api/whatsapp/connect",
+  whatsappConnectionStatus: "/api/whatsapp/connection-status",
+  whatsappSync: "/api/whatsapp/sync",
 } as const;

@@ -51,7 +51,7 @@ export function ProductImageCarousel({ images, initialUri, className }: Props) {
     return (
       <View
         className={cn(
-          'h-[300px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 items-center justify-center',
+          'h-[300px] rounded-[28px] overflow-hidden bg-gray-100 border border-gray-200 items-center justify-center',
           className
         )}
       >
@@ -62,25 +62,43 @@ export function ProductImageCarousel({ images, initialUri, className }: Props) {
 
   return (
     <View className={cn('gap-3', className)}>
-      <View className="h-[300px] rounded-2xl overflow-hidden bg-gray-100 border border-gray-200">
+      <View className="h-[300px] rounded-[28px] overflow-hidden bg-gray-100 border border-gray-200">
         <Image source={{ uri: currentUri }} className="w-full h-full" resizeMode="cover" />
         {canNavigate ? (
           <>
             <Pressable
-              className="absolute top-1/2 -mt-[22px] left-3 w-11 h-11 rounded-full bg-ink/55 items-center justify-center border border-surface/25 active:opacity-85 active:scale-95"
+              className="absolute top-1/2 -mt-[22px] left-3"
               onPress={goPrev}
               accessibilityLabel="Previous image"
             >
-              <FontAwesome name="chevron-left" size={18} color={Colors.brand.onPrimary} />
+              {({ pressed }) => (
+                <View
+                  className={cn(
+                    'w-11 h-11 rounded-full bg-ink-soft items-center justify-center border border-white/25',
+                    pressed && 'opacity-85'
+                  )}
+                >
+                  <FontAwesome name="chevron-left" size={18} color={Colors.brand.onPrimary} />
+                </View>
+              )}
             </Pressable>
             <Pressable
-              className="absolute top-1/2 -mt-[22px] right-3 w-11 h-11 rounded-full bg-ink/55 items-center justify-center border border-surface/25 active:opacity-85 active:scale-95"
+              className="absolute top-1/2 -mt-[22px] right-3"
               onPress={goNext}
               accessibilityLabel="Next image"
             >
-              <FontAwesome name="chevron-right" size={18} color={Colors.brand.onPrimary} />
+              {({ pressed }) => (
+                <View
+                  className={cn(
+                    'w-11 h-11 rounded-full bg-ink-soft items-center justify-center border border-white/25',
+                    pressed && 'opacity-85'
+                  )}
+                >
+                  <FontAwesome name="chevron-right" size={18} color={Colors.brand.onPrimary} />
+                </View>
+              )}
             </Pressable>
-            <View className="absolute bottom-3 self-center left-1/2 -ml-9 w-[72px] bg-ink/60 py-1 px-2.5 rounded-[14px] items-center">
+            <View className="absolute bottom-3 self-center left-1/2 -ml-9 w-[72px] bg-ink-counter py-1 px-2.5 rounded-[14px] items-center">
               <Text className="text-brand-on-primary text-xs font-bold">
                 {safeIndex + 1} / {gallery.length}
               </Text>
@@ -94,15 +112,15 @@ export function ProductImageCarousel({ images, initialUri, className }: Props) {
           {gallery.map((uri, index) => {
             const selected = index === safeIndex
             return (
-              <Pressable
-                key={`${uri}-${index}`}
-                onPress={() => setSelectedIndex(index)}
-                className={cn(
-                  'w-[72px] h-[72px] rounded-[10px] overflow-hidden border-2 border-transparent active:opacity-90',
-                  selected && 'border-ink'
-                )}
-              >
-                <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+              <Pressable key={`${uri}-${index}`} onPress={() => setSelectedIndex(index)}>
+                <View
+                  className={cn(
+                    'w-[72px] h-[72px] rounded-[10px] overflow-hidden border-2',
+                    selected ? 'border-ink' : 'border-transparent'
+                  )}
+                >
+                  <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+                </View>
               </Pressable>
             )
           })}

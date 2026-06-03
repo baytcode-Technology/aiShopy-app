@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { LayoutChangeEvent, Pressable, ScrollView, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -38,6 +38,27 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
   const [lines, setLines] = useState<LineItem[]>([{ productId: '', quantity: '1' }])
   const [loading, setLoading] = useState(false)
 
+  const [whatsappError, setWhatsappError] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [cityError, setCityError] = useState('')
+  const [districtError, setDistrictError] = useState('')
+  const [stateError, setStateError] = useState('')
+  const [regionError, setRegionError] = useState('')
+  const [postcodeError, setPostcodeError] = useState('')
+
+  const scrollViewRef = useRef<ScrollView>(null)
+  const fieldY = useRef<Record<string, number | undefined>>({})
+
+  const registerFieldY = (key: string) => (e: LayoutChangeEvent) => {
+    fieldY.current[key] = e.nativeEvent.layout.y
+  }
+
+  const scrollToField = (key: string) => {
+    const y = fieldY.current[key]
+    if (typeof y !== 'number') return
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true })
+  }
+
   useEffect(() => {
     if (!visible || !storeId) return
     fetchProducts(storeId)
@@ -55,6 +76,13 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
     setPostcode('')
     setNotes('')
     setLines([{ productId: '', quantity: '1' }])
+    setWhatsappError('')
+    setNameError('')
+    setCityError('')
+    setDistrictError('')
+    setStateError('')
+    setRegionError('')
+    setPostcodeError('')
   }
 
   const handleClose = () => {
@@ -68,15 +96,80 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
     const phone = whatsapp.trim()
     const name = customerName.trim()
     if (!phone || phone.length < 8) {
-      showError('Customer WhatsApp number is required')
+      setWhatsappError('This field is required')
+      setNameError('')
+      setCityError('')
+      setDistrictError('')
+      setStateError('')
+      setRegionError('')
+      setPostcodeError('')
+      scrollToField('whatsapp')
       return
     }
     if (!name) {
-      showError('Customer name is required')
+      setNameError('This field is required')
+      setWhatsappError('')
+      setCityError('')
+      setDistrictError('')
+      setStateError('')
+      setRegionError('')
+      setPostcodeError('')
+      scrollToField('customerName')
       return
     }
-    if (!city.trim() || !district.trim() || !state.trim() || !region.trim() || !postcode.trim()) {
-      showError('Complete shipping address is required')
+    if (!city.trim()) {
+      setCityError('This field is required')
+      setDistrictError('')
+      setStateError('')
+      setRegionError('')
+      setPostcodeError('')
+      setWhatsappError('')
+      setNameError('')
+      scrollToField('city')
+      return
+    }
+    if (!district.trim()) {
+      setDistrictError('This field is required')
+      setStateError('')
+      setRegionError('')
+      setPostcodeError('')
+      setWhatsappError('')
+      setNameError('')
+      setCityError('')
+      scrollToField('district')
+      return
+    }
+    if (!state.trim()) {
+      setStateError('This field is required')
+      setRegionError('')
+      setPostcodeError('')
+      setWhatsappError('')
+      setNameError('')
+      setCityError('')
+      setDistrictError('')
+      scrollToField('state')
+      return
+    }
+    if (!region.trim()) {
+      setRegionError('This field is required')
+      setWhatsappError('')
+      setNameError('')
+      setCityError('')
+      setDistrictError('')
+      setStateError('')
+      setPostcodeError('')
+      scrollToField('region')
+      return
+    }
+    if (!postcode.trim()) {
+      setPostcodeError('This field is required')
+      setWhatsappError('')
+      setNameError('')
+      setCityError('')
+      setDistrictError('')
+      setStateError('')
+      setRegionError('')
+      scrollToField('postcode')
       return
     }
 
@@ -128,6 +221,7 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
       visible={visible}
       title="New order"
       onClose={handleClose}
+      scrollViewRef={scrollViewRef}
       footer={<Button label="Create order (COD)" loading={loading} onPress={handleSubmit} />}
     >
       <Input
@@ -136,26 +230,67 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
         onChangeText={setWhatsapp}
         placeholder="+919876543210"
         keyboardType="phone-pad"
+        error={whatsappError || undefined}
+        containerOnLayout={registerFieldY('whatsapp')}
       />
       <Input
         label="Customer name *"
         value={customerName}
         onChangeText={setCustomerName}
         placeholder="John Doe"
+        error={nameError || undefined}
+        containerOnLayout={registerFieldY('customerName')}
       />
 
       <SectionTitle className="mt-1">Shipping address *</SectionTitle>
-      <Input label="City" value={city} onChangeText={setCity} placeholder="Mumbai" />
-      <Input label="District" value={district} onChangeText={setDistrict} placeholder="Mumbai Suburban" />
-      <Input label="State" value={state} onChangeText={setState} placeholder="Maharashtra" />
-      <Input label="Region" value={region} onChangeText={setRegion} placeholder="West" />
-      <Input label="Postcode" value={postcode} onChangeText={setPostcode} placeholder="400001" />
+      <Input
+        label="City"
+        value={city}
+        onChangeText={setCity}
+        placeholder="Mumbai"
+        error={cityError || undefined}
+        containerOnLayout={registerFieldY('city')}
+      />
+      <Input
+        label="District"
+        value={district}
+        onChangeText={setDistrict}
+        placeholder="Mumbai Suburban"
+        error={districtError || undefined}
+        containerOnLayout={registerFieldY('district')}
+      />
+      <Input
+        label="State"
+        value={state}
+        onChangeText={setState}
+        placeholder="Maharashtra"
+        error={stateError || undefined}
+        containerOnLayout={registerFieldY('state')}
+      />
+      <Input
+        label="Region"
+        value={region}
+        onChangeText={setRegion}
+        placeholder="West"
+        error={regionError || undefined}
+        containerOnLayout={registerFieldY('region')}
+      />
+      <Input
+        label="Postcode"
+        value={postcode}
+        onChangeText={setPostcode}
+        placeholder="400001"
+        error={postcodeError || undefined}
+        containerOnLayout={registerFieldY('postcode')}
+      />
 
       <View className="flex-row items-center justify-between">
         <SectionTitle>Line items *</SectionTitle>
-        <Pressable onPress={addLine} className="flex-row items-center gap-1">
-          <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
-          <Text className="text-xs font-semibold text-ink">Add item</Text>
+        <Pressable onPress={addLine}>
+          <View className="flex-row items-center gap-1">
+            <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
+            <Text className="text-xs font-semibold text-ink">Add item</Text>
+          </View>
         </Pressable>
       </View>
 

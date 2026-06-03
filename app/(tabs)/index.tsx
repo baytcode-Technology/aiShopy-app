@@ -2,7 +2,8 @@ import { Pressable, Text, View } from 'react-native'
 import { Link, router } from 'expo-router'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { Heading, Muted } from '@/components/ui/Typography'
+import { AppLogo } from '@/components/brand/AppLogo'
+import { Muted } from '@/components/ui/Typography'
 import { Button } from '@/components/ui/Button'
 
 export default function TabOneScreen() {
@@ -11,7 +12,7 @@ export default function TabOneScreen() {
 
   return (
     <View className="flex-1 bg-surface px-6 pt-16">
-      <Heading className="mb-2">Katlogue</Heading>
+      <AppLogo variant="wordmark" className="mb-8" />
       <Text className="text-lg font-bold text-ink mb-1">{store?.name ?? 'Your store'}</Text>
       <Muted className="mb-8">{user?.email}</Muted>
 

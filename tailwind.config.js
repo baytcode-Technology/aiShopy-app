@@ -11,19 +11,30 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: palette.ink,
+        ink: {
+          DEFAULT: palette.ink,
+          overlay: palette.overlay,
+          soft: palette.inkSoft,
+          counter: palette.inkCounter,
+        },
+        charcoal: palette.charcoal,
         surface: palette.surface,
         gray: {
+          50: palette.gray50,
           100: palette.gray100,
           200: palette.gray200,
+          300: palette.gray300,
           400: palette.gray400,
+          500: palette.gray500,
           600: palette.gray600,
+          700: palette.gray700,
         },
         success: palette.success,
         'success-bg': palette.successBg,
         'success-border': palette.successBorder,
         danger: palette.danger,
         'danger-bg': palette.dangerBg,
+        'danger-border': palette.dangerBorder,
         warning: palette.warning,
         'warning-bg': palette.warningBg,
         brand: {
@@ -32,8 +43,11 @@ module.exports = {
         },
       },
       borderRadius: {
-        '4xl': '24px',
-        '5xl': '28px',
+        '4xl': '28px',
+        '5xl': '32px',
+      },
+      letterSpacing: {
+        brand: '0.35em',
       },
     },
   },

@@ -5,9 +5,9 @@ import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 export default function Index() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, googleAuthInProgress } = useAuth();
 
-  if (isLoading) {
+  if (isLoading || googleAuthInProgress) {
     return (
       <View className="flex-1 items-center justify-center bg-surface gap-6">
         <AppLogo variant="wordmark" align="center" className="mb-6" />

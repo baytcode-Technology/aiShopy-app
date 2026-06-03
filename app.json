@@ -14,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aishopy.app"
     },
     "android": {
       "package": "com.aishopy.app",
@@ -41,6 +42,12 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow AISHOPY to access your photos for product images."
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h"
         }
       ]
     ],

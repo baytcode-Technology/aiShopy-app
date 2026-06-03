@@ -18,7 +18,7 @@ export default function MoreScreen() {
   const handleSignOut = async () => {
     await clearStore()
     await signOut()
-    router.replace('/(auth)/login')
+    router.replace('/(auth)/login' as Href)
   }
 
   const handleComingSoon = (feature: string) => {

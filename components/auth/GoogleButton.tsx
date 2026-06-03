@@ -1,24 +1,52 @@
-import { Alert, Text, View } from 'react-native'
+import { Alert, Platform, Text, View } from 'react-native'
+import { router } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AppPressable } from '@/components/ui/AppPressable'
+import { isGoogleSignInConfigured } from '@src/config/env'
+import { useNativeGoogleSignIn } from '@src/hooks/use-native-google-sign-in'
 import Colors from '@src/theme/colors'
 
 export function GoogleButton() {
+  const { signIn: signInNative, loading: nativeLoading } = useNativeGoogleSignIn()
+  const googleLoading = Platform.OS !== 'web' && nativeLoading
+
   const onPress = () => {
-    Alert.alert('Coming soon', 'Google sign-in will be available in a future update.')
+    if (!isGoogleSignInConfigured()) {
+      Alert.alert(
+        'Google sign-in not configured',
+        'Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to your .env file.'
+      )
+      return
+    }
+
+    if (Platform.OS === 'web') {
+      router.push({
+        pathname: '/(auth)/oauth',
+        params: { start: '1' },
+      })
+      return
+    }
+
+    void signInNative()
   }
+
+  const disabled = googleLoading || !isGoogleSignInConfigured()
 
   return (
     <AppPressable
-      containerClassName="flex-row items-center justify-center border border-gray-200 bg-gray-50 py-4 px-4 rounded-2xl gap-3 min-h-[52px]"
+      containerClassName={`flex-row items-center justify-center border border-gray-200 bg-gray-50 py-4 px-4 rounded-2xl gap-3 min-h-[52px] ${disabled ? 'opacity-60' : ''}`}
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel="Continue with Google"
+      accessibilityState={{ disabled }}
     >
       <View className="w-6 items-center">
         <FontAwesome name="google" size={18} color={Colors.brand.primary} />
       </View>
-      <Text className="text-[15px] font-semibold text-ink">Continue with Google</Text>
+      <Text className="text-[15px] font-semibold text-ink">
+        {googleLoading ? 'Signing in…' : 'Continue with Google'}
+      </Text>
     </AppPressable>
   )
 }

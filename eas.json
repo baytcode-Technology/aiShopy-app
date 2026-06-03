@@ -5,7 +5,14 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
+        "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "localhost",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "573339565981-4849mo7vhk42jv98lqq1tav8besdgur1.apps.googleusercontent.com"
+      }
     },
     "preview": {
       "distribution": "internal",
@@ -14,10 +21,20 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
-        "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "localhost"
+        "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "localhost",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "573339565981-4849mo7vhk42jv98lqq1tav8besdgur1.apps.googleusercontent.com"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "573339565981-4849mo7vhk42jv98lqq1tav8besdgur1.apps.googleusercontent.com"
+      }
+    }
   },
   "submit": {
     "production": {}

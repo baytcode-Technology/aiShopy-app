@@ -1,5 +1,7 @@
 /** Raw hex — edit here to retheme. Keep palette.cjs in sync for Tailwind. */
 export const palette = {
+  /** Wordmark / app icon green */
+  brandGreen: '#3EB056',
   ink: '#0A0A0B',
   charcoal: '#141416',
   surface: '#FFFFFF',

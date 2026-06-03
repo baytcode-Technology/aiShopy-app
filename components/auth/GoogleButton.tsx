@@ -1,10 +1,9 @@
 import { Alert, Platform, Text, View } from 'react-native'
 import { router } from 'expo-router'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AppPressable } from '@/components/ui/AppPressable'
+import { GoogleIcon } from '@/components/auth/GoogleIcon'
 import { isGoogleSignInConfigured } from '@src/config/env'
 import { useNativeGoogleSignIn } from '@src/hooks/use-native-google-sign-in'
-import Colors from '@src/theme/colors'
 
 export function GoogleButton() {
   const { signIn: signInNative, loading: nativeLoading } = useNativeGoogleSignIn()
@@ -42,7 +41,7 @@ export function GoogleButton() {
       accessibilityState={{ disabled }}
     >
       <View className="w-6 items-center">
-        <FontAwesome name="google" size={18} color={Colors.brand.primary} />
+        <GoogleIcon size={20} />
       </View>
       <Text className="text-[15px] font-semibold text-ink">
         {googleLoading ? 'Signing in…' : 'Continue with Google'}

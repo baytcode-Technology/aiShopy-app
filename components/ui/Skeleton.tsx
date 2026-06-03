@@ -76,6 +76,29 @@ export function CatalogSkeletonGrid() {
   )
 }
 
+export function ProductListRowSkeleton() {
+  return (
+    <View className="flex-row items-center gap-3 py-3.5 border-b border-gray-200">
+      <Skeleton className="w-12 h-12 rounded-lg" />
+      <View className="flex-1 gap-2">
+        <Skeleton className="h-3.5 w-[70%] rounded-md" />
+        <Skeleton className="h-3 w-[45%] rounded-md" />
+      </View>
+      <Skeleton className="h-6 w-14 rounded-full" />
+    </View>
+  )
+}
+
+export function ProductListSkeleton() {
+  return (
+    <View className="pt-1">
+      {[0, 1, 2, 3, 4, 5, 6].map((k) => (
+        <ProductListRowSkeleton key={k} />
+      ))}
+    </View>
+  )
+}
+
 export function OrderRowSkeleton() {
   return (
     <View

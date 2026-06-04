@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -22,7 +23,11 @@ import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
 import { ProductImagePreviewModal } from './ProductImagePreviewModal'
 
-const TILE = 96
+const COLS = 3
+const GRID_GAP = 12
+const H_PADDING = 20
+
+type GridCell = ProductMediaItem | 'add'
 
 type Props = {
   visible: boolean
@@ -32,6 +37,18 @@ type Props = {
   onChange: (items: ProductMediaItem[], thumbnailId: string | null) => void
   onSave: (items: ProductMediaItem[], thumbnailId: string | null) => Promise<void>
   saving?: boolean
+}
+
+function chunkRows(cells: GridCell[]): GridCell[][] {
+  const rows: GridCell[][] = []
+  for (let i = 0; i < cells.length; i += COLS) {
+    rows.push(cells.slice(i, i + COLS))
+  }
+  return rows
+}
+
+function tileSizeForWindow(windowWidth: number) {
+  return (windowWidth - H_PADDING * 2 - GRID_GAP * (COLS - 1)) / COLS
 }
 
 export function ProductMediaGalleryModal({
@@ -44,6 +61,7 @@ export function ProductMediaGalleryModal({
   saving = false,
 }: Props) {
   const insets = useSafeAreaInsets()
+  const tileSize = tileSizeForWindow(Dimensions.get('window').width)
   const [draft, setDraft] = useState<ProductMediaItem[]>(items)
   const [draftThumb, setDraftThumb] = useState<string | null>(thumbnailId)
   const [selectMode, setSelectMode] = useState(false)
@@ -63,6 +81,14 @@ export function ProductMediaGalleryModal({
   const dirty = useMemo(() => {
     return JSON.stringify({ items: draft, thumbnailId: draftThumb }) !== snapshot
   }, [draft, draftThumb, snapshot])
+
+  const gridCells = useMemo((): GridCell[] => {
+    const cells: GridCell[] = [...draft]
+    if (draft.length < 10) cells.push('add')
+    return cells
+  }, [draft])
+
+  const gridRows = useMemo(() => chunkRows(gridCells), [gridCells])
 
   const pickImages = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -136,6 +162,61 @@ export function ProductMediaGalleryModal({
     setPreviewItem(item)
   }
 
+  const renderImageCell = (item: ProductMediaItem) => {
+    const selected = selectedIds.has(item.id)
+    const isThumb = draftThumb === item.id
+
+    return (
+      <Pressable
+        key={item.id}
+        onPress={() => openPreview(item)}
+        style={{ width: tileSize }}
+      >
+        <View
+          style={[
+            styles.tile,
+            { width: tileSize, height: tileSize },
+            selected && styles.tileSelected,
+          ]}
+        >
+          <Image source={{ uri: item.uri }} style={styles.image} />
+          {item.pending ? (
+            <View className="absolute top-1 left-1 bg-orange-500 px-1.5 py-0.5 rounded">
+              <Text className="text-[9px] font-bold text-white">NEW</Text>
+            </View>
+          ) : null}
+          {isThumb && !selectMode ? (
+            <View className="absolute bottom-0 left-0 right-0 bg-ink/80 py-0.5">
+              <Text className="text-[8px] font-bold text-white text-center">COVER</Text>
+            </View>
+          ) : null}
+          {selectMode ? (
+            <View
+              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full border-2 items-center justify-center"
+              style={{
+                borderColor: selected ? palette.brandGreen : '#fff',
+                backgroundColor: selected ? palette.brandGreen : 'rgba(0,0,0,0.35)',
+              }}
+            >
+              {selected ? <FontAwesome name="check" size={10} color="#fff" /> : null}
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    )
+  }
+
+  const renderAddCell = () => (
+    <Pressable
+      key="add"
+      onPress={pickImages}
+      style={[styles.addTile, { width: tileSize, height: tileSize }]}
+    >
+      <FontAwesome name="plus" size={28} color={Colors.text.muted} />
+      <Text className="text-[11px] font-semibold text-gray-500 mt-1">Add</Text>
+    </Pressable>
+  )
+
   return (
     <>
       <Modal visible={visible} animationType="slide" onRequestClose={handleCancel}>
@@ -185,54 +266,21 @@ export function ProductMediaGalleryModal({
 
           <ScrollView
             className="flex-1"
-            contentContainerClassName="px-5 py-4"
+            contentContainerStyle={styles.gridScroll}
             showsVerticalScrollIndicator={false}
           >
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View className="flex-row gap-3">
-                {draft.map((item) => {
-                  const selected = selectedIds.has(item.id)
-                  const isThumb = draftThumb === item.id
-                  return (
-                    <Pressable key={item.id} onPress={() => openPreview(item)}>
-                      <View style={[styles.tile, selected && styles.tileSelected]}>
-                        <Image source={{ uri: item.uri }} style={styles.image} />
-                        {item.pending ? (
-                          <View className="absolute top-1 left-1 bg-orange-500 px-1.5 py-0.5 rounded">
-                            <Text className="text-[9px] font-bold text-white">NEW</Text>
-                          </View>
-                        ) : null}
-                        {isThumb && !selectMode ? (
-                          <View className="absolute bottom-0 left-0 right-0 bg-ink/80 py-0.5">
-                            <Text className="text-[8px] font-bold text-white text-center">
-                              COVER
-                            </Text>
-                          </View>
-                        ) : null}
-                        {selectMode ? (
-                          <View
-                            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full border-2 items-center justify-center"
-                            style={{
-                              borderColor: selected ? palette.brandGreen : '#fff',
-                              backgroundColor: selected ? palette.brandGreen : 'rgba(0,0,0,0.35)',
-                            }}
-                          >
-                            {selected ? (
-                              <FontAwesome name="check" size={10} color="#fff" />
-                            ) : null}
-                          </View>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  )
+            {gridRows.map((row, rowIndex) => (
+              <View key={`row-${rowIndex}`} style={styles.row}>
+                {[0, 1, 2].map((colIndex) => {
+                  const cell = row[colIndex]
+                  if (!cell) {
+                    return <View key={`empty-${colIndex}`} style={{ width: tileSize }} />
+                  }
+                  if (cell === 'add') return renderAddCell()
+                  return renderImageCell(cell)
                 })}
-                {draft.length < 10 ? (
-                  <Pressable onPress={pickImages} style={styles.addTile}>
-                    <FontAwesome name="plus" size={28} color={Colors.text.muted} />
-                  </Pressable>
-                ) : null}
               </View>
-            </ScrollView>
+            ))}
           </ScrollView>
 
           {dirty ? (
@@ -281,9 +329,18 @@ export function ProductMediaGalleryModal({
 }
 
 const styles = StyleSheet.create({
+  gridScroll: {
+    paddingHorizontal: H_PADDING,
+    paddingTop: 16,
+    paddingBottom: 24,
+    gap: GRID_GAP,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: GRID_GAP,
+    marginBottom: GRID_GAP,
+  },
   tile: {
-    width: TILE,
-    height: TILE,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
@@ -299,11 +356,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   addTile: {
-    width: TILE,
-    height: TILE,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: palette.gray200,
+    borderStyle: 'dashed',
     backgroundColor: palette.gray50,
     alignItems: 'center',
     justifyContent: 'center',

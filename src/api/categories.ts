@@ -2,9 +2,11 @@ import { apiFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
 import { getAccessToken } from '@src/lib/auth-storage'
 import type {
+  Category,
   CreateCategoryPayload,
   CreateCategoryResponse,
   ListCategoriesResponse,
+  UpdateCategoryPayload,
 } from '@src/types/category'
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -37,6 +39,30 @@ export type SyncCategoryProductsResponse = {
   success: boolean
   message: string
   data: { assigned: number; removed: number }
+}
+
+export type UpdateCategoryResponse = {
+  success: boolean
+  message: string
+  data: Category
+}
+
+export async function updateCategory(
+  categoryId: string,
+  payload: UpdateCategoryPayload
+): Promise<UpdateCategoryResponse> {
+  return authFetch<UpdateCategoryResponse>(`${endpoints.categories}/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteCategory(
+  categoryId: string
+): Promise<{ success: boolean; message: string }> {
+  return authFetch(`${endpoints.categories}/${categoryId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function syncCategoryProducts(

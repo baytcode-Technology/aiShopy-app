@@ -7,9 +7,18 @@ export type Category = {
   image_url: string
   sort_order: number
   is_active: boolean
+  description?: string | null
   created_at: string
   product_count?: number
 }
+
+export type UpdateCategoryPayload = Partial<{
+  name: string
+  slug: string
+  image_url: string
+  is_active: boolean
+  description: string | null
+}>
 
 export type ListCategoriesResponse = {
   success: boolean

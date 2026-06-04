@@ -1,29 +1,33 @@
-import { useCallback, useMemo, useState } from 'react'
-import { FlatList, Image, Text, View } from 'react-native'
+import { useCallback, useState } from 'react'
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { AddGridTile } from '@/components/store/AddGridTile'
-import { AppPressable } from '@/components/ui/AppPressable'
-import { Fab } from '@/components/ui/Fab'
-import { ProductCard } from '@/components/store/ProductCard'
-import { CreateProductModal } from '@/components/store/CreateProductModal'
+import { CategoryActiveBadge } from '@/components/store/CategoryActiveBadge'
+import { CategoryDetailCover } from '@/components/store/CategoryDetailCover'
+import { CategoryInfoEditBlock } from '@/components/store/CategoryInfoEditBlock'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
+import { CreateProductModal } from '@/components/store/CreateProductModal'
+import { EditCategoryModal } from '@/components/store/EditCategoryModal'
+import { ProductListRow } from '@/components/store/ProductListRow'
+import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Fab } from '@/components/ui/Fab'
+import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { SectionHeader } from '@/components/ui/SectionHeader'
-import { CatalogSkeletonGrid } from '@/components/ui/Skeleton'
-import { fetchCategories } from '@src/api/categories'
+import { Muted } from '@/components/ui/Typography'
+import { deleteCategory, fetchCategories } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
 import { useStore } from '@src/contexts/store-context'
-import { showError } from '@src/lib/toast'
+import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
 import type { Product } from '@src/types/product'
 
 export default function CategoryDetailScreen() {
   const router = useRouter()
-  const { id } = useLocalSearchParams<{ id: string }>()
-  const categoryId = typeof id === 'string' ? id : ''
+  const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>()
+  const categoryId = Array.isArray(idParam) ? idParam[0] : idParam ?? ''
   const { store } = useStore()
 
   const [category, setCategory] = useState<Category | null>(null)
@@ -33,7 +37,10 @@ export default function CategoryDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [productModalOpen, setProductModalOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [pickerMode, setPickerMode] = useState<'assign' | 'edit'>('assign')
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [infoEditing, setInfoEditing] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!store?.id || !categoryId) return
@@ -51,10 +58,14 @@ export default function CategoryDetailScreen() {
         return
       }
       const all = productsRes.data.products
-      setCategory(found)
+      const inCategory = all.filter((p) => p.category_id === categoryId)
+      setCategory({
+        ...found,
+        product_count: inCategory.length,
+      })
       setCategories(cats)
       setAllProducts(all)
-      setProducts(all.filter((p) => p.category_id === categoryId))
+      setProducts(inCategory)
     } catch (e) {
       showError(e, 'Could not load category')
     } finally {
@@ -68,135 +79,174 @@ export default function CategoryDetailScreen() {
     }, [loadData])
   )
 
-  const openPicker = useCallback((mode: 'assign' | 'edit') => {
-    setPickerMode(mode)
-    setPickerOpen(true)
-  }, [])
+  const runDelete = async () => {
+    if (!category) return
+    setDeleteLoading(true)
+    try {
+      await deleteCategory(category.id)
+      setDeleteOpen(false)
+      showSuccess('Category deleted. Products were uncategorized.')
+      router.back()
+    } catch (e) {
+      showError(e, 'Could not delete category')
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
-  const productCountLabel = useMemo(() => {
-    const n = products.length
-    return n === 1 ? '1 product' : `${n} products`
-  }, [products.length])
-
-  const listHeader = useMemo(() => {
-    if (!category) return null
+  const renderListHeader = () => {
+    if (!category || !store?.id) return null
     return (
-      <View className="pt-1 pb-2">
-        <View className="rounded-[28px] overflow-hidden h-[200px] mb-5 bg-gray-100 border border-gray-200">
-          {category.image_url ? (
-            <Image
-              source={{ uri: category.image_url }}
-              className="w-full h-full"
-              resizeMode="cover"
-            />
-          ) : (
-            <View className="w-full h-full items-center justify-center">
-              <Text className="text-4xl font-extrabold text-gray-300 tracking-wider">
-                {category.name
-                  .split(/\s+/)
-                  .slice(0, 2)
-                  .map((w) => w[0]?.toUpperCase() ?? '')
-                  .join('')}
-              </Text>
-            </View>
-          )}
+      <AnimatedFadeIn>
+        <CategoryDetailCover
+          category={category}
+          storeId={store.id}
+          onUpdated={setCategory}
+        />
+
+        <View className="flex-row flex-wrap gap-2 mb-4">
+          <CategoryActiveBadge isActive={category.is_active} />
         </View>
 
-        <View className="flex-row gap-3 mb-6">
-          <AppPressable
-            containerClassName="flex-1 flex-row items-center justify-center gap-2 bg-brand-primary py-4 rounded-[22px] border border-ink"
-            onPress={() => openPicker('assign')}
-          >
-            <FontAwesome name="plus" size={13} color={Colors.brand.onPrimary} />
-            <Text className="text-sm font-bold text-brand-on-primary">Add products</Text>
-          </AppPressable>
-          <AppPressable
-            containerClassName="flex-1 items-center justify-center py-4 rounded-[22px] border border-gray-200 bg-surface"
-            onPress={() => openPicker('edit')}
-          >
-            <Text className="text-sm font-bold text-ink">Edit list</Text>
-          </AppPressable>
-        </View>
+        <CategoryInfoEditBlock
+          category={category}
+          productCount={products.length}
+          onUpdated={setCategory}
+          onEditingChange={setInfoEditing}
+        />
 
-        <SectionHeader title="Products" subtitle={productCountLabel} className="mb-4" />
-
-        {products.length === 0 ? (
-          <View className="mb-6">
-            <AddGridTile onPress={() => openPicker('assign')} />
-          </View>
-        ) : null}
-      </View>
+        <SectionHeader
+          title={`Products · ${products.length}`}
+          className="mb-2"
+          right={
+            <Pressable
+              onPress={() => setPickerOpen(true)}
+              className="flex-row items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3.5 py-2"
+              hitSlop={6}
+            >
+              <FontAwesome name="exchange" size={12} color={Colors.brand.primary} />
+              <Text className="text-[12px] font-bold text-ink">Add / remove</Text>
+            </Pressable>
+          }
+        />
+      </AnimatedFadeIn>
     )
-  }, [category, products.length, productCountLabel, openPicker])
+  }
 
   return (
-    <Screen>
-      <ScreenHeader
-        title={category?.name ?? 'Category'}
-        subtitle={productCountLabel}
-        onBack={() => router.back()}
-        large={false}
-      />
-      <ScreenBody className="flex-1 px-5">
-        {loading ? (
-          <View className="flex-1 pt-2">
-            <View className="rounded-[28px] h-[200px] mb-5 bg-gray-100 border border-gray-200" />
-            <CatalogSkeletonGrid />
-          </View>
-        ) : !category ? null : (
-          <>
-            <FlatList
-              style={{ flex: 1 }}
-              data={products}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              ListHeaderComponent={listHeader}
-              ListEmptyComponent={
-                products.length === 0 ? (
-                  <View className="h-2" />
-                ) : null
-              }
-              contentContainerClassName="pb-32 pt-1"
-              columnWrapperClassName="justify-between gap-y-5"
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <View className="w-[48%]">
-                  <ProductCard
-                    product={item}
-                    currency={store?.currency}
-                    onPress={() => router.push(`/(store)/products/${item.id}` as Href)}
-                  />
-                </View>
-              )}
-            />
+    <Screen variant="canvas" edges={['top']}>
+      <View className="flex-row items-center px-5 py-3.5 bg-surface border-b border-gray-100">
+        <IconButton variant="ghost" onPress={() => router.back()}>
+          <FontAwesome name="arrow-left" size={18} color={Colors.brand.primary} />
+        </IconButton>
+        <Text
+          className="flex-1 text-[17px] font-extrabold text-ink text-center mx-2 tracking-tight"
+          numberOfLines={1}
+        >
+          {category?.name ?? 'Category'}
+        </Text>
+        <View className="flex-row items-center gap-0.5 shrink-0">
+          <IconButton
+            variant="ghost"
+            onPress={() => setEditModalOpen(true)}
+            disabled={!category}
+            accessibilityLabel="Edit category"
+          >
+            <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
+          </IconButton>
+          <IconButton
+            variant="ghost"
+            onPress={() => setDeleteOpen(true)}
+            disabled={!category || deleteLoading}
+            accessibilityLabel="Delete category"
+          >
+            <FontAwesome name="trash-o" size={16} color="#EF4444" />
+          </IconButton>
+        </View>
+      </View>
 
-            <Fab onPress={() => setProductModalOpen(true)} />
+      {loading ? (
+        <ScreenBody className="items-center justify-center flex-1">
+          <ActivityIndicator color={Colors.brand.primary} size="large" />
+        </ScreenBody>
+      ) : !category ? (
+        <ScreenBody className="items-center justify-center flex-1">
+          <Muted className="text-base font-semibold">Category not found</Muted>
+        </ScreenBody>
+      ) : (
+        <>
+          <FlatList
+            data={products}
+            keyExtractor={(item) => item.id}
+            ListHeaderComponent={<View className="px-5 pt-5">{renderListHeader()}</View>}
+            extraData={`${category.id}-${infoEditing}-${products.length}-${category.name}`}
+            ListEmptyComponent={
+              <View className="px-5 pb-8">
+                <Muted className="text-center text-[15px]">
+                  No products in this category. Use Add / remove or tap + below.
+                </Muted>
+              </View>
+            }
+            contentContainerClassName="pb-32"
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <View className="px-5">
+                <ProductListRow
+                  product={item}
+                  onPress={() =>
+                    router.push(`/(store)/products/${item.id}` as Href)
+                  }
+                />
+              </View>
+            )}
+          />
 
-            {store?.id ? (
-              <>
-                <CreateProductModal
-                  visible={productModalOpen}
-                  storeId={store.id}
-                  categories={categories}
-                  initialCategoryId={categoryId}
-                  onClose={() => setProductModalOpen(false)}
-                  onCreated={loadData}
-                />
-                <CategoryProductPickerModal
-                  visible={pickerOpen}
-                  mode={pickerMode}
-                  storeId={store.id}
-                  categoryId={categoryId}
-                  categoryName={category.name}
-                  allProducts={allProducts}
-                  onClose={() => setPickerOpen(false)}
-                  onSaved={loadData}
-                />
-              </>
-            ) : null}
-          </>
-        )}
-      </ScreenBody>
+          <Fab onPress={() => setProductModalOpen(true)} />
+
+          <EditCategoryModal
+            visible={editModalOpen}
+            category={category}
+            onClose={() => setEditModalOpen(false)}
+            onSaved={setCategory}
+          />
+
+          {store?.id ? (
+            <>
+              <CreateProductModal
+                visible={productModalOpen}
+                storeId={store.id}
+                categories={categories}
+                initialCategoryId={categoryId}
+                onClose={() => setProductModalOpen(false)}
+                onCreated={loadData}
+              />
+              <CategoryProductPickerModal
+                visible={pickerOpen}
+                mode="edit"
+                storeId={store.id}
+                categoryId={categoryId}
+                categoryName={category.name}
+                allProducts={allProducts}
+                onClose={() => setPickerOpen(false)}
+                onSaved={loadData}
+              />
+            </>
+          ) : null}
+
+          <ConfirmDialog
+            visible={deleteOpen}
+            title="Delete category"
+            message={`Delete "${category.name}"? Products in this category will be removed from it (not deleted).`}
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            loading={deleteLoading}
+            onCancel={() => {
+              if (!deleteLoading) setDeleteOpen(false)
+            }}
+            onConfirm={runDelete}
+          />
+        </>
+      )}
     </Screen>
   )
 }

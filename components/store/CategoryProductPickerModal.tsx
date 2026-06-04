@@ -79,7 +79,7 @@ export function CategoryProductPickerModal({
     }
   }
 
-  const title = mode === 'edit' ? `Edit · ${categoryName}` : `Add to ${categoryName}`
+  const title = mode === 'edit' ? `Add / remove · ${categoryName}` : `Add to ${categoryName}`
   const submitLabel =
     mode === 'edit' ? `Save (${selected.size} in category)` : `Add selected (${selected.size})`
 

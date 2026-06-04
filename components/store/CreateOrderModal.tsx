@@ -9,6 +9,7 @@ import { FormModal } from '@/components/store/FormModal'
 import { createOrder } from '@src/api/orders'
 import { fetchProducts } from '@src/api/products'
 import { cn } from '@src/lib/cn'
+import { getProductStatus } from '@src/lib/product-status'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
@@ -62,7 +63,9 @@ export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props
   useEffect(() => {
     if (!visible || !storeId) return
     fetchProducts(storeId)
-      .then((res) => setProducts(res.data.products.filter((p) => p.is_active)))
+      .then((res) =>
+        setProducts(res.data.products.filter((p) => getProductStatus(p) === 'active'))
+      )
       .catch((e) => showError(e))
   }, [visible, storeId])
 

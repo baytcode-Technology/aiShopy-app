@@ -8,6 +8,7 @@ import type {
   GetProductResponse,
   ListProductsResponse,
   Product,
+  ProductStatus,
   ProductVariant,
   UpdateProductVariantPayload,
 } from '@src/types/product'
@@ -61,7 +62,8 @@ export type UpdateProductPayload = Partial<{
   sku: string | null
   stock_qty: number
   track_inventory: boolean
-  is_active: boolean
+  status: ProductStatus
+  is_active?: boolean
   category_id: string | null
   images: string[]
   thumbnail_url: string
@@ -136,6 +138,7 @@ export async function createProduct(
     method: 'POST',
     body: JSON.stringify({
       track_inventory: false,
+      status: 'active',
       is_active: true,
       sort_order: 0,
       metadata: {},

@@ -3,6 +3,7 @@ import { palette } from './palette'
 export const Colors = {
   brand: {
     primary: palette.ink,
+    green: palette.brandGreen,
     onPrimary: palette.surface,
   },
   text: {

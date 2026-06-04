@@ -26,7 +26,7 @@ type Props = {
    * Optional ref to the internal ScrollView so forms can auto-scroll to
    * validation errors.
    */
-  scrollViewRef?: RefObject<RNScrollView>
+  scrollViewRef?: RefObject<RNScrollView | null>
 }
 
 export function SleekModal({
@@ -67,7 +67,7 @@ export function SleekModal({
               </Pressable>
             </View>
             <ScrollView
-              ref={scrollViewRef as any}
+              ref={scrollViewRef}
               className={cn('max-h-[560px]', scrollClassName)}
               contentContainerClassName="px-6 py-5 gap-5"
               keyboardShouldPersistTaps="handled"

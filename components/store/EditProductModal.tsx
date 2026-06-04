@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/Input'
 import { SectionTitle } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
+import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
 import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
 import {
   VariantListEditor,
@@ -19,7 +20,8 @@ import { toCreateVariantPayload } from '@src/lib/variant-options'
 import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
-import type { Product, ProductVariant } from '@src/types/product'
+import { getProductStatus } from '@src/lib/product-status'
+import type { Product, ProductStatus, ProductVariant } from '@src/types/product'
 import type { LayoutChangeEvent, ScrollView } from 'react-native'
 
 function isNewVariantId(id: string): boolean {
@@ -49,7 +51,7 @@ export function EditProductModal({
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
-  const [isActive, setIsActive] = useState(true)
+  const [status, setStatus] = useState<ProductStatus>('active')
   const [existingVariants, setExistingVariants] = useState<EditableVariantRow[]>([])
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
   const [newVariants, setNewVariants] = useState<GeneratedVariant[]>([])
@@ -80,7 +82,7 @@ export function EditProductModal({
     setDescription(product.description ?? '')
     setSku(product.sku ?? '')
     setCategoryId(product.category_id)
-    setIsActive(product.is_active)
+    setStatus(getProductStatus(product))
     setExistingVariants(variantsToEditable(initialVariants))
     setVariantOptions([])
     setNewVariants([])
@@ -146,7 +148,7 @@ export function EditProductModal({
         description: description.trim() || null,
         sku: sku.trim() || null,
         category_id: categoryId,
-        is_active: isActive,
+        status,
       })
 
       for (const v of existingVariants) {
@@ -233,13 +235,7 @@ export function EditProductModal({
         inputClassName="min-h-20"
         style={{ textAlignVertical: 'top' }}
       />
-      <Button
-        label={
-          isActive ? 'Status: Active (tap to deactivate)' : 'Status: Inactive (tap to activate)'
-        }
-        variant="outline"
-        onPress={() => setIsActive((a) => !a)}
-      />
+      <ProductStatusPicker value={status} onChange={setStatus} />
 
       {product ? (
         <VariantListEditor

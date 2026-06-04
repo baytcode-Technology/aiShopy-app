@@ -66,9 +66,7 @@ export default function OrdersScreen() {
         )}
       </ScreenBody>
 
-      <Fab onPress={() => setModalOpen(true)}>
-        <FontAwesome name="plus" size={20} color={Colors.brand.onPrimary} />
-      </Fab>
+      <Fab onPress={() => setModalOpen(true)} iconSize={20} />
 
       {store?.id ? (
         <CreateOrderModal

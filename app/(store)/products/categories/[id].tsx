@@ -170,9 +170,7 @@ export default function CategoryDetailScreen() {
               )}
             />
 
-            <Fab onPress={() => setProductModalOpen(true)}>
-              <FontAwesome name="plus" size={22} color={Colors.brand.onPrimary} />
-            </Fab>
+            <Fab onPress={() => setProductModalOpen(true)} />
 
             {store?.id ? (
               <>

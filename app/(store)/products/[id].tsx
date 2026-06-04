@@ -12,10 +12,14 @@ import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { StickyBottomBar } from '@/components/ui/StickyBottomBar'
 import { Body, Caption, Heading, Muted, SectionTitle } from '@/components/ui/Typography'
-import { fetchProduct } from '@src/api/products'
+import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
+import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
+import { fetchProduct, updateProduct } from '@src/api/products'
+import { getProductStatus } from '@src/lib/product-status'
+import { showError, showSuccess } from '@src/lib/toast'
+import type { ProductStatus } from '@src/types/product'
 import { fetchCategories } from '@src/api/categories'
 import { useStore } from '@src/contexts/store-context'
-import { showError } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
 import type { Product, ProductVariant } from '@src/types/product'
 import Colors from '@src/theme/colors'
@@ -30,6 +34,7 @@ export default function ProductDetailScreen() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
+  const [savingStatus, setSavingStatus] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -58,6 +63,20 @@ export default function ProductDetailScreen() {
   const symbol = store?.currency === 'INR' ? '₹' : '$'
   const categoryName =
     categories.find((c) => c.id === product?.category_id)?.name ?? 'Uncategorized'
+
+  const onStatusChange = async (next: ProductStatus) => {
+    if (!product || getProductStatus(product) === next) return
+    setSavingStatus(true)
+    try {
+      const res = await updateProduct(product.id, { status: next })
+      setProduct(res.data)
+      showSuccess('Status updated')
+    } catch (e) {
+      showError(e, 'Could not update status')
+    } finally {
+      setSavingStatus(false)
+    }
+  }
 
   return (
     <Screen variant="canvas" edges={['top']}>
@@ -116,12 +135,17 @@ export default function ProductDetailScreen() {
               })()}
 
               <View className="flex-row flex-wrap gap-2 mb-4">
-                <Badge
-                  label={product.is_active ? 'Active' : 'Inactive'}
-                  tone={product.is_active ? 'emphasis' : 'muted'}
-                />
+                <ProductStatusBadge status={getProductStatus(product)} />
                 <Badge label={categoryName} tone="outline" />
               </View>
+
+              <Card className="p-4 mb-7">
+                <ProductStatusPicker
+                  value={getProductStatus(product)}
+                  onChange={onStatusChange}
+                  disabled={savingStatus}
+                />
+              </Card>
 
               <Heading className="text-[30px] tracking-tighter mb-2 leading-tight">{product.name}</Heading>
               <Text className="text-[32px] font-extrabold text-ink tracking-tighter mb-1">

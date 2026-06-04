@@ -3,17 +3,17 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { EditProductModal } from '@/components/store/EditProductModal'
-import { ProductImageCarousel } from '@/components/store/ProductImageCarousel'
+import { ProductDetailMediaSection } from '@/components/store/product-media/ProductDetailMediaSection'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { StickyBottomBar } from '@/components/ui/StickyBottomBar'
-import { Body, Caption, Heading, Muted, SectionTitle } from '@/components/ui/Typography'
+import { Muted, SectionTitle } from '@/components/ui/Typography'
+import { ProductInfoEditBlock } from '@/components/store/ProductInfoEditBlock'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
 import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
+import { VariantEditableCard } from '@/components/store/VariantEditableCard'
 import { fetchProduct, updateProduct } from '@src/api/products'
 import { getProductStatus } from '@src/lib/product-status'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -108,31 +108,17 @@ export default function ProductDetailScreen() {
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-5 pt-5"
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{ paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
           >
             <AnimatedFadeIn>
-              {(() => {
-                const galleryImages =
-                  product.images.length > 0
-                    ? product.images
-                    : product.thumbnail_url
-                      ? [product.thumbnail_url]
-                      : []
-                return galleryImages.length > 0 ? (
-                  <ProductImageCarousel
-                    images={galleryImages}
-                    initialUri={product.thumbnail_url}
-                    className="mb-7"
-                  />
-                ) : (
-                  <View className="h-[300px] rounded-[28px] items-center justify-center bg-gray-100 mb-7 border border-gray-200">
-                    <Text className="text-6xl font-extrabold text-gray-300">
-                      {product.name.slice(0, 1)}
-                    </Text>
-                  </View>
-                )
-              })()}
+              {store?.id ? (
+                <ProductDetailMediaSection
+                  product={product}
+                  storeId={store.id}
+                  onProductUpdated={setProduct}
+                />
+              ) : null}
 
               <View className="flex-row flex-wrap gap-2 mb-4">
                 <ProductStatusBadge status={getProductStatus(product)} />
@@ -147,69 +133,32 @@ export default function ProductDetailScreen() {
                 />
               </Card>
 
-              <Heading className="text-[30px] tracking-tighter mb-2 leading-tight">{product.name}</Heading>
-              <Text className="text-[32px] font-extrabold text-ink tracking-tighter mb-1">
-                {symbol}
-                {product.base_price}
-              </Text>
-              {product.compare_at_price ? (
-                <Caption className="line-through mb-7 text-gray-400">
-                  Compare {symbol}
-                  {product.compare_at_price}
-                </Caption>
-              ) : (
-                <View className="mb-7" />
-              )}
-
-              <View className="flex-row gap-3 mb-9">
-                <StatCard
-                  label="Stock"
-                  value={product.track_inventory ? String(product.stock_qty) : '—'}
-                />
-                <StatCard label="SKU" value={product.sku ?? '—'} />
-                <StatCard label="Variants" value={String(variants.length)} />
-              </View>
-
-              {product.description ? (
-                <View className="mb-9">
-                  <SectionTitle className="mb-3">About</SectionTitle>
-                  <Body className="text-gray-600 leading-6">{product.description}</Body>
-                </View>
-              ) : null}
+              <ProductInfoEditBlock
+                product={product}
+                variantCount={variants.length}
+                currencySymbol={symbol}
+                onUpdated={setProduct}
+              />
 
               {variants.length > 0 ? (
                 <View className="mb-8">
                   <SectionTitle className="mb-4">Variants · {variants.length}</SectionTitle>
-                  {variants.map((v) => {
-                    const optionLabels = Object.entries(v.options ?? {})
-                      .map(([k, val]) => `${k}: ${val}`)
-                      .join(' · ')
-                    return (
-                      <Card key={v.id} className="mb-3 p-4">
-                        <View className="flex-row justify-between items-center mb-2">
-                          <Text className="flex-1 text-base font-extrabold text-ink">{v.name}</Text>
-                          <Badge
-                            label={v.is_active ? 'Active' : 'Off'}
-                            tone={v.is_active ? 'emphasis' : 'muted'}
-                            className="ml-2"
-                          />
-                        </View>
-                        {optionLabels ? <Caption className="mb-3">{optionLabels}</Caption> : null}
-                        <View className="flex-row flex-wrap gap-3">
-                          <Text className="text-[13px] font-bold text-ink">
-                            {symbol}
-                            {Number(product.base_price) + Number(v.price_delta)}
-                          </Text>
-                          <Text className="text-[13px] font-bold text-gray-600">
-                            Stock {v.stock_qty}
-                          </Text>
-                          {v.sku ? (
-                            <Text className="text-[13px] font-bold text-gray-600">SKU {v.sku}</Text>
-                          ) : null}
-                        </View>
-                      </Card>
-                    )
-                  })}
+                  {variants.map((v) => (
+                    <VariantEditableCard
+                      key={v.id}
+                      variant={v}
+                      product={product}
+                      currencySymbol={symbol}
+                      onUpdated={(updated) => {
+                        setVariants((prev) =>
+                          prev.map((item) => (item.id === updated.id ? updated : item))
+                        )
+                      }}
+                      onDeleted={(variantId) => {
+                        setVariants((prev) => prev.filter((item) => item.id !== variantId))
+                      }}
+                    />
+                  ))}
                 </View>
               ) : (
                 <View className="mb-8">
@@ -219,10 +168,6 @@ export default function ProductDetailScreen() {
               )}
             </AnimatedFadeIn>
           </ScrollView>
-
-          <StickyBottomBar>
-            <Button label="Edit product" size="lg" onPress={() => setEditOpen(true)} />
-          </StickyBottomBar>
         </View>
       )}
 
@@ -238,13 +183,3 @@ export default function ProductDetailScreen() {
   )
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="flex-1 rounded-[20px] p-4 bg-surface border border-gray-200">
-      <Caption className="uppercase tracking-widest mb-1.5 text-gray-400">{label}</Caption>
-      <Text className="text-base font-extrabold text-ink tracking-tight" numberOfLines={1}>
-        {value}
-      </Text>
-    </View>
-  )
-}

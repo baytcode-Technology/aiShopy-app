@@ -30,6 +30,7 @@ export function VariantEditableCard({
   const [expanded, setExpanded] = useState(false)
   const [priceDraft, setPriceDraft] = useState('')
   const [stockDraft, setStockDraft] = useState('')
+  const [skuDraft, setSkuDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null)
@@ -48,11 +49,13 @@ export function VariantEditableCard({
   useEffect(() => {
     setPriceDraft(String(unitPrice))
     setStockDraft(String(variant.stock_qty))
-  }, [variant.id, unitPrice, variant.stock_qty])
+    setSkuDraft(variant.sku ?? '')
+  }, [variant.id, unitPrice, variant.stock_qty, variant.sku])
 
   const cancel = () => {
     setPriceDraft(String(unitPrice))
     setStockDraft(String(variant.stock_qty))
+    setSkuDraft(variant.sku ?? '')
     setExpanded(false)
   }
 
@@ -74,6 +77,7 @@ export function VariantEditableCard({
       const res = await updateProductVariant(product.id, variant.id, {
         price_delta,
         stock_qty: stock,
+        sku: skuDraft.trim() || null,
       })
       onUpdated(res.data.variant)
       setExpanded(false)
@@ -157,9 +161,9 @@ export function VariantEditableCard({
               {unitPrice}
             </Text>
             <Text className="text-[13px] font-bold text-gray-600">Stock {variant.stock_qty}</Text>
-            {variant.sku ? (
-              <Text className="text-[13px] font-bold text-gray-600">SKU {variant.sku}</Text>
-            ) : null}
+            <Text className="text-[13px] font-bold text-gray-600">
+              SKU {variant.sku?.trim() ? variant.sku : '—'}
+            </Text>
           </View>
         ) : (
           <View className="mt-1 pt-3 border-t border-gray-100 gap-3">
@@ -184,6 +188,20 @@ export function VariantEditableCard({
                 value={stockDraft}
                 onChangeText={setStockDraft}
                 keyboardType="number-pad"
+                selectionColor={Colors.brand.primary}
+                editable={!cardLocked}
+              />
+            </View>
+            <View>
+              <Text className="text-[12px] font-bold text-gray-500 mb-1.5">SKU</Text>
+              <TextInput
+                className="border border-gray-200 rounded-xl bg-gray-50 px-3 py-3 text-base font-bold text-ink"
+                value={skuDraft}
+                onChangeText={setSkuDraft}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="Optional"
+                placeholderTextColor={Colors.text.muted}
                 selectionColor={Colors.brand.primary}
                 editable={!cardLocked}
               />

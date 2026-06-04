@@ -13,6 +13,7 @@ import {
   mediaId,
   mimeFromUri,
   productToMediaItems,
+  resolveProductMediaForSave,
   resolveThumbnailId,
   type ProductMediaItem,
 } from '@src/lib/product-media'
@@ -53,44 +54,15 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
 
   const persistMedia = useCallback(
     async (nextItems: ProductMediaItem[], nextThumbId: string | null) => {
-      if (nextItems.length === 0) {
-        throw new Error('At least one product image is required')
-      }
-
-      const pending = nextItems.filter((i) => i.pending)
-      const remoteUrls = nextItems
-        .filter((i) => !i.pending && i.remoteUrl)
-        .map((i) => i.remoteUrl as string)
-
-      let uploaded: string[] = []
-      if (pending.length > 0) {
-        uploaded = await uploadProductImages(
-          storeId,
-          pending.map((p) => ({
-            uri: p.uri,
-            name: p.pending!.name,
-            type: p.pending!.type,
-          }))
-        )
-      }
-
-      const orderedUrls: string[] = []
-      let uploadIdx = 0
-      for (const item of nextItems) {
-        if (item.pending) {
-          orderedUrls.push(uploaded[uploadIdx]!)
-          uploadIdx += 1
-        } else if (item.remoteUrl) {
-          orderedUrls.push(item.remoteUrl)
-        }
-      }
-
-      const thumbIndex = nextItems.findIndex((i) => i.id === nextThumbId)
-      const thumbnail_url =
-        thumbIndex >= 0 ? orderedUrls[thumbIndex]! : orderedUrls[0]!
+      const { images, thumbnail_url } = await resolveProductMediaForSave(
+        storeId,
+        nextItems,
+        nextThumbId,
+        uploadProductImages
+      )
 
       const res = await updateProduct(product.id, {
-        images: orderedUrls,
+        images,
         thumbnail_url,
       })
 

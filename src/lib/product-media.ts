@@ -63,6 +63,50 @@ export async function cropImageToSquare(uri: string): Promise<string> {
   return result.uri
 }
 
+/** Uploads pending items and returns ordered image URLs + thumbnail for product PATCH. */
+export async function resolveProductMediaForSave(
+  storeId: string,
+  items: ProductMediaItem[],
+  thumbnailId: string | null,
+  upload: (
+    storeId: string,
+    files: { uri: string; name: string; type: string }[]
+  ) => Promise<string[]>
+): Promise<{ images: string[]; thumbnail_url: string }> {
+  if (items.length === 0) {
+    throw new Error('At least one product image is required')
+  }
+
+  const pending = items.filter((i) => i.pending)
+  let uploaded: string[] = []
+  if (pending.length > 0) {
+    uploaded = await upload(
+      storeId,
+      pending.map((p) => ({
+        uri: p.uri,
+        name: p.pending!.name,
+        type: p.pending!.type,
+      }))
+    )
+  }
+
+  const orderedUrls: string[] = []
+  let uploadIdx = 0
+  for (const item of items) {
+    if (item.pending) {
+      orderedUrls.push(uploaded[uploadIdx]!)
+      uploadIdx += 1
+    } else if (item.remoteUrl) {
+      orderedUrls.push(item.remoteUrl)
+    }
+  }
+
+  const thumbIndex = items.findIndex((i) => i.id === thumbnailId)
+  const thumbnail_url = thumbIndex >= 0 ? orderedUrls[thumbIndex]! : orderedUrls[0]!
+
+  return { images: orderedUrls, thumbnail_url }
+}
+
 export function mimeFromUri(uri: string): string {
   const lower = uri.toLowerCase()
   if (lower.endsWith('.png')) return 'image/png'

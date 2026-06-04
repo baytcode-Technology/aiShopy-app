@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { View, type LayoutChangeEvent, type ScrollView } from 'react-native'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SectionTitle } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
+import { ProductMediaEditor } from '@/components/store/ProductMediaEditor'
 import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
 import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
 import {
@@ -16,13 +18,20 @@ import {
   updateProduct,
   updateProductVariant,
 } from '@src/api/products'
+import { uploadProductImages } from '@src/api/uploads'
+import { useStore } from '@src/contexts/store-context'
+import {
+  productToMediaItems,
+  resolveProductMediaForSave,
+  resolveThumbnailId,
+  type ProductMediaItem,
+} from '@src/lib/product-media'
 import { toCreateVariantPayload } from '@src/lib/variant-options'
 import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
 import { getProductStatus } from '@src/lib/product-status'
 import type { Product, ProductStatus, ProductVariant } from '@src/types/product'
-import type { LayoutChangeEvent, ScrollView } from 'react-native'
 
 function isNewVariantId(id: string): boolean {
   return id.startsWith('gen-')
@@ -45,6 +54,7 @@ export function EditProductModal({
   onClose,
   onSaved,
 }: Props) {
+  const { store } = useStore()
   const [name, setName] = useState('')
   const [basePrice, setBasePrice] = useState('')
   const [stockQty, setStockQty] = useState('0')
@@ -52,6 +62,9 @@ export function EditProductModal({
   const [sku, setSku] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [status, setStatus] = useState<ProductStatus>('active')
+  const [mediaItems, setMediaItems] = useState<ProductMediaItem[]>([])
+  const [thumbnailId, setThumbnailId] = useState<string | null>(null)
+  const [imageError, setImageError] = useState('')
   const [existingVariants, setExistingVariants] = useState<EditableVariantRow[]>([])
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
   const [newVariants, setNewVariants] = useState<GeneratedVariant[]>([])
@@ -83,6 +96,10 @@ export function EditProductModal({
     setSku(product.sku ?? '')
     setCategoryId(product.category_id)
     setStatus(getProductStatus(product))
+    const items = productToMediaItems(product)
+    setMediaItems(items)
+    setThumbnailId(resolveThumbnailId(items, product.thumbnail_url))
+    setImageError('')
     setExistingVariants(variantsToEditable(initialVariants))
     setVariantOptions([])
     setNewVariants([])
@@ -96,7 +113,7 @@ export function EditProductModal({
   }
 
   const handleSubmit = async () => {
-    if (!product) return
+    if (!product || !store?.id) return
     const trimmedName = name.trim()
     const price = Number(basePrice)
     const stock = Number(stockQty)
@@ -124,9 +141,21 @@ export function EditProductModal({
       return
     }
 
+    if (mediaItems.length === 0) {
+      setImageError('At least one product image is required')
+      scrollToField('images')
+      return
+    }
+    if (!thumbnailId) {
+      setImageError('Select a thumbnail image')
+      scrollToField('images')
+      return
+    }
+
     setNameError('')
     setPriceError('')
     setStockError('')
+    setImageError('')
 
     for (const v of existingVariants) {
       if (!v.name.trim()) {
@@ -140,6 +169,13 @@ export function EditProductModal({
       const hasNewVariants = newVariants.length > 0
       const hasExisting = existingVariants.length > 0 || hasNewVariants
 
+      const { images, thumbnail_url } = await resolveProductMediaForSave(
+        store.id,
+        mediaItems,
+        thumbnailId,
+        uploadProductImages
+      )
+
       await updateProduct(product.id, {
         name: trimmedName,
         base_price: price,
@@ -149,6 +185,8 @@ export function EditProductModal({
         sku: sku.trim() || null,
         category_id: categoryId,
         status,
+        images,
+        thumbnail_url,
       })
 
       for (const v of existingVariants) {
@@ -158,13 +196,15 @@ export function EditProductModal({
           price_delta: Number(v.priceDelta) || 0,
           stock_qty: Number(v.stockQty) || 0,
           sku: v.sku.trim() || null,
+          is_active: v.isActive,
         }
         const changed =
           !original ||
           original.name !== payload.name ||
           Number(original.price_delta) !== payload.price_delta ||
           original.stock_qty !== payload.stock_qty ||
-          (original.sku ?? '') !== (payload.sku ?? '')
+          (original.sku ?? '') !== (payload.sku ?? '') ||
+          original.is_active !== payload.is_active
 
         if (changed) {
           await updateProductVariant(product.id, v.id, payload)
@@ -199,6 +239,19 @@ export function EditProductModal({
       scrollViewRef={scrollViewRef}
       footer={<Button label="Save changes" loading={loading} onPress={handleSubmit} />}
     >
+      <FormImageSection onLayout={registerFieldY('images')}>
+        <ProductMediaEditor
+          items={mediaItems}
+          thumbnailId={thumbnailId}
+          onChange={(nextItems, nextThumb) => {
+            setMediaItems(nextItems)
+            setThumbnailId(nextThumb)
+            if (nextItems.length > 0 && nextThumb) setImageError('')
+          }}
+          error={imageError}
+        />
+      </FormImageSection>
+
       <Input
         label="Product name *"
         value={name}
@@ -256,4 +309,14 @@ export function EditProductModal({
       />
     </FormModal>
   )
+}
+
+function FormImageSection({
+  onLayout,
+  children,
+}: {
+  onLayout: (e: LayoutChangeEvent) => void
+  children: ReactNode
+}) {
+  return <View onLayout={onLayout}>{children}</View>
 }

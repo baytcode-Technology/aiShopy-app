@@ -7,6 +7,7 @@ import { ProductDetailMediaSection } from '@/components/store/product-media/Prod
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
@@ -80,20 +81,20 @@ export default function ProductDetailScreen() {
 
   return (
     <Screen variant="canvas" edges={['top']}>
-      <View className="flex-row items-center px-5 py-3.5 bg-surface border-b border-gray-100">
-        <IconButton variant="ghost" onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color={Colors.brand.primary} />
-        </IconButton>
-        <Text
-          className="flex-1 text-[17px] font-extrabold text-ink text-center mx-3 tracking-tight"
-          numberOfLines={1}
-        >
-          {product?.name ?? 'Product'}
-        </Text>
-        <IconButton variant="ghost" onPress={() => setEditOpen(true)} disabled={!product}>
-          <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
-        </IconButton>
-      </View>
+      <DetailScreenHeader
+        title={product?.name ?? 'Product'}
+        onBack={() => router.back()}
+        rightActions={
+          <IconButton
+            variant="ghost"
+            onPress={() => setEditOpen(true)}
+            disabled={!product}
+            accessibilityLabel="Edit product"
+          >
+            <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
+          </IconButton>
+        }
+      />
 
       {loading ? (
         <ScreenBody className="items-center justify-center">

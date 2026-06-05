@@ -1,15 +1,15 @@
-import { Redirect, Tabs } from 'expo-router'
-import { ActivityIndicator, View } from 'react-native'
-import { AppLogo } from '@/components/brand/AppLogo'
-import { StoreTabBar } from '@/components/navigation/StoreTabBar'
-import { ChatSocketProvider } from '@src/contexts/chat-socket-context'
-import { useAuth } from '@src/contexts/auth-context'
-import { useStore } from '@src/contexts/store-context'
-import Colors from '@src/theme/colors'
+import { AppLogo } from "@/components/brand/AppLogo";
+import { StoreTabBar } from "@/components/navigation/StoreTabBar";
+import { useAuth } from "@src/contexts/auth-context";
+import { ChatSocketProvider } from "@src/contexts/chat-socket-context";
+import { useStore } from "@src/contexts/store-context";
+import Colors from "@src/theme/colors";
+import { Redirect, Tabs } from "expo-router";
+import { ActivityIndicator, View } from "react-native";
 
 export default function StoreLayout() {
-  const { isLoading, isAuthenticated } = useAuth()
-  const { store, isLoading: storeLoading } = useStore()
+  const { isLoading, isAuthenticated } = useAuth();
+  const { store, isLoading: storeLoading } = useStore();
 
   if (isLoading || storeLoading) {
     return (
@@ -17,15 +17,15 @@ export default function StoreLayout() {
         <AppLogo variant="wordmark" align="center" className="mb-6" />
         <ActivityIndicator color={Colors.brand.primary} size="large" />
       </View>
-    )
+    );
   }
 
   if (!isAuthenticated) {
-    return <Redirect href="/(auth)/login" />
+    return <Redirect href="/(auth)/login" />;
   }
 
   if (!store) {
-    return <Redirect href="/store-check" />
+    return <Redirect href="/store-check" />;
   }
 
   return (
@@ -36,11 +36,11 @@ export default function StoreLayout() {
           headerShown: false,
         }}
       >
-        <Tabs.Screen name="chats" options={{ title: 'Chats' }} />
-        <Tabs.Screen name="products" options={{ title: 'Products' }} />
-        <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
-        <Tabs.Screen name="more" options={{ title: 'Account' }} />
+        <Tabs.Screen name="chats" options={{ title: "Chats" }} />
+        <Tabs.Screen name="products" options={{ title: "Products" }} />
+        <Tabs.Screen name="orders" options={{ title: "Orders" }} />
+        <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />
       </Tabs>
     </ChatSocketProvider>
-  )
+  );
 }

@@ -25,6 +25,7 @@ export default function AdminDashboardScreen() {
         title="Admin Dashboard"
         subtitle="Connect channels and manage integrations"
         onBack={() => router.back()}
+        showSettings
       />
       <ScreenBody className="px-5 pt-2 gap-4">
         <Muted className="text-[14px] leading-5 mb-1">

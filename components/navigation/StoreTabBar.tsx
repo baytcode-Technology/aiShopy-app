@@ -11,17 +11,17 @@ const icons: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = 
   chats: 'comments',
   products: 'th-large',
   orders: 'shopping-bag',
-  more: 'user',
+  dashboard: 'tachometer',
 }
 
 const labels: Record<string, string> = {
   chats: 'Chats',
   products: 'Products',
   orders: 'Orders',
-  more: 'Account',
+  dashboard: 'Dashboard',
 }
 
-const VISIBLE_TAB_ROUTES = new Set(['chats', 'products', 'orders', 'more'])
+const VISIBLE_TAB_ROUTES = new Set(['chats', 'products', 'orders', 'dashboard'])
 
 const TAB_PILL_RADIUS = 18
 

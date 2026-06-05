@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pressable, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AppLogo } from '@/components/brand/AppLogo'
+import { HeaderActionsRow } from '@/components/navigation/HeaderActionsRow'
 import { cn } from '@src/lib/cn'
 import Colors from '@src/theme/colors'
 import { Heading, Subtitle } from './Typography'
@@ -20,6 +21,8 @@ type Props = {
   variant?: 'default' | 'tab'
   /** Show AISHOPY wordmark above the title (tab screens). */
   showLogo?: boolean
+  /** Show the settings cog in the top-right (default true). */
+  showSettings?: boolean
 }
 
 export function ScreenHeader({
@@ -31,8 +34,14 @@ export function ScreenHeader({
   large = true,
   variant = 'default',
   showLogo = false,
+  showSettings = true,
 }: Props) {
   const isTab = variant === 'tab'
+
+  const headerActions =
+    right || showSettings ? (
+      <HeaderActionsRow showSettings={showSettings}>{right}</HeaderActionsRow>
+    ) : null
 
   // Back headers are always left-aligned.
   if (onBack) {
@@ -62,7 +71,7 @@ export function ScreenHeader({
               </Subtitle>
             ) : null}
           </View>
-          {right ? <View className="pt-1 shrink-0">{right}</View> : null}
+          {headerActions ? <View className="pt-1 shrink-0">{headerActions}</View> : null}
         </View>
       </View>
     )
@@ -72,7 +81,12 @@ export function ScreenHeader({
   // and place the AISHOPY wordmark centered within the header width.
   if (isTab) {
     return (
-      <View className={cn('px-5 py-4 bg-surface', className)}>
+      <View
+        className={cn(
+          showLogo ? 'px-5 pt-1 pb-3 bg-surface' : 'px-5 py-4 bg-surface',
+          className
+        )}
+      >
         <View className="relative">
           {showLogo ? (
             <View pointerEvents="none" className="absolute left-0 right-0 top-0 items-center">
@@ -80,7 +94,12 @@ export function ScreenHeader({
             </View>
           ) : null}
 
-          <View className="flex-row items-center justify-between">
+          <View
+            className={cn(
+              'flex-row items-center justify-between',
+              showLogo ? 'mt-5' : undefined
+            )}
+          >
             <View className="flex-1 pr-3">
               <Heading className="text-2xl tracking-tight">{title}</Heading>
               {subtitle ? (
@@ -89,7 +108,7 @@ export function ScreenHeader({
                 </Subtitle>
               ) : null}
             </View>
-            {right ? <View className="shrink-0">{right}</View> : null}
+            {headerActions ? <View className="shrink-0">{headerActions}</View> : null}
           </View>
         </View>
       </View>
@@ -111,7 +130,7 @@ export function ScreenHeader({
             </Subtitle>
           ) : null}
         </View>
-        {right ? <View className="pt-1 shrink-0">{right}</View> : null}
+        {headerActions ? <View className="pt-1 shrink-0">{headerActions}</View> : null}
       </View>
     </View>
   )

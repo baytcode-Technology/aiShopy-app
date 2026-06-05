@@ -12,6 +12,7 @@ import { CreateProductModal } from '@/components/store/CreateProductModal'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Fab } from '@/components/ui/Fab'
+import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
@@ -94,35 +95,30 @@ export default function CategoryDetailScreen() {
 
   return (
     <Screen variant="canvas" edges={['top']}>
-      <View className="flex-row items-center px-5 py-3.5 bg-surface border-b border-gray-100">
-        <IconButton variant="ghost" onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color={Colors.brand.primary} />
-        </IconButton>
-        <Text
-          className="flex-1 text-[17px] font-extrabold text-ink text-center mx-2 tracking-tight"
-          numberOfLines={1}
-        >
-          {category?.name ?? 'Category'}
-        </Text>
-        <View className="flex-row items-center gap-0.5 shrink-0">
-          <IconButton
-            variant="ghost"
-            onPress={() => setMainEditOpen(true)}
-            disabled={!category}
-            accessibilityLabel="Edit category"
-          >
-            <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
-          </IconButton>
-          <IconButton
-            variant="ghost"
-            onPress={() => setDeleteOpen(true)}
-            disabled={!category || deleteLoading}
-            accessibilityLabel="Delete category"
-          >
-            <FontAwesome name="trash-o" size={16} color="#EF4444" />
-          </IconButton>
-        </View>
-      </View>
+      <DetailScreenHeader
+        title={category?.name ?? 'Category'}
+        onBack={() => router.back()}
+        rightActions={
+          <>
+            <IconButton
+              variant="ghost"
+              onPress={() => setMainEditOpen(true)}
+              disabled={!category}
+              accessibilityLabel="Edit category"
+            >
+              <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
+            </IconButton>
+            <IconButton
+              variant="ghost"
+              onPress={() => setDeleteOpen(true)}
+              disabled={!category || deleteLoading}
+              accessibilityLabel="Delete category"
+            >
+              <FontAwesome name="trash-o" size={16} color="#EF4444" />
+            </IconButton>
+          </>
+        }
+      />
 
       {loading ? (
         <ScreenBody className="items-center justify-center flex-1">

@@ -1,20 +1,19 @@
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { CategoryActiveBadge } from '@/components/store/CategoryActiveBadge'
 import { CategoryDetailCover } from '@/components/store/CategoryDetailCover'
 import { CategoryInfoEditBlock } from '@/components/store/CategoryInfoEditBlock'
+import { EditCategoryModal } from '@/components/store/EditCategoryModal'
+import { CategoryProductsSection } from '@/components/store/CategoryProductsSection'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
 import { CreateProductModal } from '@/components/store/CreateProductModal'
-import { EditCategoryModal } from '@/components/store/EditCategoryModal'
-import { ProductListRow } from '@/components/store/ProductListRow'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Fab } from '@/components/ui/Fab'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { SectionHeader } from '@/components/ui/SectionHeader'
 import { Muted } from '@/components/ui/Typography'
 import { deleteCategory, fetchCategories } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
@@ -37,8 +36,7 @@ export default function CategoryDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [productModalOpen, setProductModalOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [infoEditing, setInfoEditing] = useState(false)
+  const [mainEditOpen, setMainEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -94,45 +92,6 @@ export default function CategoryDetailScreen() {
     }
   }
 
-  const renderListHeader = () => {
-    if (!category || !store?.id) return null
-    return (
-      <AnimatedFadeIn>
-        <CategoryDetailCover
-          category={category}
-          storeId={store.id}
-          onUpdated={setCategory}
-        />
-
-        <View className="flex-row flex-wrap gap-2 mb-4">
-          <CategoryActiveBadge isActive={category.is_active} />
-        </View>
-
-        <CategoryInfoEditBlock
-          category={category}
-          productCount={products.length}
-          onUpdated={setCategory}
-          onEditingChange={setInfoEditing}
-        />
-
-        <SectionHeader
-          title={`Products · ${products.length}`}
-          className="mb-2"
-          right={
-            <Pressable
-              onPress={() => setPickerOpen(true)}
-              className="flex-row items-center gap-1.5 rounded-full border border-gray-200 bg-surface px-3.5 py-2"
-              hitSlop={6}
-            >
-              <FontAwesome name="exchange" size={12} color={Colors.brand.primary} />
-              <Text className="text-[12px] font-bold text-ink">Add / remove</Text>
-            </Pressable>
-          }
-        />
-      </AnimatedFadeIn>
-    )
-  }
-
   return (
     <Screen variant="canvas" edges={['top']}>
       <View className="flex-row items-center px-5 py-3.5 bg-surface border-b border-gray-100">
@@ -148,7 +107,7 @@ export default function CategoryDetailScreen() {
         <View className="flex-row items-center gap-0.5 shrink-0">
           <IconButton
             variant="ghost"
-            onPress={() => setEditModalOpen(true)}
+            onPress={() => setMainEditOpen(true)}
             disabled={!category}
             accessibilityLabel="Edit category"
           >
@@ -173,65 +132,70 @@ export default function CategoryDetailScreen() {
         <ScreenBody className="items-center justify-center flex-1">
           <Muted className="text-base font-semibold">Category not found</Muted>
         </ScreenBody>
-      ) : (
+      ) : !store?.id ? null : (
         <>
-          <FlatList
-            data={products}
-            keyExtractor={(item) => item.id}
-            ListHeaderComponent={<View className="px-5 pt-5">{renderListHeader()}</View>}
-            extraData={`${category.id}-${infoEditing}-${products.length}-${category.name}`}
-            ListEmptyComponent={
-              <View className="px-5 pb-8">
-                <Muted className="text-center text-[15px]">
-                  No products in this category. Use Add / remove or tap + below.
-                </Muted>
-              </View>
-            }
-            contentContainerClassName="pb-32"
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="px-5 pt-5"
+            contentContainerStyle={{ paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <View className="px-5">
-                <ProductListRow
-                  product={item}
-                  onPress={() =>
-                    router.push(`/(store)/products/${item.id}` as Href)
-                  }
-                />
+          >
+            <AnimatedFadeIn>
+              <CategoryDetailCover
+                category={category}
+                storeId={store.id}
+                onUpdated={setCategory}
+              />
+
+              <View className="flex-row flex-wrap gap-2 mb-4">
+                <CategoryActiveBadge isActive={category.is_active} />
               </View>
-            )}
-          />
+
+              <CategoryInfoEditBlock
+                category={category}
+                productCount={products.length}
+                onUpdated={setCategory}
+              />
+
+              <CategoryProductsSection
+                products={products}
+                onPressProduct={(productId) =>
+                  router.push(`/(store)/products/${productId}` as Href)
+                }
+                onAddRemove={() => setPickerOpen(true)}
+              />
+            </AnimatedFadeIn>
+          </ScrollView>
 
           <Fab onPress={() => setProductModalOpen(true)} />
 
-          <EditCategoryModal
-            visible={editModalOpen}
-            category={category}
-            onClose={() => setEditModalOpen(false)}
-            onSaved={setCategory}
+          <CreateProductModal
+            visible={productModalOpen}
+            storeId={store.id}
+            categories={categories}
+            initialCategoryId={categoryId}
+            onClose={() => setProductModalOpen(false)}
+            onCreated={loadData}
           />
-
-          {store?.id ? (
-            <>
-              <CreateProductModal
-                visible={productModalOpen}
-                storeId={store.id}
-                categories={categories}
-                initialCategoryId={categoryId}
-                onClose={() => setProductModalOpen(false)}
-                onCreated={loadData}
-              />
-              <CategoryProductPickerModal
-                visible={pickerOpen}
-                mode="edit"
-                storeId={store.id}
-                categoryId={categoryId}
-                categoryName={category.name}
-                allProducts={allProducts}
-                onClose={() => setPickerOpen(false)}
-                onSaved={loadData}
-              />
-            </>
-          ) : null}
+          <EditCategoryModal
+            visible={mainEditOpen}
+            category={category}
+            storeId={store.id}
+            productCount={products.length}
+            onClose={() => setMainEditOpen(false)}
+            onUpdated={setCategory}
+            onManageProducts={() => setPickerOpen(true)}
+          />
+          <CategoryProductPickerModal
+            visible={pickerOpen}
+            mode="edit"
+            storeId={store.id}
+            categoryId={categoryId}
+            categoryName={category.name}
+            allProducts={allProducts}
+            onClose={() => setPickerOpen(false)}
+            onSaved={loadData}
+          />
 
           <ConfirmDialog
             visible={deleteOpen}

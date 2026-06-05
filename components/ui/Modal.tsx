@@ -51,7 +51,8 @@ export function SleekModal({
         </Pressable>
         <KeyboardAvoidingView
           className="max-h-[92%]"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 4 : 0}
         >
           <View className="bg-surface rounded-t-[32px] border border-gray-200 border-b-0 max-h-full overflow-hidden">
             <View className="self-center w-10 h-1 rounded-full bg-gray-200 mt-3" />
@@ -71,6 +72,8 @@ export function SleekModal({
               className={cn('max-h-[560px]', scrollClassName)}
               contentContainerClassName="px-6 py-5 gap-5"
               keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              showsVerticalScrollIndicator={false}
             >
               {children}
             </ScrollView>

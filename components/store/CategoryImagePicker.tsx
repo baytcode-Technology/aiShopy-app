@@ -10,6 +10,8 @@ type Props = {
   image: PickedImage | null
   onChange: (image: PickedImage | null) => void
   error?: string
+  allowRemove?: boolean
+  label?: string
 }
 
 function mimeFromUri(uri: string): string {
@@ -20,7 +22,13 @@ function mimeFromUri(uri: string): string {
   return 'image/jpeg'
 }
 
-export function CategoryImagePicker({ image, onChange, error }: Props) {
+export function CategoryImagePicker({
+  image,
+  onChange,
+  error,
+  allowRemove = true,
+  label = 'Category image *',
+}: Props) {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
@@ -50,7 +58,7 @@ export function CategoryImagePicker({ image, onChange, error }: Props) {
 
   return (
     <View className="gap-2">
-      <Label>Category image *</Label>
+      <Label>{label}</Label>
       <Pressable onPress={pickImage}>
         <View
           className={`h-44 rounded-2xl border-2 border-dashed items-center justify-center overflow-hidden ${
@@ -67,7 +75,7 @@ export function CategoryImagePicker({ image, onChange, error }: Props) {
           )}
         </View>
       </Pressable>
-      {image ? (
+      {image && allowRemove ? (
         <Pressable onPress={() => onChange(null)}>
           <Text className="text-xs font-semibold text-gray-600 underline">Remove image</Text>
         </Pressable>

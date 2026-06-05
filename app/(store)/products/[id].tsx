@@ -9,11 +9,11 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { Muted, SectionTitle } from '@/components/ui/Typography'
+import { Muted } from '@/components/ui/Typography'
 import { ProductInfoEditBlock } from '@/components/store/ProductInfoEditBlock'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
 import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
-import { VariantEditableCard } from '@/components/store/VariantEditableCard'
+import { ProductVariantsSection } from '@/components/store/ProductVariantsSection'
 import { fetchProduct, updateProduct } from '@src/api/products'
 import { getProductStatus } from '@src/lib/product-status'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -140,32 +140,19 @@ export default function ProductDetailScreen() {
                 onUpdated={setProduct}
               />
 
-              {variants.length > 0 ? (
-                <View className="mb-8">
-                  <SectionTitle className="mb-4">Variants · {variants.length}</SectionTitle>
-                  {variants.map((v) => (
-                    <VariantEditableCard
-                      key={v.id}
-                      variant={v}
-                      product={product}
-                      currencySymbol={symbol}
-                      onUpdated={(updated) => {
-                        setVariants((prev) =>
-                          prev.map((item) => (item.id === updated.id ? updated : item))
-                        )
-                      }}
-                      onDeleted={(variantId) => {
-                        setVariants((prev) => prev.filter((item) => item.id !== variantId))
-                      }}
-                    />
-                  ))}
-                </View>
-              ) : (
-                <View className="mb-8">
-                  <SectionTitle className="mb-3">Variants</SectionTitle>
-                  <Muted>No variants — single SKU product.</Muted>
-                </View>
-              )}
+              <ProductVariantsSection
+                product={product}
+                variants={variants}
+                currencySymbol={symbol}
+                onVariantUpdated={(updated) => {
+                  setVariants((prev) =>
+                    prev.map((item) => (item.id === updated.id ? updated : item))
+                  )
+                }}
+                onVariantDeleted={(variantId) => {
+                  setVariants((prev) => prev.filter((item) => item.id !== variantId))
+                }}
+              />
             </AnimatedFadeIn>
           </ScrollView>
         </View>

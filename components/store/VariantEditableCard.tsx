@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react'
-import { ActivityIndicator, Text, TextInput, View } from 'react-native'
+import { useState } from 'react'
+import { ActivityIndicator, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Card } from '@/components/ui/Card'
-import { CancelSaveRow } from '@/components/ui/CancelSaveRow'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { IconButton } from '@/components/ui/IconButton'
 import { Caption } from '@/components/ui/Typography'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
+import { VariantEditModal } from '@/components/store/VariantEditModal'
 import { deleteProductVariant, updateProductVariant } from '@src/api/products'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Product, ProductVariant } from '@src/types/product'
@@ -27,11 +27,7 @@ export function VariantEditableCard({
   onUpdated,
   onDeleted,
 }: Props) {
-  const [expanded, setExpanded] = useState(false)
-  const [priceDraft, setPriceDraft] = useState('')
-  const [stockDraft, setStockDraft] = useState('')
-  const [skuDraft, setSkuDraft] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -46,51 +42,8 @@ export function VariantEditableCard({
     .map(([k, val]) => `${k}: ${val}`)
     .join(' · ')
 
-  useEffect(() => {
-    setPriceDraft(String(unitPrice))
-    setStockDraft(String(variant.stock_qty))
-    setSkuDraft(variant.sku ?? '')
-  }, [variant.id, unitPrice, variant.stock_qty, variant.sku])
-
-  const cancel = () => {
-    setPriceDraft(String(unitPrice))
-    setStockDraft(String(variant.stock_qty))
-    setSkuDraft(variant.sku ?? '')
-    setExpanded(false)
-  }
-
-  const save = async () => {
-    const price = Number(priceDraft)
-    const stock = Number(stockDraft)
-    if (!Number.isFinite(price) || price < 0) {
-      showError('Enter a valid price')
-      return
-    }
-    if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) {
-      showError('Enter a valid stock quantity')
-      return
-    }
-
-    const price_delta = price - Number(product.base_price)
-    setSaving(true)
-    try {
-      const res = await updateProductVariant(product.id, variant.id, {
-        price_delta,
-        stock_qty: stock,
-        sku: skuDraft.trim() || null,
-      })
-      onUpdated(res.data.variant)
-      setExpanded(false)
-      showSuccess('Variant updated')
-    } catch (e) {
-      showError(e, 'Could not update variant')
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const toggleActive = async () => {
-    if (cardLocked || expanded) return
+    if (cardLocked) return
     const next = !variant.is_active
     setBusy(true)
     setOptimisticActive(next)
@@ -141,7 +94,7 @@ export function VariantEditableCard({
             <IconButton
               size="sm"
               onPress={toggleActive}
-              disabled={cardLocked || expanded}
+              disabled={cardLocked}
               accessibilityLabel={displayActive ? 'Disable variant' : 'Enable variant'}
             >
               <FontAwesome
@@ -154,83 +107,45 @@ export function VariantEditableCard({
         </View>
         {optionLabels ? <Caption className="mb-3">{optionLabels}</Caption> : null}
 
-        {!expanded ? (
-          <View className="flex-row flex-wrap gap-3 pr-[4.75rem]">
-            <Text className="text-[13px] font-bold text-ink">
-              {currencySymbol}
-              {unitPrice}
-            </Text>
-            <Text className="text-[13px] font-bold text-gray-600">Stock {variant.stock_qty}</Text>
-            <Text className="text-[13px] font-bold text-gray-600">
-              SKU {variant.sku?.trim() ? variant.sku : '—'}
-            </Text>
-          </View>
-        ) : (
-          <View className="mt-1 pt-3 border-t border-gray-100 gap-3">
-            <View>
-              <Text className="text-[12px] font-bold text-gray-500 mb-1.5">Price</Text>
-              <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 px-3">
-                <Text className="text-base font-bold text-ink mr-1">{currencySymbol}</Text>
-                <TextInput
-                  className="flex-1 py-3 text-base font-bold text-ink"
-                  value={priceDraft}
-                  onChangeText={setPriceDraft}
-                  keyboardType="decimal-pad"
-                  selectionColor={Colors.brand.primary}
-                  editable={!cardLocked}
-                />
-              </View>
-            </View>
-            <View>
-              <Text className="text-[12px] font-bold text-gray-500 mb-1.5">Stock</Text>
-              <TextInput
-                className="border border-gray-200 rounded-xl bg-gray-50 px-3 py-3 text-base font-bold text-ink"
-                value={stockDraft}
-                onChangeText={setStockDraft}
-                keyboardType="number-pad"
-                selectionColor={Colors.brand.primary}
-                editable={!cardLocked}
-              />
-            </View>
-            <View>
-              <Text className="text-[12px] font-bold text-gray-500 mb-1.5">SKU</Text>
-              <TextInput
-                className="border border-gray-200 rounded-xl bg-gray-50 px-3 py-3 text-base font-bold text-ink"
-                value={skuDraft}
-                onChangeText={setSkuDraft}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholder="Optional"
-                placeholderTextColor={Colors.text.muted}
-                selectionColor={Colors.brand.primary}
-                editable={!cardLocked}
-              />
-            </View>
-            <CancelSaveRow onCancel={cancel} onSave={save} saving={saving} />
-          </View>
-        )}
+        <View className="flex-row flex-wrap gap-3 pr-[4.75rem]">
+          <Text className="text-[13px] font-bold text-ink">
+            {currencySymbol}
+            {unitPrice}
+          </Text>
+          <Text className="text-[13px] font-bold text-gray-600">Stock {variant.stock_qty}</Text>
+          <Text className="text-[13px] font-bold text-gray-600">
+            SKU {variant.sku?.trim() ? variant.sku : '—'}
+          </Text>
+        </View>
 
-        {!expanded ? (
-          <View className="absolute bottom-3 right-3 flex-row items-center gap-2">
-            <IconButton
-              size="sm"
-              onPress={() => setExpanded(true)}
-              disabled={cardLocked}
-              accessibilityLabel="Edit variant"
-            >
-              <FontAwesome name="pencil" size={14} color={Colors.brand.primary} />
-            </IconButton>
-            <IconButton
-              size="sm"
-              onPress={() => setDeleteOpen(true)}
-              disabled={cardLocked}
-              accessibilityLabel="Delete variant"
-            >
-              <FontAwesome name="trash-o" size={14} color="#EF4444" />
-            </IconButton>
-          </View>
-        ) : null}
+        <View className="absolute bottom-3 right-3 flex-row items-center gap-2">
+          <IconButton
+            size="sm"
+            onPress={() => setEditOpen(true)}
+            disabled={cardLocked}
+            accessibilityLabel="Edit variant"
+          >
+            <FontAwesome name="pencil" size={14} color={Colors.brand.primary} />
+          </IconButton>
+          <IconButton
+            size="sm"
+            onPress={() => setDeleteOpen(true)}
+            disabled={cardLocked}
+            accessibilityLabel="Delete variant"
+          >
+            <FontAwesome name="trash-o" size={14} color="#EF4444" />
+          </IconButton>
+        </View>
       </Card>
+
+      <VariantEditModal
+        visible={editOpen}
+        variant={variant}
+        product={product}
+        currencySymbol={currencySymbol}
+        onClose={() => setEditOpen(false)}
+        onUpdated={onUpdated}
+      />
 
       <ConfirmDialog
         visible={deleteOpen}

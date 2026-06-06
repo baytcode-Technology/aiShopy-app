@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { PriceDisplayRow } from '@/components/store/PriceDisplayRow'
 import { ProductInfoEditModal } from '@/components/store/ProductInfoEditModal'
 import { Caption, SectionTitle } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
@@ -43,16 +44,13 @@ export function ProductInfoEditBlock({
           <Text className="text-[20px] font-extrabold text-ink tracking-tighter leading-tight mb-1">
             {product.name}
           </Text>
-          <Text className="text-[18px] font-extrabold text-ink tracking-tighter mb-4">
-            {currencySymbol}
-            {product.base_price}
-          </Text>
-          {product.compare_at_price ? (
-            <Caption className="line-through text-gray-400 mb-4 -mt-2">
-              Compare {currencySymbol}
-              {product.compare_at_price}
-            </Caption>
-          ) : null}
+          <PriceDisplayRow
+            currencySymbol={currencySymbol}
+            price={product.base_price}
+            compareAtPrice={product.compare_at_price}
+            size="lg"
+            className="mb-4"
+          />
 
           <View className="flex-row gap-3 mb-4">
             <InfoStat label="Stock" value={stockDisplay} />

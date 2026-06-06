@@ -15,6 +15,7 @@ export type EditableVariantRow = {
   id: string
   name: string
   priceDelta: string
+  compareAtPrice: string
   stockQty: string
   sku: string
   isActive: boolean
@@ -25,6 +26,7 @@ export function variantsToEditable(rows: ProductVariant[]): EditableVariantRow[]
     id: v.id,
     name: v.name,
     priceDelta: String(v.price_delta),
+    compareAtPrice: v.compare_at_price != null ? String(v.compare_at_price) : '',
     stockQty: String(v.stock_qty),
     sku: v.sku ?? '',
     isActive: v.is_active,
@@ -118,6 +120,17 @@ export function VariantListEditor({ productId, variants, onChange }: Props) {
                   value={v.priceDelta}
                   onChangeText={(priceDelta) => update(v.id, { priceDelta })}
                   keyboardType="decimal-pad"
+                />
+              </View>
+              <View className="flex-1">
+                <Label className="mb-1 normal-case tracking-normal text-[10px]">Compare at</Label>
+                <TextInput
+                  className={fieldInputClass}
+                  value={v.compareAtPrice}
+                  onChangeText={(compareAtPrice) => update(v.id, { compareAtPrice })}
+                  keyboardType="decimal-pad"
+                  placeholder="Optional"
+                  placeholderTextColor={Colors.text.muted}
                 />
               </View>
               <View className="flex-1">

@@ -27,6 +27,7 @@ export type ProductVariant = {
   name: string
   options: Record<string, unknown>
   price_delta: number
+  compare_at_price: number | null
   stock_qty: number
   sku: string | null
   image_url: string | null
@@ -37,6 +38,7 @@ export type ProductVariant = {
 export type CreateProductVariantPayload = {
   name: string
   price_delta?: number
+  compare_at_price?: number | null
   stock_qty?: number
   sku?: string
   options?: Record<string, unknown>
@@ -47,6 +49,7 @@ export type CreateProductVariantPayload = {
 export type UpdateProductVariantPayload = Partial<{
   name: string
   price_delta: number
+  compare_at_price: number | null
   stock_qty: number
   sku: string | null
   options: Record<string, unknown>
@@ -68,6 +71,7 @@ export type CreateProductPayload = {
   store_id: string
   name: string
   base_price: number
+  compare_at_price?: number | null
   images: string[]
   thumbnail_url: string
   description?: string

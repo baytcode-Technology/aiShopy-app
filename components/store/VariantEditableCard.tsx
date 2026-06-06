@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { IconButton } from '@/components/ui/IconButton'
 import { Caption } from '@/components/ui/Typography'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
+import { PriceDisplayRow } from '@/components/store/PriceDisplayRow'
 import { VariantEditModal } from '@/components/store/VariantEditModal'
 import { deleteProductVariant, updateProductVariant } from '@src/api/products'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -107,11 +108,12 @@ export function VariantEditableCard({
         </View>
         {optionLabels ? <Caption className="mb-3">{optionLabels}</Caption> : null}
 
-        <View className="flex-row flex-wrap gap-3 pr-[4.75rem]">
-          <Text className="text-[13px] font-bold text-ink">
-            {currencySymbol}
-            {unitPrice}
-          </Text>
+        <View className="flex-row flex-wrap items-center gap-3 pr-[4.75rem]">
+          <PriceDisplayRow
+            currencySymbol={currencySymbol}
+            price={unitPrice}
+            compareAtPrice={variant.compare_at_price}
+          />
           <Text className="text-[13px] font-bold text-gray-600">Stock {variant.stock_qty}</Text>
           <Text className="text-[13px] font-bold text-gray-600">
             SKU {variant.sku?.trim() ? variant.sku : '—'}

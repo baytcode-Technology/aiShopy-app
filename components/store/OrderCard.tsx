@@ -26,7 +26,10 @@ type Props = {
 
 export function OrderCard({ order, currency = 'INR' }: Props) {
   const symbol = currency === 'INR' ? '₹' : '$'
-  const customerName = order.customers?.name ?? order.customers?.whatsapp_number ?? 'Customer'
+  const customerName =
+    order.customers?.name ??
+    order.customers?.whatsapp_number ??
+    (order.source === 'offline' ? 'Walk-in order' : 'Customer')
   const itemCount = order.items?.length ?? 0
 
   return (

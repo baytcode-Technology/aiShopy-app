@@ -72,6 +72,7 @@ export default function OrdersScreen() {
         <CreateOrderModal
           visible={modalOpen}
           storeId={store.id}
+          currency={store.currency}
           onClose={() => setModalOpen(false)}
           onCreated={loadOrders}
         />

@@ -190,8 +190,8 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
                   >
                     {v.name}
                   </Text>
-                  <View className="flex-row gap-2">
-                    <View className="flex-1">
+                  <View className="flex-row gap-2 flex-wrap">
+                    <View className="flex-1 min-w-[30%]">
                       <Label className="mb-1 normal-case tracking-normal text-[10px]">
                         +Price
                       </Label>
@@ -204,7 +204,22 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
                         keyboardType="decimal-pad"
                       />
                     </View>
-                    <View className="flex-1">
+                    <View className="flex-1 min-w-[30%]">
+                      <Label className="mb-1 normal-case tracking-normal text-[10px]">
+                        Compare at
+                      </Label>
+                      <TextInput
+                        className={miniInputClass}
+                        value={v.compareAtPrice}
+                        onChangeText={(compareAtPrice) =>
+                          updateVariant(v.id, { compareAtPrice })
+                        }
+                        keyboardType="decimal-pad"
+                        placeholder="Optional"
+                        placeholderTextColor={Colors.text.muted}
+                      />
+                    </View>
+                    <View className="flex-1 min-w-[30%]">
                       <Label className="mb-1 normal-case tracking-normal text-[10px]">
                         Stock
                       </Label>
@@ -217,7 +232,7 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
                         keyboardType="number-pad"
                       />
                     </View>
-                    <View className="flex-[1.2]">
+                    <View className="flex-1 min-w-[30%]">
                       <Label className="mb-1 normal-case tracking-normal text-[10px]">
                         SKU
                       </Label>

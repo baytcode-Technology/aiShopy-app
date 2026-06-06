@@ -58,6 +58,7 @@ export async function fetchProduct(
 export type UpdateProductPayload = Partial<{
   name: string
   base_price: number
+  compare_at_price: number | null
   description: string | null
   sku: string | null
   stock_qty: number

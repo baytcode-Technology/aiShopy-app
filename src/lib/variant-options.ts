@@ -11,6 +11,7 @@ export type GeneratedVariant = {
   name: string
   options: Record<string, string>
   priceDelta: string
+  compareAtPrice: string
   stockQty: string
   sku: string
 }
@@ -51,6 +52,7 @@ export function generateVariantsFromOptions(
       name,
       options: opts,
       priceDelta: existing?.priceDelta ?? '0',
+      compareAtPrice: existing?.compareAtPrice ?? '',
       stockQty: existing?.stockQty ?? '0',
       sku: existing?.sku ?? '',
     }
@@ -58,10 +60,13 @@ export function generateVariantsFromOptions(
 }
 
 export function toCreateVariantPayload(v: GeneratedVariant): CreateProductVariantPayload {
+  const compareTrimmed = v.compareAtPrice.trim()
+  const compare_at_price = compareTrimmed ? Number(compareTrimmed) || null : null
   return {
     name: v.name,
     options: v.options,
     price_delta: Number(v.priceDelta) || 0,
+    compare_at_price,
     stock_qty: Number(v.stockQty) || 0,
     sku: v.sku.trim() || undefined,
     is_active: true,

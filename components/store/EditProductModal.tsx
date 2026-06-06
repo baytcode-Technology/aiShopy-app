@@ -26,6 +26,7 @@ import {
   resolveThumbnailId,
   type ProductMediaItem,
 } from '@src/lib/product-media'
+import { parseOptionalPrice } from '@src/lib/parse-optional-price'
 import { toCreateVariantPayload } from '@src/lib/variant-options'
 import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -57,6 +58,7 @@ export function EditProductModal({
   const { store } = useStore()
   const [name, setName] = useState('')
   const [basePrice, setBasePrice] = useState('')
+  const [compareAtPrice, setCompareAtPrice] = useState('')
   const [stockQty, setStockQty] = useState('0')
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
@@ -91,6 +93,9 @@ export function EditProductModal({
     if (!product || !visible) return
     setName(product.name)
     setBasePrice(String(product.base_price))
+    setCompareAtPrice(
+      product.compare_at_price != null ? String(product.compare_at_price) : ''
+    )
     setStockQty(String(product.stock_qty))
     setDescription(product.description ?? '')
     setSku(product.sku ?? '')
@@ -132,6 +137,12 @@ export function EditProductModal({
       scrollToField('basePrice')
       return
     }
+    const compareNum = parseOptionalPrice(compareAtPrice)
+    if (compareNum === undefined) {
+      setPriceError('Compare at price is not valid')
+      scrollToField('compareAtPrice')
+      return
+    }
 
     if (showProductStock && (!Number.isFinite(stock) || stock < 0)) {
       setStockError(stockQty.trim() ? 'Not a valid number' : 'This field is required')
@@ -162,6 +173,10 @@ export function EditProductModal({
         showError('Each variant needs a name')
         return
       }
+      if (parseOptionalPrice(v.compareAtPrice) === undefined) {
+        showError('Each variant needs a valid compare at price')
+        return
+      }
     }
 
     setLoading(true)
@@ -179,6 +194,7 @@ export function EditProductModal({
       await updateProduct(product.id, {
         name: trimmedName,
         base_price: price,
+        compare_at_price: compareNum,
         stock_qty: hasExisting ? 0 : Number.isFinite(stock) ? stock : 0,
         track_inventory: hasExisting || stock > 0,
         description: description.trim() || null,
@@ -191,9 +207,11 @@ export function EditProductModal({
 
       for (const v of existingVariants) {
         const original = initialVariants.find((o) => o.id === v.id)
+        const variantCompareNum = parseOptionalPrice(v.compareAtPrice)!
         const payload = {
           name: v.name.trim(),
           price_delta: Number(v.priceDelta) || 0,
+          compare_at_price: variantCompareNum,
           stock_qty: Number(v.stockQty) || 0,
           sku: v.sku.trim() || null,
           is_active: v.isActive,
@@ -202,6 +220,7 @@ export function EditProductModal({
           !original ||
           original.name !== payload.name ||
           Number(original.price_delta) !== payload.price_delta ||
+          (original.compare_at_price ?? null) !== payload.compare_at_price ||
           original.stock_qty !== payload.stock_qty ||
           (original.sku ?? '') !== (payload.sku ?? '') ||
           original.is_active !== payload.is_active
@@ -266,6 +285,14 @@ export function EditProductModal({
         keyboardType="decimal-pad"
         error={priceError || undefined}
         containerOnLayout={registerFieldY('basePrice')}
+      />
+      <Input
+        label="Compare at price"
+        value={compareAtPrice}
+        onChangeText={setCompareAtPrice}
+        placeholder="Optional original price"
+        keyboardType="decimal-pad"
+        containerOnLayout={registerFieldY('compareAtPrice')}
       />
       {showProductStock ? (
         <Input

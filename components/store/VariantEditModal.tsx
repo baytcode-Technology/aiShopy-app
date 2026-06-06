@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, TextInput, View } from 'react-native'
 import { Button } from '@/components/ui/Button'
 import { SleekModal } from '@/components/ui/Modal'
 import { updateProductVariant } from '@src/api/products'
+import { parseOptionalPrice } from '@src/lib/parse-optional-price'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Product, ProductVariant } from '@src/types/product'
 import Colors from '@src/theme/colors'
@@ -25,6 +26,7 @@ export function VariantEditModal({
   onUpdated,
 }: Props) {
   const [priceDraft, setPriceDraft] = useState('')
+  const [compareAtPriceDraft, setCompareAtPriceDraft] = useState('')
   const [stockDraft, setStockDraft] = useState('')
   const [skuDraft, setSkuDraft] = useState('')
   const [saving, setSaving] = useState(false)
@@ -36,9 +38,12 @@ export function VariantEditModal({
   useEffect(() => {
     if (!visible || !variant) return
     setPriceDraft(String(unitPrice))
+    setCompareAtPriceDraft(
+      variant.compare_at_price != null ? String(variant.compare_at_price) : ''
+    )
     setStockDraft(String(variant.stock_qty))
     setSkuDraft(variant.sku ?? '')
-  }, [visible, variant?.id, unitPrice, variant?.stock_qty, variant?.sku])
+  }, [visible, variant?.id, unitPrice, variant?.compare_at_price, variant?.stock_qty, variant?.sku])
 
   const handleClose = () => {
     if (!saving) onClose()
@@ -57,11 +62,18 @@ export function VariantEditModal({
       return
     }
 
+    const compareAtPrice = parseOptionalPrice(compareAtPriceDraft)
+    if (compareAtPrice === undefined) {
+      showError('Enter a valid compare at price')
+      return
+    }
+
     const price_delta = price - Number(product.base_price)
     setSaving(true)
     try {
       const res = await updateProductVariant(product.id, variant.id, {
         price_delta,
+        compare_at_price: compareAtPrice,
         stock_qty: stock,
         sku: skuDraft.trim() || null,
       })
@@ -101,6 +113,21 @@ export function VariantEditModal({
             value={priceDraft}
             onChangeText={setPriceDraft}
             keyboardType="decimal-pad"
+            selectionColor={Colors.brand.primary}
+            editable={!saving}
+          />
+        </View>
+      </Field>
+      <Field label="Compare at price">
+        <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 px-3">
+          <Text className="text-base font-bold text-ink mr-1">{currencySymbol}</Text>
+          <TextInput
+            className="flex-1 py-3 text-base font-bold text-ink"
+            value={compareAtPriceDraft}
+            onChangeText={setCompareAtPriceDraft}
+            keyboardType="decimal-pad"
+            placeholder="Optional original price"
+            placeholderTextColor={Colors.text.muted}
             selectionColor={Colors.brand.primary}
             editable={!saving}
           />

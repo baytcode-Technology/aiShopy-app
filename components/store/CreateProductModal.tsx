@@ -9,6 +9,7 @@ import { ShopifyVariantEditor } from "@/components/store/ShopifyVariantEditor";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { createProduct } from "@src/api/products";
+import { parseOptionalPrice } from "@src/lib/parse-optional-price";
 import { uploadProductImages } from "@src/api/uploads";
 import { showError, showSuccess } from "@src/lib/toast";
 import type { GeneratedVariant, VariantOption } from "@src/lib/variant-options";
@@ -38,6 +39,7 @@ export function CreateProductModal({
 }: Props) {
   const [name, setName] = useState("");
   const [basePrice, setBasePrice] = useState("");
+  const [compareAtPrice, setCompareAtPrice] = useState("");
   const [stockQty, setStockQty] = useState("0");
   const [description, setDescription] = useState("");
   const [sku, setSku] = useState("");
@@ -75,6 +77,7 @@ export function CreateProductModal({
   const reset = () => {
     setName("");
     setBasePrice("");
+    setCompareAtPrice("");
     setStockQty("0");
     setDescription("");
     setSku("");
@@ -114,6 +117,12 @@ export function CreateProductModal({
       setNameError("");
       setStockError("");
       scrollToField("basePrice");
+      return;
+    }
+    const compareNum = parseOptionalPrice(compareAtPrice);
+    if (compareNum === undefined) {
+      setPriceError("Compare at price is not valid");
+      scrollToField("compareAtPrice");
       return;
     }
     if (variants.length === 0 && (!Number.isFinite(stock) || stock < 0)) {
@@ -160,6 +169,7 @@ export function CreateProductModal({
         store_id: storeId,
         name: trimmedName,
         base_price: price,
+        compare_at_price: compareNum,
         stock_qty: hasVariants ? 0 : Number.isFinite(stock) ? stock : 0,
         track_inventory: hasVariants || stock > 0,
         description: description.trim() || undefined,
@@ -234,6 +244,14 @@ export function CreateProductModal({
         keyboardType="decimal-pad"
         error={priceError || undefined}
         containerOnLayout={registerFieldY("basePrice")}
+      />
+      <Input
+        label="Compare at price"
+        value={compareAtPrice}
+        onChangeText={setCompareAtPrice}
+        placeholder="399 (optional)"
+        keyboardType="decimal-pad"
+        containerOnLayout={registerFieldY("compareAtPrice")}
       />
       {variants.length === 0 ? (
         <Input

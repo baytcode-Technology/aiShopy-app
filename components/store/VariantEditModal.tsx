@@ -86,7 +86,7 @@ export function VariantEditModal({
       showError('Enter a valid price')
       return
     }
-    if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) {
+    if (!Number.isFinite(stock) || !Number.isInteger(stock)) {
       showError('Enter a valid stock quantity')
       return
     }

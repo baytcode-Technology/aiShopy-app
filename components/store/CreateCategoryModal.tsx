@@ -17,7 +17,7 @@ type Props = {
   storeId: string
   categories?: Category[]
   onClose: () => void
-  onCreated: () => void
+  onCreated: (category: Category) => void
 }
 
 function slugify(name: string): string {
@@ -121,7 +121,7 @@ export function CreateCategoryModal({
       })
       showSuccess(res.message)
       reset()
-      onCreated()
+      onCreated(res.data)
       onClose()
     } catch (e) {
       showError(e)

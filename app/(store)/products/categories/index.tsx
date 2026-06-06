@@ -176,7 +176,7 @@ export default function CategoriesScreen() {
             storeId={store.id}
             categories={categories}
             onClose={() => setModalOpen(false)}
-            onCreated={loadData}
+            onCreated={() => loadData()}
           />
         ) : null}
       </ScreenBody>

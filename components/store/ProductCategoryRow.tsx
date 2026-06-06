@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
+import { CreateCategoryModal } from '@/components/store/CreateCategoryModal'
 import { DetailSection } from '@/components/store/detail/DetailSection'
 import { SleekModal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -12,12 +14,21 @@ import type { Product } from '@src/types/product'
 
 type Props = {
   product: Product
+  storeId: string
   categories: Category[]
   onUpdated: (product: Product) => void
+  onCategoriesChange?: (categories: Category[]) => void
 }
 
-export function ProductCategoryRow({ product, categories, onUpdated }: Props) {
+export function ProductCategoryRow({
+  product,
+  storeId,
+  categories,
+  onUpdated,
+  onCategoriesChange,
+}: Props) {
   const [open, setOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(product.category_id)
   const [saving, setSaving] = useState(false)
 
@@ -27,6 +38,23 @@ export function ProductCategoryRow({ product, categories, onUpdated }: Props) {
 
   const categoryName =
     categories.find((c) => c.id === product.category_id)?.name ?? 'Uncategorized'
+
+  const handleCategoryCreated = async (category: Category) => {
+    setCreateOpen(false)
+    onCategoriesChange?.([...categories, category])
+    setSelectedId(category.id)
+    setSaving(true)
+    try {
+      const res = await updateProduct(product.id, { category_id: category.id })
+      onUpdated(res.data)
+      showSuccess('Category created and assigned')
+      setOpen(false)
+    } catch (e) {
+      showError(e, 'Category created but could not assign to product')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const save = async () => {
     if (selectedId === product.category_id) {
@@ -70,7 +98,7 @@ export function ProductCategoryRow({ product, categories, onUpdated }: Props) {
         onClose={() => !saving && setOpen(false)}
         title="Category"
         subtitle="Assign this product to a category"
-        scrollClassName="max-h-[40%]"
+        scrollClassName="max-h-[80%]"
         footer={
           saving ? (
             <View className="py-3 items-center">
@@ -86,7 +114,24 @@ export function ProductCategoryRow({ product, categories, onUpdated }: Props) {
           selectedId={selectedId}
           onSelect={setSelectedId}
         />
+
+        <Pressable
+          onPress={() => setCreateOpen(true)}
+          disabled={saving}
+          className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 py-3 active:opacity-80"
+        >
+          <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
+          <Text className="text-[13px] font-bold text-ink">Add category</Text>
+        </Pressable>
       </SleekModal>
+
+      <CreateCategoryModal
+        visible={createOpen}
+        storeId={storeId}
+        categories={categories}
+        onClose={() => setCreateOpen(false)}
+        onCreated={handleCategoryCreated}
+      />
     </>
   )
 }

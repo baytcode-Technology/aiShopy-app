@@ -163,11 +163,15 @@ export default function ProductDetailScreen() {
                 />
               ) : null}
 
-              <ProductCategoryRow
-                product={product}
-                categories={categories}
-                onUpdated={setProduct}
-              />
+              {store?.id ? (
+                <ProductCategoryRow
+                  product={product}
+                  storeId={store.id}
+                  categories={categories}
+                  onUpdated={setProduct}
+                  onCategoriesChange={setCategories}
+                />
+              ) : null}
 
               <DetailSection className="p-3">
                 <ProductStatusPicker

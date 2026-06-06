@@ -1,22 +1,32 @@
-export type OrderStatus =
+export type OrderLifecycleStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled'
 
-  | 'draft'
 
-  | 'pending_payment'
+
+export type OrderPaymentStatus =
+
+  | 'pending'
+
+  | 'confirming'
+
+  | 'partially_paid'
 
   | 'paid'
 
-  | 'confirmed'
-
-  | 'packed'
-
-  | 'shipped'
-
-  | 'delivered'
-
-  | 'cancelled'
-
   | 'refunded'
+
+
+
+export type OrderFulfillmentStatus =
+
+  | 'unfulfilled'
+
+  | 'ready'
+
+  | 'in_transit'
+
+  | 'out_for_delivery'
+
+  | 'fulfilled'
 
 
 
@@ -54,7 +64,11 @@ export type Order = {
 
   order_number: string
 
-  status: OrderStatus
+  order_status: OrderLifecycleStatus
+
+  payment_status: OrderPaymentStatus
+
+  fulfillment_status: OrderFulfillmentStatus
 
   source: string
 
@@ -95,6 +109,48 @@ export type ListOrdersResponse = {
     orders: Order[]
 
     count: number
+
+  }
+
+}
+
+
+
+export type GetOrderResponse = {
+
+  success: boolean
+
+  message: string
+
+  data: Order
+
+}
+
+
+
+export type UpdateOrderPayload = {
+
+  store_id: string
+
+  order_status?: OrderLifecycleStatus
+
+  payment_status?: OrderPaymentStatus
+
+  fulfillment_status?: OrderFulfillmentStatus
+
+}
+
+
+
+export type UpdateOrderResponse = {
+
+  success: boolean
+
+  message: string
+
+  data: {
+
+    order: Order
 
   }
 
@@ -154,7 +210,6 @@ export type CreateOrderPayload = {
 
   notes?: string
 
-  /** Merchant POS: allow oversell; online channels should omit or set false. */
   offline?: boolean
 
 }
@@ -176,4 +231,5 @@ export type CreateOrderResponse = {
   }
 
 }
+
 

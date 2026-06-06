@@ -45,7 +45,7 @@ const FEATURES: Record<
     subtitle: 'Plan & billing',
     icon: 'calendar',
     description:
-      'View your AISHOPY plan, billing history, and upgrade options. This will be available soon.',
+      'View your AiShopy plan, billing history, and upgrade options. This will be available soon.',
   },
 }
 

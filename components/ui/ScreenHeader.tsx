@@ -19,7 +19,7 @@ type Props = {
    * `default` is the larger marketing-style header.
    */
   variant?: 'default' | 'tab'
-  /** Show AISHOPY wordmark above the title (tab screens). */
+  /** Show AiShopy wordmark above the title (tab screens). */
   showLogo?: boolean
   /** Show the settings cog in the top-right (default true). */
   showSettings?: boolean
@@ -78,7 +78,7 @@ export function ScreenHeader({
   }
 
   // Tab header: match Chats layout (left title, optional right action),
-  // and place the AISHOPY wordmark centered within the header width.
+  // and place the AiShopy wordmark centered within the header width.
   if (isTab) {
     return (
       <View

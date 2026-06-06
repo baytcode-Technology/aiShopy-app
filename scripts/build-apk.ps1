@@ -6,7 +6,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 Write-Host ""
-Write-Host "=== AISHOPY: building tester APK ===" -ForegroundColor Cyan
+Write-Host "=== AiShopy: building tester APK ===" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not (Test-Path ".\android\gradlew.bat")) {

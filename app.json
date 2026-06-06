@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AISHOPY",
+    "name": "AiShopy",
     "slug": "aishopy",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,7 +41,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AISHOPY to access your photos for product images."
+          "photosPermission": "Allow AiShopy to access your photos for product images."
         }
       ],
       [

@@ -2,7 +2,7 @@ import { Image, View, type ImageStyle, type StyleProp, type ViewStyle } from 're
 import { cn } from '@src/lib/cn'
 import { APP_ICON, APP_NAME, APP_WORDMARK } from '@/constants/brand'
 
-/** Matches `DisplayBrand` (text-xs, uppercase wordmark line). */
+/** Matches `DisplayBrand` (text-xs wordmark line). */
 const WORDMARK_HEIGHT = 18
 const WORDMARK_WIDTH = 138
 

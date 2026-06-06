@@ -1,6 +1,14 @@
 import { PriceDisplayRow } from "@/components/store/PriceDisplayRow";
 import { ProductStatusBadge } from "@/components/store/ProductStatusBadge";
+import { VariantImageActionsModal } from "@/components/store/VariantImageActionsModal";
+import { VariantImagePreviewModal } from "@/components/store/VariantImagePreviewModal";
+import {
+  pickVariantImageFromGallery,
+  VariantImageTile,
+  type PickedVariantImage,
+} from "@/components/store/VariantImageTile";
 import { VariantEditModal } from "@/components/store/VariantEditModal";
+import { uploadProductImages } from "@src/api/uploads";
 import { Card } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { IconButton } from "@/components/ui/IconButton";
@@ -34,15 +42,18 @@ export function VariantEditableCard({
 }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
   const [optimisticActive, setOptimisticActive] = useState<boolean | null>(
     null,
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [imageActionsOpen, setImageActionsOpen] = useState(false);
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
 
   const displayActive = optimisticActive ?? variant.is_active;
   const status = displayActive ? "active" : "unlisted";
-  const cardLocked = busy || deleteLoading;
+  const cardLocked = busy || deleteLoading || imageBusy;
 
   const unitPrice = Number(product.base_price) + Number(variant.price_delta);
   const stockLabel = getVariantStockLabel(product, variant);
@@ -70,6 +81,47 @@ export function VariantEditableCard({
     }
   };
 
+  const handlePickImage = async (file: PickedVariantImage) => {
+    if (cardLocked) return;
+    setImageBusy(true);
+    try {
+      const urls = await uploadProductImages(product.store_id, [file]);
+      const image_url = urls[0];
+      if (!image_url) throw new Error("Upload failed");
+      const res = await updateProductVariant(product.id, variant.id, {
+        image_url,
+      });
+      onUpdated(res.data.variant);
+      showSuccess("Variant image updated");
+    } catch (e) {
+      showError(e, "Could not update variant image");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const handleReplaceImage = async () => {
+    if (cardLocked) return;
+    const file = await pickVariantImageFromGallery();
+    if (file) await handlePickImage(file);
+  };
+
+  const handleRemoveImage = async () => {
+    if (cardLocked) return;
+    setImageBusy(true);
+    try {
+      const res = await updateProductVariant(product.id, variant.id, {
+        image_url: null,
+      });
+      onUpdated(res.data.variant);
+      showSuccess("Variant image removed");
+    } catch (e) {
+      showError(e, "Could not remove variant image");
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
   const runDelete = async () => {
     setDeleteLoading(true);
     try {
@@ -87,7 +139,7 @@ export function VariantEditableCard({
   return (
     <>
       <Card className="relative mt-3 p-4 overflow-hidden">
-        {busy ? (
+        {busy || imageBusy ? (
           <View
             className="absolute inset-0 z-20 items-center justify-center rounded-2xl"
             style={{ backgroundColor: "rgba(255, 255, 255, 0.62)" }}
@@ -97,8 +149,18 @@ export function VariantEditableCard({
           </View>
         ) : null}
 
-        <View className="flex-row items-start mb-2">
-          <Text className="flex-1 text-base font-extrabold text-ink pr-2">
+        <View className="flex-row items-start gap-2.5 mb-2">
+          <VariantImageTile
+            imageUri={variant.image_url}
+            size={44}
+            loading={imageBusy}
+            disabled={cardLocked}
+            onPick={handlePickImage}
+            onImagePress={
+              variant.image_url ? () => setImageActionsOpen(true) : undefined
+            }
+          />
+          <Text className="flex-1 text-base font-extrabold text-ink pr-2 pt-0.5">
             {variant.name}
           </Text>
           <View className="flex-row items-center gap-1.5 shrink-0">
@@ -166,6 +228,21 @@ export function VariantEditableCard({
           </IconButton>
         </View>
       </Card>
+
+      <VariantImageActionsModal
+        visible={imageActionsOpen}
+        onClose={() => setImageActionsOpen(false)}
+        onView={() => setImagePreviewOpen(true)}
+        onReplace={handleReplaceImage}
+        onRemove={handleRemoveImage}
+      />
+
+      <VariantImagePreviewModal
+        visible={imagePreviewOpen}
+        imageUri={variant.image_url}
+        title={variant.name}
+        onClose={() => setImagePreviewOpen(false)}
+      />
 
       <VariantEditModal
         visible={editOpen}

@@ -13,7 +13,10 @@ import { parseOptionalPrice } from "@src/lib/parse-optional-price";
 import { uploadProductImages } from "@src/api/uploads";
 import { showError, showSuccess } from "@src/lib/toast";
 import type { GeneratedVariant, VariantOption } from "@src/lib/variant-options";
-import { toCreateVariantPayload } from "@src/lib/variant-options";
+import {
+  toCreateVariantPayload,
+  uploadVariantImagesForCreate,
+} from "@src/lib/variant-options";
 import type { Category } from "@src/types/category";
 import type { ProductStatus } from "@src/types/product";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -165,6 +168,12 @@ export function CreateProductModal({
 
       const hasVariants = variants.length > 0;
 
+      const variantImageUrls = await uploadVariantImagesForCreate(
+        storeId,
+        variants,
+        uploadProductImages,
+      );
+
       await createProduct({
         store_id: storeId,
         name: trimmedName,
@@ -179,7 +188,7 @@ export function CreateProductModal({
         images: urls,
         thumbnail_url: thumbnailUrl,
         variants: variants.map((v, index) => ({
-          ...toCreateVariantPayload(v),
+          ...toCreateVariantPayload(v, variantImageUrls.get(v.id)),
           sort_order: index,
         })),
       });

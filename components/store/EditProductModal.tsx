@@ -28,7 +28,11 @@ import {
   type ProductMediaItem,
 } from '@src/lib/product-media'
 import { parseOptionalPrice } from '@src/lib/parse-optional-price'
-import { toCreateVariantPayload } from '@src/lib/variant-options'
+import {
+  toCreateVariantPayload,
+  uploadLocalVariantImages,
+  uploadVariantImagesForCreate,
+} from '@src/lib/variant-options'
 import type { GeneratedVariant, VariantOption } from '@src/lib/variant-options'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Category } from '@src/types/category'
@@ -212,9 +216,23 @@ export function EditProductModal({
         mark_as_non_inventory: markAsNonInventory,
       })
 
+      const existingVariantImageUrls = await uploadLocalVariantImages(
+        store.id,
+        existingVariants,
+        uploadProductImages
+      )
+
       for (const v of existingVariants) {
         const original = initialVariants.find((o) => o.id === v.id)
         const variantCompareNum = parseOptionalPrice(v.compareAtPrice)!
+
+        let image_url: string | null | undefined
+        if (v.imageRemoved) {
+          image_url = null
+        } else if (v.imageUri) {
+          image_url = existingVariantImageUrls.get(v.id) ?? null
+        }
+
         const payload = {
           name: v.name.trim(),
           price_delta: Number(v.priceDelta) || 0,
@@ -222,6 +240,7 @@ export function EditProductModal({
           stock_qty: Number(v.stockQty) || 0,
           sku: v.sku.trim() || null,
           is_active: v.isActive,
+          ...(image_url !== undefined ? { image_url } : {}),
         }
         const changed =
           !original ||
@@ -230,17 +249,24 @@ export function EditProductModal({
           (original.compare_at_price ?? null) !== payload.compare_at_price ||
           original.stock_qty !== payload.stock_qty ||
           (original.sku ?? '') !== (payload.sku ?? '') ||
-          original.is_active !== payload.is_active
+          original.is_active !== payload.is_active ||
+          image_url !== undefined
 
         if (changed) {
           await updateProductVariant(product.id, v.id, payload)
         }
       }
 
+      const variantImageUrls = await uploadVariantImagesForCreate(
+        store.id,
+        newVariants,
+        uploadProductImages
+      )
+
       for (let i = 0; i < newVariants.length; i++) {
         const v = newVariants[i]
         await createProductVariant(product.id, {
-          ...toCreateVariantPayload(v),
+          ...toCreateVariantPayload(v, variantImageUrls.get(v.id)),
           sort_order: existingVariants.length + i,
         })
       }

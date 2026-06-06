@@ -1,3 +1,4 @@
+import { VariantImageTile } from "@/components/store/VariantImageTile";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -184,12 +185,35 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
               </Text>
               {variants.map((v) => (
                 <Card key={v.id} className="gap-2">
-                  <Text
-                    className="text-sm font-bold text-ink"
-                    numberOfLines={2}
-                  >
-                    {v.name}
-                  </Text>
+                  <View className="flex-row items-start gap-2.5">
+                    <VariantImageTile
+                      imageUri={v.imageUri}
+                      size={40}
+                      onPick={(file) =>
+                        updateVariant(v.id, {
+                          imageUri: file.uri,
+                          imageName: file.name,
+                          imageType: file.type,
+                        })
+                      }
+                      onRemove={
+                        v.imageUri
+                          ? () =>
+                              updateVariant(v.id, {
+                                imageUri: null,
+                                imageName: undefined,
+                                imageType: undefined,
+                              })
+                          : undefined
+                      }
+                    />
+                    <Text
+                      className="flex-1 text-sm font-bold text-ink pt-0.5"
+                      numberOfLines={2}
+                    >
+                      {v.name}
+                    </Text>
+                  </View>
                   <View className="flex-row gap-2 flex-wrap">
                     <View className="flex-1 min-w-[30%]">
                       <Label className="mb-1 normal-case tracking-normal text-[10px]">

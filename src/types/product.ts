@@ -47,6 +47,7 @@ export type CreateProductVariantPayload = {
   mark_as_sold?: boolean
   mark_as_non_inventory?: boolean
   sku?: string
+  image_url?: string
   options?: Record<string, unknown>
   is_active?: boolean
   sort_order?: number
@@ -60,6 +61,7 @@ export type UpdateProductVariantPayload = Partial<{
   mark_as_sold: boolean
   mark_as_non_inventory: boolean
   sku: string | null
+  image_url: string | null
   options: Record<string, unknown>
   is_active: boolean
   sort_order: number

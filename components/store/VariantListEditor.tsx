@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Text, TextInput, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { VariantImageTile } from '@/components/store/VariantImageTile'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
 import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -19,6 +20,11 @@ export type EditableVariantRow = {
   stockQty: string
   sku: string
   isActive: boolean
+  imageUrl?: string | null
+  imageUri?: string | null
+  imageName?: string
+  imageType?: string
+  imageRemoved?: boolean
 }
 
 export function variantsToEditable(rows: ProductVariant[]): EditableVariantRow[] {
@@ -30,6 +36,9 @@ export function variantsToEditable(rows: ProductVariant[]): EditableVariantRow[]
     stockQty: String(v.stock_qty),
     sku: v.sku ?? '',
     isActive: v.is_active,
+    imageUrl: v.image_url,
+    imageUri: null,
+    imageRemoved: false,
   }))
 }
 
@@ -77,10 +86,38 @@ export function VariantListEditor({ productId, variants, onChange }: Props) {
       <SectionTitle>Existing variants</SectionTitle>
       {variants.map((v) => {
         const status = v.isActive ? 'active' : 'unlisted'
+        const displayImageUri = v.imageRemoved ? null : (v.imageUri ?? v.imageUrl)
         return (
           <Card key={v.id} className="border-ink gap-2">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-bold text-ink flex-1 mr-2" numberOfLines={1}>
+            <View className="flex-row items-start gap-2.5">
+              <VariantImageTile
+                imageUri={displayImageUri}
+                size={40}
+                onPick={(file) =>
+                  update(v.id, {
+                    imageUri: file.uri,
+                    imageName: file.name,
+                    imageType: file.type,
+                    imageRemoved: false,
+                  })
+                }
+                onRemove={
+                  displayImageUri
+                    ? () =>
+                        update(v.id, {
+                          imageUri: null,
+                          imageName: undefined,
+                          imageType: undefined,
+                          imageRemoved: true,
+                        })
+                    : undefined
+                }
+              />
+              <View className="flex-1 flex-row items-center justify-between min-w-0">
+              <Text
+                className="text-sm font-bold text-ink flex-1 mr-2 pt-0.5"
+                numberOfLines={1}
+              >
                 {v.name || 'Unnamed variant'}
               </Text>
               <View className="flex-row items-center gap-1.5 shrink-0">
@@ -103,6 +140,7 @@ export function VariantListEditor({ productId, variants, onChange }: Props) {
                 >
                   <FontAwesome name="trash-o" size={14} color="#EF4444" />
                 </IconButton>
+              </View>
               </View>
             </View>
             <TextInput

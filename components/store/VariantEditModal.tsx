@@ -1,10 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Text, TextInput, View } from 'react-native'
 import { Button } from '@/components/ui/Button'
+import {
+  VariantImageTile,
+  type PickedVariantImage,
+} from '@/components/store/VariantImageTile'
 import { VariantInventoryFlagsEditor } from '@/components/store/VariantInventoryFlagsEditor'
 import { SleekModal } from '@/components/ui/Modal'
 import { productInventoryFlagsLocked } from '@src/lib/product-inventory'
 import { updateProductVariant } from '@src/api/products'
+import { uploadProductImages } from '@src/api/uploads'
 import { parseOptionalPrice } from '@src/lib/parse-optional-price'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Product, ProductVariant } from '@src/types/product'
@@ -34,6 +39,9 @@ export function VariantEditModal({
   const [markAsSold, setMarkAsSold] = useState(false)
   const [markAsNonInventory, setMarkAsNonInventory] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [displayImageUri, setDisplayImageUri] = useState<string | null>(null)
+  const [pickedImage, setPickedImage] = useState<PickedVariantImage | null>(null)
+  const [imageRemoved, setImageRemoved] = useState(false)
 
   const productLocked = productInventoryFlagsLocked(product)
 
@@ -51,6 +59,9 @@ export function VariantEditModal({
     setSkuDraft(variant.sku ?? '')
     setMarkAsSold(variant.mark_as_sold ?? false)
     setMarkAsNonInventory(variant.mark_as_non_inventory ?? false)
+    setDisplayImageUri(variant.image_url)
+    setPickedImage(null)
+    setImageRemoved(false)
   }, [
     visible,
     variant?.id,
@@ -60,6 +71,7 @@ export function VariantEditModal({
     variant?.sku,
     variant?.mark_as_sold,
     variant?.mark_as_non_inventory,
+    variant?.image_url,
   ])
 
   const handleClose = () => {
@@ -88,11 +100,21 @@ export function VariantEditModal({
     const price_delta = price - Number(product.base_price)
     setSaving(true)
     try {
+      let image_url: string | null | undefined
+      if (imageRemoved) {
+        image_url = null
+      } else if (pickedImage) {
+        const urls = await uploadProductImages(product.store_id, [pickedImage])
+        image_url = urls[0] ?? null
+        if (!image_url) throw new Error('Image upload failed')
+      }
+
       const res = await updateProductVariant(product.id, variant.id, {
         price_delta,
         compare_at_price: compareAtPrice,
         stock_qty: stock,
         sku: skuDraft.trim() || null,
+        ...(image_url !== undefined ? { image_url } : {}),
         ...(!productLocked
           ? {
               mark_as_sold: markAsSold,
@@ -128,6 +150,27 @@ export function VariantEditModal({
         )
       }
     >
+      <Field label="Variant image">
+        <VariantImageTile
+          imageUri={pickedImage?.uri ?? displayImageUri}
+          size={56}
+          disabled={saving}
+          onPick={(file) => {
+            setPickedImage(file)
+            setImageRemoved(false)
+          }}
+          onRemove={
+            pickedImage || displayImageUri
+              ? () => {
+                  setPickedImage(null)
+                  setDisplayImageUri(null)
+                  setImageRemoved(true)
+                }
+              : undefined
+          }
+        />
+      </Field>
+
       <Field label="Price">
         <View className="flex-row items-center border border-gray-200 rounded-xl bg-gray-50 px-3">
           <Text className="text-base font-bold text-ink mr-1">{currencySymbol}</Text>

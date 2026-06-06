@@ -6,6 +6,7 @@ import { SectionTitle } from '@/components/ui/Typography'
 import { FormModal } from '@/components/store/FormModal'
 import { CategoryPicker } from '@/components/store/CategoryPicker'
 import { ProductMediaEditor } from '@/components/store/ProductMediaEditor'
+import { ProductInventoryFlagsEditor } from '@/components/store/ProductInventoryFlagsEditor'
 import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
 import { ShopifyVariantEditor } from '@/components/store/ShopifyVariantEditor'
 import {
@@ -70,6 +71,8 @@ export function EditProductModal({
   const [existingVariants, setExistingVariants] = useState<EditableVariantRow[]>([])
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([])
   const [newVariants, setNewVariants] = useState<GeneratedVariant[]>([])
+  const [markAsSold, setMarkAsSold] = useState(false)
+  const [markAsNonInventory, setMarkAsNonInventory] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const [nameError, setNameError] = useState('')
@@ -111,6 +114,8 @@ export function EditProductModal({
     setNameError('')
     setPriceError('')
     setStockError('')
+    setMarkAsSold(product.mark_as_sold ?? false)
+    setMarkAsNonInventory(product.mark_as_non_inventory ?? false)
   }, [product, visible, initialVariants])
 
   const handleClose = () => {
@@ -203,6 +208,8 @@ export function EditProductModal({
         status,
         images,
         thumbnail_url,
+        mark_as_sold: markAsSold,
+        mark_as_non_inventory: markAsNonInventory,
       })
 
       for (const v of existingVariants) {
@@ -316,6 +323,13 @@ export function EditProductModal({
         style={{ textAlignVertical: 'top' }}
       />
       <ProductStatusPicker value={status} onChange={setStatus} />
+      <ProductInventoryFlagsEditor
+        markAsSold={markAsSold}
+        markAsNonInventory={markAsNonInventory}
+        onMarkAsSoldChange={setMarkAsSold}
+        onMarkAsNonInventoryChange={setMarkAsNonInventory}
+        disabled={loading}
+      />
 
       {product ? (
         <VariantListEditor

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { SleekModal } from '@/components/ui/Modal'
+import { getProductStockLabel, stockLabelToneClass } from '@src/lib/product-inventory'
 import { getProductStatus } from '@src/lib/product-status'
 import { formatMoney } from '@src/lib/format-money'
 import Colors from '@src/theme/colors'
@@ -57,7 +58,7 @@ export function OrderProductPickerModal({
         <View>
           {filtered.map((product) => {
             const variants = variantCount(product)
-            const available = product.track_inventory ? product.stock_qty : null
+            const stockLabel = getProductStockLabel(product)
             const status = getProductStatus(product)
 
             return (
@@ -91,13 +92,9 @@ export function OrderProductPickerModal({
                       <>
                         {formatMoney(Number(product.base_price), currency)} ·{' '}
                         {status === 'active' ? 'Active' : status}
-                        {available !== null ? (
-                          <Text
-                            className={
-                              available <= 0 ? 'text-[#991B1B]' : 'text-gray-500'
-                            }
-                          >
-                            {` · ${available} available`}
+                        {stockLabel ? (
+                          <Text className={stockLabelToneClass(stockLabel.tone)}>
+                            {` · ${stockLabel.text}`}
                           </Text>
                         ) : null}
                       </>

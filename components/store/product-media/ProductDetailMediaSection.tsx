@@ -139,9 +139,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
   }
 
   return (
-    <View
-      className="mb-6 border border-gray-200 rounded-[20px] bg-surface overflow-hidden"
-    >
+    <View className="border border-gray-300 rounded-2xl bg-surface overflow-hidden">
       <View className="px-4 pt-4 pb-3">
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-[15px] font-semibold text-ink">Media ({items.length})</Text>

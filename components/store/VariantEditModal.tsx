@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Text, TextInput, View } from 'react-native'
 import { Button } from '@/components/ui/Button'
+import { VariantInventoryFlagsEditor } from '@/components/store/VariantInventoryFlagsEditor'
 import { SleekModal } from '@/components/ui/Modal'
+import { productInventoryFlagsLocked } from '@src/lib/product-inventory'
 import { updateProductVariant } from '@src/api/products'
 import { parseOptionalPrice } from '@src/lib/parse-optional-price'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -29,7 +31,11 @@ export function VariantEditModal({
   const [compareAtPriceDraft, setCompareAtPriceDraft] = useState('')
   const [stockDraft, setStockDraft] = useState('')
   const [skuDraft, setSkuDraft] = useState('')
+  const [markAsSold, setMarkAsSold] = useState(false)
+  const [markAsNonInventory, setMarkAsNonInventory] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const productLocked = productInventoryFlagsLocked(product)
 
   const unitPrice = variant
     ? Number(product.base_price) + Number(variant.price_delta)
@@ -43,7 +49,18 @@ export function VariantEditModal({
     )
     setStockDraft(String(variant.stock_qty))
     setSkuDraft(variant.sku ?? '')
-  }, [visible, variant?.id, unitPrice, variant?.compare_at_price, variant?.stock_qty, variant?.sku])
+    setMarkAsSold(variant.mark_as_sold ?? false)
+    setMarkAsNonInventory(variant.mark_as_non_inventory ?? false)
+  }, [
+    visible,
+    variant?.id,
+    unitPrice,
+    variant?.compare_at_price,
+    variant?.stock_qty,
+    variant?.sku,
+    variant?.mark_as_sold,
+    variant?.mark_as_non_inventory,
+  ])
 
   const handleClose = () => {
     if (!saving) onClose()
@@ -76,6 +93,12 @@ export function VariantEditModal({
         compare_at_price: compareAtPrice,
         stock_qty: stock,
         sku: skuDraft.trim() || null,
+        ...(!productLocked
+          ? {
+              mark_as_sold: markAsSold,
+              mark_as_non_inventory: markAsNonInventory,
+            }
+          : {}),
       })
       onUpdated(res.data.variant)
       showSuccess('Variant updated')
@@ -154,6 +177,17 @@ export function VariantEditModal({
           placeholderTextColor={Colors.text.muted}
           selectionColor={Colors.brand.primary}
           editable={!saving}
+        />
+      </Field>
+
+      <Field label="Variant inventory">
+        <VariantInventoryFlagsEditor
+          markAsSold={markAsSold}
+          markAsNonInventory={markAsNonInventory}
+          onMarkAsSoldChange={setMarkAsSold}
+          onMarkAsNonInventoryChange={setMarkAsNonInventory}
+          disabled={saving}
+          lockedByProduct={productLocked}
         />
       </Field>
     </SleekModal>

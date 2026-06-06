@@ -154,6 +154,9 @@ export type CreateOrderPayload = {
 
   notes?: string
 
+  /** Merchant POS: allow oversell; online channels should omit or set false. */
+  offline?: boolean
+
 }
 
 

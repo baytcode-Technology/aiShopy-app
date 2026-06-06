@@ -2,6 +2,7 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
 import { PressableScale } from '@/components/ui/PressableScale'
+import { getProductStockLabel } from '@src/lib/product-inventory'
 import { getProductStatus } from '@src/lib/product-status'
 import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
@@ -19,17 +20,13 @@ type Props = {
 export function ProductListRow({ product, onPress }: Props) {
   const status = getProductStatus(product)
   const variants = variantCount(product)
-  const available = product.track_inventory ? product.stock_qty : null
-
-  const inventoryLabel =
-    available === null
-      ? null
-      : available === 1
-        ? '1 available'
-        : `${available} available`
-
+  const stockLabel = getProductStockLabel(product)
   const inventoryTone =
-    available !== null && available <= 0 ? 'text-[#991B1B]' : 'text-gray-500'
+    stockLabel?.tone === 'danger'
+      ? 'text-[#991B1B]'
+      : stockLabel?.tone === 'muted'
+        ? 'text-gray-400'
+        : 'text-gray-500'
 
   return (
     <PressableScale onPress={onPress} disabled={!onPress}>
@@ -50,9 +47,9 @@ export function ProductListRow({ product, onPress }: Props) {
           <Text className="text-[15px] font-semibold text-ink" numberOfLines={1}>
             {product.name}
           </Text>
-          {inventoryLabel ? (
+          {stockLabel ? (
             <Text className={`text-[13px] mt-0.5 ${inventoryTone}`}>
-              {inventoryLabel}
+              {stockLabel.text}
               {variants != null ? (
                 <Text className="text-gray-500">{` · ${variants} variants`}</Text>
               ) : null}

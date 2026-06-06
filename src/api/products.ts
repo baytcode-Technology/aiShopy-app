@@ -63,6 +63,8 @@ export type UpdateProductPayload = Partial<{
   sku: string | null
   stock_qty: number
   track_inventory: boolean
+  mark_as_sold?: boolean
+  mark_as_non_inventory?: boolean
   status: ProductStatus
   is_active?: boolean
   category_id: string | null

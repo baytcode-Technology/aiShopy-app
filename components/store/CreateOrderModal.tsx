@@ -8,6 +8,7 @@ import { OrderCustomerPickerModal } from '@/components/store/order-create/OrderC
 import { OrderProductPickerModal } from '@/components/store/order-create/OrderProductPickerModal'
 import { OrderVariantPickerModal } from '@/components/store/order-create/OrderVariantPickerModal'
 import {
+  cartHasInsufficientStock,
   cartLineKey,
   type CartLine,
   unitPrice,
@@ -17,7 +18,7 @@ import { fetchProduct, fetchProducts } from '@src/api/products'
 import { customerDisplayName, customerDisplayPhone } from '@src/lib/customer-display'
 import { formatMoney } from '@src/lib/format-money'
 import { getProductStatus } from '@src/lib/product-status'
-import { showError, showSuccess } from '@src/lib/toast'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Customer } from '@src/types/customer'
 import type { Product, ProductVariant } from '@src/types/product'
@@ -151,12 +152,15 @@ export function CreateOrderModal({ visible, storeId, currency, onClose, onCreate
     const phone = customer ? customerDisplayPhone(customer) : null
     const name = customer?.name?.trim()
 
+    const overStock = cartHasInsufficientStock(cart)
+
     setCheckoutLoading(true)
     try {
       await createOrder({
         store_id: storeId,
         items,
         payment_method: 'cod',
+        offline: true,
         ...(customer ? { customer_id: customer.id } : {}),
         ...(phone && phone.length >= 8 ? { whatsapp_number: phone } : {}),
         ...(name ? { name } : {}),
@@ -172,7 +176,14 @@ export function CreateOrderModal({ visible, storeId, currency, onClose, onCreate
       reset()
       onCreated()
       onClose()
-      showSuccess(customer ? 'Order created' : 'Walk-in order created')
+      if (overStock) {
+        showWarning(
+          'Insufficient stock',
+          customer ? 'Order created — inventory went below zero' : 'Walk-in order created — inventory went below zero'
+        )
+      } else {
+        showSuccess(customer ? 'Order created' : 'Walk-in order created')
+      }
     } catch (e) {
       showError(e)
     } finally {

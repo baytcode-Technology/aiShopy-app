@@ -1,6 +1,7 @@
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { SleekModal } from '@/components/ui/Modal'
+import { getVariantStockLabel, stockLabelToneClass } from '@src/lib/product-inventory'
 import { formatMoney } from '@src/lib/format-money'
 import Colors from '@src/theme/colors'
 import type { Product, ProductVariant } from '@src/types/product'
@@ -42,7 +43,7 @@ export function OrderVariantPickerModal({
         <View>
           {variants.map((variant) => {
             const price = product ? unitPrice(product, variant) : 0
-            const stock = variant.stock_qty
+            const stockLabel = product ? getVariantStockLabel(product, variant) : null
             return (
               <Pressable
                 key={variant.id}
@@ -72,9 +73,9 @@ export function OrderVariantPickerModal({
                   </Text>
                   <Text className="text-[13px] text-gray-500 mt-0.5">
                     {formatMoney(price, currency)}
-                    {product?.track_inventory ? (
-                      <Text className={stock <= 0 ? 'text-[#991B1B]' : 'text-gray-500'}>
-                        {` · ${stock} available`}
+                    {stockLabel ? (
+                      <Text className={stockLabelToneClass(stockLabel.tone)}>
+                        {` · ${stockLabel.text}`}
                       </Text>
                     ) : null}
                   </Text>

@@ -1,25 +1,29 @@
-import { useState } from 'react'
-import { ActivityIndicator, Text, View } from 'react-native'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { Card } from '@/components/ui/Card'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { IconButton } from '@/components/ui/IconButton'
-import { Caption } from '@/components/ui/Typography'
-import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
-import { PriceDisplayRow } from '@/components/store/PriceDisplayRow'
-import { VariantEditModal } from '@/components/store/VariantEditModal'
-import { deleteProductVariant, updateProductVariant } from '@src/api/products'
-import { showError, showSuccess } from '@src/lib/toast'
-import type { Product, ProductVariant } from '@src/types/product'
-import Colors from '@src/theme/colors'
+import { PriceDisplayRow } from "@/components/store/PriceDisplayRow";
+import { ProductStatusBadge } from "@/components/store/ProductStatusBadge";
+import { VariantEditModal } from "@/components/store/VariantEditModal";
+import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { IconButton } from "@/components/ui/IconButton";
+import { Caption } from "@/components/ui/Typography";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { deleteProductVariant, updateProductVariant } from "@src/api/products";
+import {
+  getVariantStockDisplayValue,
+  getVariantStockLabel,
+} from "@src/lib/product-inventory";
+import { showError, showSuccess } from "@src/lib/toast";
+import Colors from "@src/theme/colors";
+import type { Product, ProductVariant } from "@src/types/product";
+import { useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 
 type Props = {
-  variant: ProductVariant
-  product: Product
-  currencySymbol: string
-  onUpdated: (variant: ProductVariant) => void
-  onDeleted?: (variantId: string) => void
-}
+  variant: ProductVariant;
+  product: Product;
+  currencySymbol: string;
+  onUpdated: (variant: ProductVariant) => void;
+  onDeleted?: (variantId: string) => void;
+};
 
 export function VariantEditableCard({
   variant,
@@ -28,60 +32,65 @@ export function VariantEditableCard({
   onUpdated,
   onDeleted,
 }: Props) {
-  const [editOpen, setEditOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [editOpen, setEditOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [optimisticActive, setOptimisticActive] = useState<boolean | null>(
+    null,
+  );
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const displayActive = optimisticActive ?? variant.is_active
-  const status = displayActive ? 'active' : 'unlisted'
-  const cardLocked = busy || deleteLoading
+  const displayActive = optimisticActive ?? variant.is_active;
+  const status = displayActive ? "active" : "unlisted";
+  const cardLocked = busy || deleteLoading;
 
-  const unitPrice = Number(product.base_price) + Number(variant.price_delta)
+  const unitPrice = Number(product.base_price) + Number(variant.price_delta);
+  const stockLabel = getVariantStockLabel(product, variant);
   const optionLabels = Object.entries(variant.options ?? {})
     .map(([k, val]) => `${k}: ${val}`)
-    .join(' · ')
+    .join(" · ");
 
   const toggleActive = async () => {
-    if (cardLocked) return
-    const next = !variant.is_active
-    setBusy(true)
-    setOptimisticActive(next)
+    if (cardLocked) return;
+    const next = !variant.is_active;
+    setBusy(true);
+    setOptimisticActive(next);
     try {
-      const res = await updateProductVariant(product.id, variant.id, { is_active: next })
-      onUpdated(res.data.variant)
-      showSuccess(next ? 'Variant is active' : 'Variant is unlisted')
+      const res = await updateProductVariant(product.id, variant.id, {
+        is_active: next,
+      });
+      onUpdated(res.data.variant);
+      showSuccess(next ? "Variant is active" : "Variant is unlisted");
     } catch (e) {
-      setOptimisticActive(null)
-      showError(e, 'Could not update variant status')
+      setOptimisticActive(null);
+      showError(e, "Could not update variant status");
     } finally {
-      setOptimisticActive(null)
-      setBusy(false)
+      setOptimisticActive(null);
+      setBusy(false);
     }
-  }
+  };
 
   const runDelete = async () => {
-    setDeleteLoading(true)
+    setDeleteLoading(true);
     try {
-      await deleteProductVariant(product.id, variant.id)
-      setDeleteOpen(false)
-      onDeleted?.(variant.id)
-      showSuccess('Variant deleted')
+      await deleteProductVariant(product.id, variant.id);
+      setDeleteOpen(false);
+      onDeleted?.(variant.id);
+      showSuccess("Variant deleted");
     } catch (e) {
-      showError(e, 'Could not delete variant')
+      showError(e, "Could not delete variant");
     } finally {
-      setDeleteLoading(false)
+      setDeleteLoading(false);
     }
-  }
+  };
 
   return (
     <>
-      <Card className="relative mb-3 p-4 overflow-hidden">
+      <Card className="relative mt-3 p-4 overflow-hidden">
         {busy ? (
           <View
             className="absolute inset-0 z-20 items-center justify-center rounded-2xl"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.62)' }}
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.62)" }}
             pointerEvents="auto"
           >
             <ActivityIndicator size="small" color={Colors.brand.primary} />
@@ -89,24 +98,30 @@ export function VariantEditableCard({
         ) : null}
 
         <View className="flex-row items-start mb-2">
-          <Text className="flex-1 text-base font-extrabold text-ink pr-2">{variant.name}</Text>
+          <Text className="flex-1 text-base font-extrabold text-ink pr-2">
+            {variant.name}
+          </Text>
           <View className="flex-row items-center gap-1.5 shrink-0">
             <ProductStatusBadge status={status} />
             <IconButton
               size="sm"
               onPress={toggleActive}
               disabled={cardLocked}
-              accessibilityLabel={displayActive ? 'Disable variant' : 'Enable variant'}
+              accessibilityLabel={
+                displayActive ? "Disable variant" : "Enable variant"
+              }
             >
               <FontAwesome
-                name={displayActive ? 'toggle-on' : 'toggle-off'}
+                name={displayActive ? "toggle-on" : "toggle-off"}
                 size={20}
                 color={displayActive ? Colors.brand.primary : Colors.text.muted}
               />
             </IconButton>
           </View>
         </View>
-        {optionLabels ? <Caption className="mb-3">{optionLabels}</Caption> : null}
+        {optionLabels ? (
+          <Caption className="mb-3">{optionLabels}</Caption>
+        ) : null}
 
         <View className="flex-row flex-wrap items-center gap-3 pr-[4.75rem]">
           <PriceDisplayRow
@@ -114,9 +129,21 @@ export function VariantEditableCard({
             price={unitPrice}
             compareAtPrice={variant.compare_at_price}
           />
-          <Text className="text-[13px] font-bold text-gray-600">Stock {variant.stock_qty}</Text>
+          <Text
+            className={`text-[13px] font-bold ${
+              stockLabel?.tone === "danger"
+                ? "text-[#991B1B]"
+                : stockLabel?.tone === "muted"
+                  ? "text-gray-400"
+                  : "text-gray-600"
+            }`}
+          >
+            {stockLabel
+              ? stockLabel.text
+              : `Stock ${getVariantStockDisplayValue(product, variant)}`}
+          </Text>
           <Text className="text-[13px] font-bold text-gray-600">
-            SKU {variant.sku?.trim() ? variant.sku : '—'}
+            SKU {variant.sku?.trim() ? variant.sku : "—"}
           </Text>
         </View>
 
@@ -157,10 +184,10 @@ export function VariantEditableCard({
         cancelLabel="Cancel"
         loading={deleteLoading}
         onCancel={() => {
-          if (!deleteLoading) setDeleteOpen(false)
+          if (!deleteLoading) setDeleteOpen(false);
         }}
         onConfirm={runDelete}
       />
     </>
-  )
+  );
 }

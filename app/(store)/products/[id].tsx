@@ -1,88 +1,130 @@
-import { useCallback, useState } from 'react'
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { EditProductModal } from '@/components/store/EditProductModal'
-import { ProductDetailMediaSection } from '@/components/store/product-media/ProductDetailMediaSection'
-import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
-import { Badge } from '@/components/ui/Badge'
-import { Card } from '@/components/ui/Card'
-import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
-import { IconButton } from '@/components/ui/IconButton'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { Muted } from '@/components/ui/Typography'
-import { ProductInfoEditBlock } from '@/components/store/ProductInfoEditBlock'
-import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
-import { ProductStatusPicker } from '@/components/store/ProductStatusPicker'
-import { ProductVariantsSection } from '@/components/store/ProductVariantsSection'
-import { fetchProduct, updateProduct } from '@src/api/products'
-import { getProductStatus } from '@src/lib/product-status'
-import { showError, showSuccess } from '@src/lib/toast'
-import type { ProductStatus } from '@src/types/product'
-import { fetchCategories } from '@src/api/categories'
-import { useStore } from '@src/contexts/store-context'
-import type { Category } from '@src/types/category'
-import type { Product, ProductVariant } from '@src/types/product'
-import Colors from '@src/theme/colors'
+import { useCallback, useState } from "react";
+
+import { ActivityIndicator, ScrollView, View } from "react-native";
+
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+
+import { EditProductModal } from "@/components/store/EditProductModal";
+
+import { ProductCategoryRow } from "@/components/store/ProductCategoryRow";
+
+import { ProductInventoryFlagsBlock } from "@/components/store/ProductInventoryFlagsBlock";
+
+import { ProductDetailMediaSection } from "@/components/store/product-media/ProductDetailMediaSection";
+
+import { DetailSection } from "@/components/store/detail/DetailSection";
+
+import { AnimatedFadeIn } from "@/components/ui/AnimatedFadeIn";
+
+import { DetailScreenHeader } from "@/components/navigation/DetailScreenHeader";
+
+import { IconButton } from "@/components/ui/IconButton";
+
+import { Screen, ScreenBody } from "@/components/ui/Screen";
+
+import { Muted } from "@/components/ui/Typography";
+
+import { ProductInfoEditBlock } from "@/components/store/ProductInfoEditBlock";
+
+import { ProductStatusPicker } from "@/components/store/ProductStatusPicker";
+
+import { ProductVariantsSection } from "@/components/store/ProductVariantsSection";
+
+import { fetchProduct, updateProduct } from "@src/api/products";
+
+import { getProductStatus } from "@src/lib/product-status";
+
+import { showError, showSuccess } from "@src/lib/toast";
+
+import type { ProductStatus } from "@src/types/product";
+
+import { fetchCategories } from "@src/api/categories";
+
+import { useStore } from "@src/contexts/store-context";
+
+import type { Category } from "@src/types/category";
+
+import type { Product, ProductVariant } from "@src/types/product";
+
+import Colors from "@src/theme/colors";
 
 export default function ProductDetailScreen() {
-  const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>()
-  const id = Array.isArray(idParam) ? idParam[0] : idParam
-  const router = useRouter()
-  const { store } = useStore()
-  const [product, setProduct] = useState<Product | null>(null)
-  const [variants, setVariants] = useState<ProductVariant[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editOpen, setEditOpen] = useState(false)
-  const [savingStatus, setSavingStatus] = useState(false)
+  const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>();
+
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+
+  const router = useRouter();
+
+  const { store } = useStore();
+
+  const [product, setProduct] = useState<Product | null>(null);
+
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [editOpen, setEditOpen] = useState(false);
+
+  const [savingStatus, setSavingStatus] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return
-    setLoading(true)
+    if (!id) return;
+
+    setLoading(true);
+
     try {
       const [res, cats] = await Promise.all([
         fetchProduct(id, store?.id),
+
         store?.id ? fetchCategories(store.id) : Promise.resolve(null),
-      ])
-      setProduct(res.data.product)
-      setVariants(res.data.variants)
-      if (cats) setCategories(cats.data.categories)
+      ]);
+
+      setProduct(res.data.product);
+
+      setVariants(res.data.variants);
+
+      if (cats) setCategories(cats.data.categories);
     } catch (e) {
-      showError(e, 'Could not load product')
+      showError(e, "Could not load product");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [id, store?.id])
+  }, [id, store?.id]);
 
   useFocusEffect(
     useCallback(() => {
-      load()
-    }, [load])
-  )
+      load();
+    }, [load]),
+  );
 
-  const symbol = store?.currency === 'INR' ? '₹' : '$'
-  const categoryName =
-    categories.find((c) => c.id === product?.category_id)?.name ?? 'Uncategorized'
+  const symbol = store?.currency === "INR" ? "₹" : "$";
 
   const onStatusChange = async (next: ProductStatus) => {
-    if (!product || getProductStatus(product) === next) return
-    setSavingStatus(true)
+    if (!product || getProductStatus(product) === next) return;
+
+    setSavingStatus(true);
+
     try {
-      const res = await updateProduct(product.id, { status: next })
-      setProduct(res.data)
-      showSuccess('Status updated')
+      const res = await updateProduct(product.id, { status: next });
+
+      setProduct(res.data);
+
+      showSuccess("Status updated");
     } catch (e) {
-      showError(e, 'Could not update status')
+      showError(e, "Could not update status");
     } finally {
-      setSavingStatus(false)
+      setSavingStatus(false);
     }
-  }
+  };
 
   return (
-    <Screen variant="canvas" edges={['top']}>
+    <Screen variant="shell" edges={["top"]}>
       <DetailScreenHeader
-        title={product?.name ?? 'Product'}
+        title={product?.name ?? "Product"}
         onBack={() => router.back()}
         rightActions={
           <IconButton
@@ -108,11 +150,11 @@ export default function ProductDetailScreen() {
         <View className="flex-1">
           <ScrollView
             className="flex-1"
-            contentContainerClassName="px-5 pt-5"
+            contentContainerClassName="px-5 pt-4 gap-3"
             contentContainerStyle={{ paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
           >
-            <AnimatedFadeIn>
+            <AnimatedFadeIn className="flex-1 gap-2">
               {store?.id ? (
                 <ProductDetailMediaSection
                   product={product}
@@ -121,23 +163,30 @@ export default function ProductDetailScreen() {
                 />
               ) : null}
 
-              <View className="flex-row flex-wrap gap-2 mb-4">
-                <ProductStatusBadge status={getProductStatus(product)} />
-                <Badge label={categoryName} tone="outline" />
-              </View>
+              <ProductCategoryRow
+                product={product}
+                categories={categories}
+                onUpdated={setProduct}
+              />
 
-              <Card className="p-4 mb-7">
+              <DetailSection className="p-3">
                 <ProductStatusPicker
                   value={getProductStatus(product)}
                   onChange={onStatusChange}
                   disabled={savingStatus}
+                  compact
                 />
-              </Card>
+              </DetailSection>
 
               <ProductInfoEditBlock
                 product={product}
                 variantCount={variants.length}
                 currencySymbol={symbol}
+                onUpdated={setProduct}
+              />
+
+              <ProductInventoryFlagsBlock
+                product={product}
                 onUpdated={setProduct}
               />
 
@@ -147,11 +196,15 @@ export default function ProductDetailScreen() {
                 currencySymbol={symbol}
                 onVariantUpdated={(updated) => {
                   setVariants((prev) =>
-                    prev.map((item) => (item.id === updated.id ? updated : item))
-                  )
+                    prev.map((item) =>
+                      item.id === updated.id ? updated : item,
+                    ),
+                  );
                 }}
                 onVariantDeleted={(variantId) => {
-                  setVariants((prev) => prev.filter((item) => item.id !== variantId))
+                  setVariants((prev) =>
+                    prev.filter((item) => item.id !== variantId),
+                  );
                 }}
               />
             </AnimatedFadeIn>
@@ -168,6 +221,5 @@ export default function ProductDetailScreen() {
         onSaved={load}
       />
     </Screen>
-  )
+  );
 }
-

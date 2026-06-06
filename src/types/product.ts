@@ -11,6 +11,8 @@ export type Product = {
   compare_at_price: number | null
   track_inventory: boolean
   stock_qty: number
+  mark_as_sold?: boolean
+  mark_as_non_inventory?: boolean
   images: string[]
   thumbnail_url: string | null
   status: ProductStatus
@@ -29,6 +31,8 @@ export type ProductVariant = {
   price_delta: number
   compare_at_price: number | null
   stock_qty: number
+  mark_as_sold?: boolean
+  mark_as_non_inventory?: boolean
   sku: string | null
   image_url: string | null
   is_active: boolean
@@ -40,6 +44,8 @@ export type CreateProductVariantPayload = {
   price_delta?: number
   compare_at_price?: number | null
   stock_qty?: number
+  mark_as_sold?: boolean
+  mark_as_non_inventory?: boolean
   sku?: string
   options?: Record<string, unknown>
   is_active?: boolean
@@ -51,6 +57,8 @@ export type UpdateProductVariantPayload = Partial<{
   price_delta: number
   compare_at_price: number | null
   stock_qty: number
+  mark_as_sold: boolean
+  mark_as_non_inventory: boolean
   sku: string | null
   options: Record<string, unknown>
   is_active: boolean
@@ -78,6 +86,8 @@ export type CreateProductPayload = {
   sku?: string
   stock_qty?: number
   track_inventory?: boolean
+  mark_as_sold?: boolean
+  mark_as_non_inventory?: boolean
   status?: ProductStatus
   is_active?: boolean
   sort_order?: number

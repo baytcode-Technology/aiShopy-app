@@ -21,3 +21,14 @@ export function showError(error: unknown, fallback = 'Something went wrong') {
     visibilityTime: 4500,
   })
 }
+
+export function showWarning(message: string, subtitle?: string) {
+  Toast.show({
+    type: 'error',
+    text1: message,
+    text2: subtitle,
+    position: 'top',
+    visibilityTime: 4500,
+    topOffset: 56,
+  })
+}

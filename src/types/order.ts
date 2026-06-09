@@ -67,6 +67,8 @@ export type Order = {
 
   total: number
 
+  shipping_address?: CreateOrderShippingAddress | Record<string, unknown> | null
+
   notes: string | null
 
   created_at: string

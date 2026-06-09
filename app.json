@@ -18,6 +18,7 @@
       "bundleIdentifier": "com.aishopy.app"
     },
     "android": {
+      "label": "AiShopy",
       "package": "com.aishopy.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",

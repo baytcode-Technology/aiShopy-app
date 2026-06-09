@@ -21,9 +21,10 @@ export function ProductInventoryFlagsBlock({ product, onUpdated }: Props) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (saving) return
     setMarkAsSold(product.mark_as_sold ?? false)
     setMarkAsNonInventory(product.mark_as_non_inventory ?? false)
-  }, [product.id, product.mark_as_sold, product.mark_as_non_inventory])
+  }, [product.id, product.mark_as_sold, product.mark_as_non_inventory, saving])
 
   const persist = async (sold: boolean, nonInventory: boolean) => {
     setSaving(true)
@@ -58,30 +59,45 @@ export function ProductInventoryFlagsBlock({ product, onUpdated }: Props) {
   }
 
   return (
-    <DetailSection className="p-3.5">
-      <View className="flex-row items-center justify-between mb-2.5">
-        <Text className="text-[13px] font-bold text-ink">Inventory options</Text>
-        {saving ? <ActivityIndicator size="small" color={Colors.brand.primary} /> : null}
-      </View>
-      <Text className="text-[11px] text-gray-500 mb-2 leading-4">
-        Product settings override variant settings and apply to every variant.
-      </Text>
-      <ProductInventoryFlagsEditor
-        markAsSold={markAsSold}
-        markAsNonInventory={markAsNonInventory}
-        onMarkAsSoldChange={onMarkAsSoldChange}
-        onMarkAsNonInventoryChange={onMarkAsNonInventoryChange}
-        disabled={saving}
-      />
-      {productInventoryFlagsLocked({
-        ...product,
-        mark_as_sold: markAsSold,
-        mark_as_non_inventory: markAsNonInventory,
-      }) ? (
-        <Text className="text-[11px] text-amber-800 mt-2 leading-4">
-          All variants will follow these product flags.
-        </Text>
+    <DetailSection className="p-3.5 relative overflow-hidden">
+      {saving ? (
+        <View
+          className="absolute inset-0 z-10 rounded-2xl"
+          style={{ backgroundColor: 'rgba(255, 255, 255, 0.55)' }}
+          pointerEvents="auto"
+        />
       ) : null}
+
+      <View
+        style={saving ? { opacity: 0.55 } : undefined}
+        pointerEvents={saving ? 'none' : 'auto'}
+      >
+        <View className="flex-row items-center justify-between mb-2.5">
+          <Text className="text-[13px] font-bold text-ink">Inventory options</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color={Colors.brand.green} />
+          ) : null}
+        </View>
+        <Text className="text-[11px] text-gray-500 mb-2 leading-4">
+          Product settings override variant settings and apply to every variant.
+        </Text>
+        <ProductInventoryFlagsEditor
+          markAsSold={markAsSold}
+          markAsNonInventory={markAsNonInventory}
+          onMarkAsSoldChange={onMarkAsSoldChange}
+          onMarkAsNonInventoryChange={onMarkAsNonInventoryChange}
+          disabled={saving}
+        />
+        {productInventoryFlagsLocked({
+          ...product,
+          mark_as_sold: markAsSold,
+          mark_as_non_inventory: markAsNonInventory,
+        }) ? (
+          <Text className="text-[11px] text-amber-800 mt-2 leading-4">
+            All variants will follow these product flags.
+          </Text>
+        ) : null}
+      </View>
     </DetailSection>
   )
 }

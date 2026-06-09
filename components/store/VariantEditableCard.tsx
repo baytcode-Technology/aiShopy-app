@@ -16,8 +16,8 @@ import { Caption } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { deleteProductVariant, updateProductVariant } from "@src/api/products";
 import {
-  getVariantStockDisplayValue,
-  getVariantStockLabel,
+  getVariantAvailabilityLabel,
+  getVariantCardInventoryFlags,
 } from "@src/lib/product-inventory";
 import { showError, showSuccess } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
@@ -56,7 +56,11 @@ export function VariantEditableCard({
   const cardLocked = busy || deleteLoading || imageBusy;
 
   const unitPrice = Number(product.base_price) + Number(variant.price_delta);
-  const stockLabel = getVariantStockLabel(product, variant);
+  const availabilityLabel = getVariantAvailabilityLabel(product, variant);
+  const { showSoldOut, showNonInventory } = getVariantCardInventoryFlags(
+    product,
+    variant,
+  );
   const optionLabels = Object.entries(variant.options ?? {})
     .map(([k, val]) => `${k}: ${val}`)
     .join(" · ");
@@ -163,22 +167,43 @@ export function VariantEditableCard({
           <Text className="flex-1 text-base font-extrabold text-ink pr-2 pt-0.5">
             {variant.name}
           </Text>
-          <View className="flex-row items-center gap-1.5 shrink-0">
-            <ProductStatusBadge status={status} />
-            <IconButton
-              size="sm"
-              onPress={toggleActive}
-              disabled={cardLocked}
-              accessibilityLabel={
-                displayActive ? "Disable variant" : "Enable variant"
-              }
-            >
-              <FontAwesome
-                name={displayActive ? "toggle-on" : "toggle-off"}
-                size={20}
-                color={displayActive ? Colors.brand.primary : Colors.text.muted}
-              />
-            </IconButton>
+          <View className="items-end shrink-0 gap-1">
+            <View className="flex-row items-center gap-1.5">
+              <ProductStatusBadge status={status} />
+              <IconButton
+                size="sm"
+                onPress={toggleActive}
+                disabled={cardLocked}
+                accessibilityLabel={
+                  displayActive ? "Disable variant" : "Enable variant"
+                }
+              >
+                <FontAwesome
+                  name={displayActive ? "toggle-on" : "toggle-off"}
+                  size={20}
+                  color={
+                    displayActive ? Colors.brand.primary : Colors.text.muted
+                  }
+                />
+              </IconButton>
+            </View>
+            {showSoldOut || showNonInventory ? (
+              <View className="items-end gap-0.5">
+                {showSoldOut ? (
+                  <Text className="text-[11px] font-bold text-[#991B1B]">
+                    Sold out
+                  </Text>
+                ) : null}
+                {showNonInventory ? (
+                  <Text
+                    className="text-[11px] font-bold"
+                    style={{ color: Colors.brand.green }}
+                  >
+                    Non inventory
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </View>
         {optionLabels ? (
@@ -191,22 +216,17 @@ export function VariantEditableCard({
             price={unitPrice}
             compareAtPrice={variant.compare_at_price}
           />
-          <Text
-            className={`text-[13px] font-bold ${
-              stockLabel?.tone === "danger"
-                ? "text-[#991B1B]"
-                : stockLabel?.tone === "muted"
-                  ? "text-gray-400"
+          {availabilityLabel ? (
+            <Text
+              className={`text-[13px] font-bold ${
+                availabilityLabel.tone === "danger"
+                  ? "text-[#991B1B]"
                   : "text-gray-600"
-            }`}
-          >
-            {stockLabel
-              ? stockLabel.text
-              : `Stock ${getVariantStockDisplayValue(product, variant)}`}
-          </Text>
-          <Text className="text-[13px] font-bold text-gray-600">
-            SKU {variant.sku?.trim() ? variant.sku : "—"}
-          </Text>
+              }`}
+            >
+              {availabilityLabel.text}
+            </Text>
+          ) : null}
         </View>
 
         <View className="absolute bottom-3 right-3 flex-row items-center gap-2">

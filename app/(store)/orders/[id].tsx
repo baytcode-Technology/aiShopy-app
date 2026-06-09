@@ -116,19 +116,25 @@ export default function OrderDetailScreen() {
                 <OrderStatusRow
                   field="order_status"
                   value={order.order_status}
-                  onPress={() => setPickerField('order_status')}
+                  onPress={() => {
+                    if (!saving) setPickerField('order_status')
+                  }}
                   disabled={saving}
                 />
                 <OrderStatusRow
                   field="payment_status"
                   value={order.payment_status}
-                  onPress={() => setPickerField('payment_status')}
+                  onPress={() => {
+                    if (!saving) setPickerField('payment_status')
+                  }}
                   disabled={saving}
                 />
                 <OrderStatusRow
                   field="fulfillment_status"
                   value={order.fulfillment_status}
-                  onPress={() => setPickerField('fulfillment_status')}
+                  onPress={() => {
+                    if (!saving) setPickerField('fulfillment_status')
+                  }}
                   disabled={saving}
                 />
               </View>
@@ -200,7 +206,10 @@ export default function OrderDetailScreen() {
         currentValue={currentPickerValue}
         onClose={() => setPickerField(null)}
         onSelect={(value) => {
-          if (pickerField) void handleStatusChange(pickerField, value)
+          if (!pickerField || saving) return
+          const field = pickerField
+          setPickerField(null)
+          void handleStatusChange(field, value)
         }}
       />
     </Screen>

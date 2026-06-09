@@ -55,7 +55,9 @@ export function EditCategoryModal({
     setName(category.name)
     setIsActive(category.is_active)
     setDescription(category.description ?? '')
-    setImage(category.image_url ? toPickedImage(category.image_url) : null)
+    setImage(
+      category.image_url?.trim() ? toPickedImage(category.image_url) : null
+    )
   }, [
     visible,
     category.id,
@@ -185,7 +187,6 @@ export function EditCategoryModal({
         </View>
       </Pressable>
 
-      <Caption className="text-gray-400">Slug: /{category.slug}</Caption>
     </SleekModal>
   )
 }

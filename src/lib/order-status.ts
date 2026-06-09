@@ -16,7 +16,6 @@ export const ORDER_LIFECYCLE_OPTIONS: OrderLifecycleStatus[] = [
 export const ORDER_PAYMENT_OPTIONS: OrderPaymentStatus[] = [
   'pending',
   'confirming',
-  'partially_paid',
   'paid',
   'refunded',
 ]
@@ -24,8 +23,6 @@ export const ORDER_PAYMENT_OPTIONS: OrderPaymentStatus[] = [
 export const ORDER_FULFILLMENT_OPTIONS: OrderFulfillmentStatus[] = [
   'unfulfilled',
   'ready',
-  'in_transit',
-  'out_for_delivery',
   'fulfilled',
 ]
 

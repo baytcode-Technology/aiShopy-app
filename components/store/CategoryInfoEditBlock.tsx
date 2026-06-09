@@ -36,11 +36,8 @@ export function CategoryInfoEditBlock({
         </Pressable>
 
         <View className="pr-10">
-          <Text className="text-[20px] font-extrabold text-ink tracking-tighter leading-tight mb-1">
+          <Text className="text-[20px] font-extrabold text-ink tracking-tighter leading-tight mb-4">
             {category.name}
-          </Text>
-          <Text className="text-[14px] text-gray-500 mb-4" numberOfLines={1}>
-            /{category.slug}
           </Text>
 
           <View className="flex-row gap-3 mb-4">

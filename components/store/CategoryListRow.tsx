@@ -1,15 +1,10 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { CategoryActiveBadge } from '@/components/store/CategoryActiveBadge'
 import { PressableScale } from '@/components/ui/PressableScale'
+import { categoryHasImage } from '@src/lib/category-image'
+import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 type Props = {
   category: Category
@@ -24,14 +19,14 @@ export function CategoryListRow({ category, onPress }: Props) {
     <PressableScale onPress={onPress} disabled={!onPress}>
       <View className="flex-row items-center gap-3 py-3.5 border-b border-gray-200">
         <View className="w-12 h-12 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden items-center justify-center">
-          {category.image_url ? (
+          {categoryHasImage(category.image_url) ? (
             <Image
-              source={{ uri: category.image_url }}
+              source={{ uri: category.image_url! }}
               style={styles.thumb}
               resizeMode="cover"
             />
           ) : (
-            <Text className="text-[13px] font-extrabold text-gray-400">{initials(category.name)}</Text>
+            <FontAwesome name="folder-open-o" size={18} color={Colors.text.muted} />
           )}
         </View>
 

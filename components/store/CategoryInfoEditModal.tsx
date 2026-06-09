@@ -123,7 +123,6 @@ export function CategoryInfoEditModal({
         />
       </Field>
 
-      <Caption className="text-gray-400">Slug: /{category.slug}</Caption>
     </SleekModal>
   )
 }

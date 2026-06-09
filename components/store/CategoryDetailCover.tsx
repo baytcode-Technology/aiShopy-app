@@ -6,17 +6,10 @@ import { CategoryImagePreviewModal } from '@/components/store/CategoryImagePrevi
 import { IconButton } from '@/components/ui/IconButton'
 import { updateCategory } from '@src/api/categories'
 import { uploadProductImages } from '@src/api/uploads'
+import { categoryHasImage } from '@src/lib/category-image'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 function mimeFromUri(uri: string): string {
   const lower = uri.toLowerCase()
@@ -94,21 +87,20 @@ export function CategoryDetailCover({ category, storeId, onUpdated }: Props) {
           </View>
 
           <Pressable
-            onPress={() => category.image_url && setPreviewOpen(true)}
-            disabled={!category.image_url}
+            onPress={() => categoryHasImage(category.image_url) && setPreviewOpen(true)}
+            disabled={!categoryHasImage(category.image_url)}
           >
             <View className="rounded-2xl overflow-hidden h-[180px] bg-gray-100 border border-gray-200">
-              {category.image_url ? (
+              {categoryHasImage(category.image_url) ? (
                 <Image
-                  source={{ uri: category.image_url }}
+                  source={{ uri: category.image_url! }}
                   className="w-full h-full"
                   resizeMode="cover"
                 />
               ) : (
-                <View className="w-full h-full items-center justify-center">
-                  <Text className="text-4xl font-extrabold text-gray-300 tracking-wider">
-                    {initials(category.name)}
-                  </Text>
+                <View className="w-full h-full items-center justify-center gap-2">
+                  <FontAwesome name="folder-open-o" size={36} color={Colors.text.muted} />
+                  <Text className="text-[13px] font-medium text-gray-400">No cover image</Text>
                 </View>
               )}
             </View>

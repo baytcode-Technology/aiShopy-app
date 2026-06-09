@@ -27,7 +27,7 @@ export function CategoryImagePicker({
   onChange,
   error,
   allowRemove = true,
-  label = 'Category image *',
+  label = 'Category image',
 }: Props) {
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -70,7 +70,7 @@ export function CategoryImagePicker({
           ) : (
             <View className="items-center gap-2 px-4">
               <FontAwesome name="image" size={28} color={Colors.text.muted} />
-              <Muted className="text-center">Tap to add category cover image</Muted>
+              <Muted className="text-center">Tap to add cover image (optional)</Muted>
             </View>
           )}
         </View>

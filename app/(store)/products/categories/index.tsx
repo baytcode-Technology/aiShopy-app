@@ -71,7 +71,7 @@ export default function CategoriesScreen() {
     const q = search.trim().toLowerCase()
     return categories.filter((c) => {
       const matchesSearch =
-        !q || c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q)
+        !q || c.name.toLowerCase().includes(q)
       const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'active' ? c.is_active : !c.is_active)
@@ -135,7 +135,7 @@ export default function CategoriesScreen() {
               <EmptyState
                 icon="folder-open-o"
                 title="No categories yet"
-                description="Tap + to create a category with a cover image, then assign products."
+                description="Tap + to create a category, then assign products."
               />
             </View>
           </View>

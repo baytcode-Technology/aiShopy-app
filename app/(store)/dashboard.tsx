@@ -124,7 +124,7 @@ export default function DashboardScreen() {
             />
             <MenuRow
               label="Admin Dashboard"
-              value="WhatsApp · Instagram · Domain"
+              value="WhatsApp · Instagram · Chat Boat · Domain"
               icon="plug"
               showChevron
               onPress={() => router.push('/admin-dashboard' as Href)}

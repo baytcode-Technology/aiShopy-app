@@ -100,7 +100,7 @@ export default function SettingsScreen() {
             />
             <MenuRow
               label="Admin Dashboard"
-              value="WhatsApp · Instagram · Domain"
+              value="WhatsApp · Instagram · Chat Boat · Domain"
               icon="cog"
               showChevron
               onPress={() => router.push('/admin-dashboard' as Href)}

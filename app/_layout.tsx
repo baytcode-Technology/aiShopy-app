@@ -64,6 +64,7 @@ export default function RootLayout() {
             <Stack.Screen name="connect-whatsapp" />
             <Stack.Screen name="admin-dashboard" />
             <Stack.Screen name="instagram-connect" />
+            <Stack.Screen name="chat-boat" />
             <Stack.Screen name="settings" />
             <Stack.Screen name="account-coming-soon" />
             <Stack.Screen name="(tabs)" />

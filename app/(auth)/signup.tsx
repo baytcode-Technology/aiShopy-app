@@ -62,7 +62,12 @@ export default function SignupScreen() {
         autoCorrect={false}
         error={error}
       />
-      <AuthButton label="Continue" loading={loading} onPress={onContinue} />
+      <AuthButton
+        label="Continue"
+        loading={loading}
+        onPress={onContinue}
+        className="bg-brand-green border-brand-green"
+      />
     </AuthLayout>
   )
 }

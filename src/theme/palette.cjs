@@ -1,5 +1,6 @@
 /** Raw hex — keep in sync with palette.ts */
 module.exports = {
+  brandGreen: '#3EB056',
   ink: '#0A0A0B',
   charcoal: '#141416',
   surface: '#FFFFFF',

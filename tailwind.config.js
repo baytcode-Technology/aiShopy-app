@@ -39,6 +39,7 @@ module.exports = {
         'warning-bg': palette.warningBg,
         brand: {
           primary: palette.ink,
+          green: palette.brandGreen,
           'on-primary': palette.surface,
         },
       },

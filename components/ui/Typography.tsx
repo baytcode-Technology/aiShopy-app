@@ -72,7 +72,7 @@ export function LinkText({ className, ...props }: TypographyProps) {
 export function DisplayBrand({ className, ...props }: TypographyProps) {
   return (
     <Text
-      className={cn('text-xs font-bold text-ink uppercase tracking-brand', className)}
+      className={cn('text-xs font-bold text-ink tracking-brand', className)}
       {...props}
     />
   )

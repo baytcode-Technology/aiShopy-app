@@ -1,4 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { MessageBubble } from "@/components/chat/MessageBubble";
+import { HeaderActionsRow } from "@/components/navigation/HeaderActionsRow";
+import { IconButton } from "@/components/ui/IconButton";
+import { LinkText, Muted } from "@/components/ui/Typography";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import {
+  fetchChatMessages,
+  mapApiMessageToChatMessage,
+  mapSocketMessageToChatMessage,
+  sendChatMessage,
+} from "@src/api/chats";
+import { useChatSocket } from "@src/contexts/chat-socket-context";
+import { useStore } from "@src/contexts/store-context";
+import { showError } from "@src/lib/toast";
+import Colors from "@src/theme/colors";
+import type { ChatMessage } from "@src/types/chat";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -7,142 +24,151 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { router, useLocalSearchParams } from 'expo-router'
-import { MessageBubble } from '@/components/chat/MessageBubble'
-import { IconButton } from '@/components/ui/IconButton'
-import { LinkText, Muted } from '@/components/ui/Typography'
-import Colors from '@src/theme/colors'
-import type { ChatMessage } from '@src/types/chat'
-import {
-  fetchChatMessages,
-  mapApiMessageToChatMessage,
-  mapSocketMessageToChatMessage,
-  sendChatMessage,
-} from '@src/api/chats'
-import { useChatSocket } from '@src/contexts/chat-socket-context'
-import { useStore } from '@src/contexts/store-context'
-import { showError } from '@src/lib/toast'
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 function initialsFromPhone(phone: string) {
-  const digits = phone.replace(/\D/g, '')
-  const last2 = digits.slice(-2)
-  return (last2 || 'WA').toUpperCase()
+  const digits = phone.replace(/\D/g, "");
+  const last2 = digits.slice(-2);
+  return (last2 || "WA").toUpperCase();
 }
 
 function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
-  const seen = new Set<string>()
-  const out: ChatMessage[] = []
+  const seen = new Set<string>();
+  const out: ChatMessage[] = [];
 
   for (const m of list) {
-    const key = m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(m)
+    const key = m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(m);
   }
 
-  return out
+  return out;
 }
 
 export default function ChatDetailScreen() {
-  const { store } = useStore()
-  const { onMessageNew, onMessageStatus } = useChatSocket()
-  const { id, phone } = useLocalSearchParams<{ id: string; phone?: string }>()
-  const [draft, setDraft] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSending, setIsSending] = useState(false)
+  const { store } = useStore();
+  const { onMessageNew, onMessageStatus } = useChatSocket();
+  const { id, phone } = useLocalSearchParams<{ id: string; phone?: string }>();
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const conversationId = typeof id === 'string' ? id : ''
-  const customerPhone = typeof phone === 'string' ? phone : ''
-  const title = useMemo(() => customerPhone || 'Chat', [customerPhone])
+  const conversationId = typeof id === "string" ? id : "";
+  const customerPhone = typeof phone === "string" ? phone : "";
+  const title = useMemo(() => customerPhone || "Chat", [customerPhone]);
 
   const loadMessages = useCallback(async () => {
-    if (!store?.id || !conversationId) return
-    setIsLoading(true)
+    if (!store?.id || !conversationId) return;
+    setIsLoading(true);
     try {
-      const res = await fetchChatMessages({ storeId: store.id, conversationId, limit: 50 })
+      const res = await fetchChatMessages({
+        storeId: store.id,
+        conversationId,
+        limit: 50,
+      });
       const mapped = res.data.messages
         .slice()
         .reverse()
-        .map((m) => mapApiMessageToChatMessage(m))
-      setMessages(mapped)
+        .map((m) => mapApiMessageToChatMessage(m));
+      setMessages(mapped);
     } catch (e: unknown) {
-      showError('Failed to load messages', e instanceof Error ? e.message : 'Unknown error')
+      showError(
+        "Failed to load messages",
+        e instanceof Error ? e.message : "Unknown error",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [store?.id, conversationId])
+  }, [store?.id, conversationId]);
 
   useEffect(() => {
-    void loadMessages()
-  }, [loadMessages])
+    void loadMessages();
+  }, [loadMessages]);
 
   useEffect(() => {
-    if (!conversationId) return
+    if (!conversationId) return;
 
     const unsubNew = onMessageNew((payload) => {
-      if (payload.conversationId !== conversationId) return
+      if (payload.conversationId !== conversationId) return;
       setMessages((prev) => {
-        const incoming = mapSocketMessageToChatMessage(payload.message)
+        const incoming = mapSocketMessageToChatMessage(payload.message);
         // Dedupe against optimistic + API-response messages
         if (
           prev.some(
             (m) =>
               m.id === incoming.id ||
-              (incoming.metaMessageId && m.metaMessageId === incoming.metaMessageId)
+              (incoming.metaMessageId &&
+                m.metaMessageId === incoming.metaMessageId),
           )
         ) {
-          return prev
+          return prev;
         }
-        return dedupeByIdAndMeta([...prev, incoming])
-      })
-    })
+        return dedupeByIdAndMeta([...prev, incoming]);
+      });
+    });
 
     const unsubStatus = onMessageStatus((payload) => {
-      if (payload.conversationId !== conversationId) return
+      if (payload.conversationId !== conversationId) return;
       setMessages((prev) =>
         prev.map((m) =>
-          m.metaMessageId === payload.metaMessageId || m.id === payload.metaMessageId
-            ? { ...m, status: payload.status as ChatMessage['status'], pending: false }
-            : m
-        )
-      )
-    })
+          m.metaMessageId === payload.metaMessageId ||
+          m.id === payload.metaMessageId
+            ? {
+                ...m,
+                status: payload.status as ChatMessage["status"],
+                pending: false,
+              }
+            : m,
+        ),
+      );
+    });
 
     return () => {
-      unsubNew()
-      unsubStatus()
-    }
-  }, [conversationId, onMessageNew, onMessageStatus])
+      unsubNew();
+      unsubStatus();
+    };
+  }, [conversationId, onMessageNew, onMessageStatus]);
 
   if (!conversationId) {
     return (
       <SafeAreaView className="flex-1 bg-gray-100 items-center">
-        <Text className="text-center mt-10 text-ink font-semibold">Conversation not found</Text>
+        <Text className="text-center mt-10 text-ink font-semibold">
+          Conversation not found
+        </Text>
         <Pressable className="mt-4" onPress={() => router.back()}>
           <LinkText>Go back</LinkText>
         </Pressable>
       </SafeAreaView>
-    )
+    );
   }
 
   const sendMessage = async () => {
-    const text = draft.trim()
-    if (!text || !store?.id || isSending) return
+    const text = draft.trim();
+    if (!text || !store?.id || isSending) return;
 
-    const tempId = `local-${Date.now()}`
-    const now = new Date()
-    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const tempId = `local-${Date.now()}`;
+    const now = new Date();
+    const time = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     setMessages((prev) => [
       ...prev,
-      { id: tempId, text, time, outgoing: true, status: 'pending', pending: true },
-    ])
-    setDraft('')
-    setIsSending(true)
+      {
+        id: tempId,
+        text,
+        time,
+        outgoing: true,
+        status: "pending",
+        pending: true,
+      },
+    ]);
+    setDraft("");
+    setIsSending(true);
 
     try {
       const res = await sendChatMessage({
@@ -150,48 +176,61 @@ export default function ChatDetailScreen() {
         to: customerPhone,
         message: text,
         conversationId,
-      })
+      });
 
       setMessages((prev) =>
         dedupeByIdAndMeta(
           prev.map((m) =>
             m.id === tempId
-              ? { ...mapApiMessageToChatMessage(res.data.message), pending: false }
-              : m
-          )
-        )
-      )
+              ? {
+                  ...mapApiMessageToChatMessage(res.data.message),
+                  pending: false,
+                }
+              : m,
+          ),
+        ),
+      );
     } catch (e: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId))
-      setDraft(text)
-      showError(e, 'Failed to send')
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setDraft(text);
+      showError(e, "Failed to send");
     } finally {
-      setIsSending(false)
+      setIsSending(false);
     }
-  }
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
       <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
         <Pressable className="p-1" onPress={() => router.back()} hitSlop={12}>
-          <FontAwesome name="chevron-left" size={18} color={Colors.brand.onPrimary} />
+          <FontAwesome
+            name="chevron-left"
+            size={18}
+            color={Colors.brand.onPrimary}
+          />
         </Pressable>
         <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
           <Text className="text-brand-on-primary font-bold text-sm">
             {initialsFromPhone(customerPhone)}
           </Text>
         </View>
-        <View className="flex-1">
-          <Text className="text-brand-on-primary text-base font-bold">{title}</Text>
-          <Muted className="text-gray-400 text-xs mt-0.5">
-            {isLoading ? 'Loading…' : customerPhone}
+        <View className="flex-1 min-w-0">
+          <Text
+            className="text-brand-on-primary text-base font-bold"
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          <Muted className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
+            {isLoading ? "Loading…" : customerPhone}
           </Muted>
         </View>
+        <HeaderActionsRow settingsTone="onPrimary" />
       </View>
 
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={0}
       >
         <FlatList
@@ -221,5 +260,5 @@ export default function ChatDetailScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
-  )
+  );
 }

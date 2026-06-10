@@ -1,16 +1,11 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { PressableScale } from '@/components/ui/PressableScale'
+import { categoryHasImage } from '@src/lib/category-image'
 import { shadows } from '@src/lib/shadows'
 import { cn } from '@src/lib/cn'
+import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 type Props = {
   category: Category
@@ -45,17 +40,15 @@ export function CategoryCard({
             style={[styles.media, variant === 'hero' ? styles.mediaHero : undefined]}
             className="w-full relative"
           >
-            {category.image_url ? (
+            {categoryHasImage(category.image_url) ? (
               <Image
-                source={{ uri: category.image_url }}
+                source={{ uri: category.image_url! }}
                 style={StyleSheet.absoluteFillObject}
                 resizeMode="cover"
               />
             ) : (
               <View className="flex-1 w-full h-full items-center justify-center bg-gray-100">
-                <Text className="text-3xl font-extrabold text-gray-300 tracking-wider">
-                  {initials(category.name)}
-                </Text>
+                <FontAwesome name="folder-open-o" size={32} color={Colors.text.muted} />
               </View>
             )}
 

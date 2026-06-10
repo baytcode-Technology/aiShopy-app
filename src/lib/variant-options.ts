@@ -11,8 +11,13 @@ export type GeneratedVariant = {
   name: string
   options: Record<string, string>
   priceDelta: string
+  compareAtPrice: string
   stockQty: string
   sku: string
+  /** Local image picked before upload (create flow). */
+  imageUri?: string | null
+  imageName?: string
+  imageType?: string
 }
 
 function cartesian(options: VariantOption[]): Record<string, string>[] {
@@ -51,20 +56,77 @@ export function generateVariantsFromOptions(
       name,
       options: opts,
       priceDelta: existing?.priceDelta ?? '0',
+      compareAtPrice: existing?.compareAtPrice ?? '',
       stockQty: existing?.stockQty ?? '0',
       sku: existing?.sku ?? '',
+      imageUri: existing?.imageUri ?? null,
+      imageName: existing?.imageName,
+      imageType: existing?.imageType,
     }
   })
 }
 
-export function toCreateVariantPayload(v: GeneratedVariant): CreateProductVariantPayload {
+export function toCreateVariantPayload(
+  v: GeneratedVariant,
+  imageUrl?: string | null
+): CreateProductVariantPayload {
+  const compareTrimmed = v.compareAtPrice.trim()
+  const compare_at_price = compareTrimmed ? Number(compareTrimmed) || null : null
   return {
     name: v.name,
     options: v.options,
     price_delta: Number(v.priceDelta) || 0,
+    compare_at_price,
     stock_qty: Number(v.stockQty) || 0,
     sku: v.sku.trim() || undefined,
+    ...(imageUrl ? { image_url: imageUrl } : {}),
     is_active: true,
     sort_order: 0,
   }
+}
+
+type VariantLocalImage = {
+  id: string
+  imageUri?: string | null
+  imageName?: string
+  imageType?: string
+}
+
+export async function uploadLocalVariantImages(
+  storeId: string,
+  variants: VariantLocalImage[],
+  upload: (
+    storeId: string,
+    files: { uri: string; name: string; type: string }[]
+  ) => Promise<string[]>
+): Promise<Map<string, string>> {
+  const withImage = variants.filter((v) => v.imageUri)
+  if (withImage.length === 0) return new Map()
+
+  const urls = await upload(
+    storeId,
+    withImage.map((v) => ({
+      uri: v.imageUri!,
+      name: v.imageName ?? `variant-${v.id}.jpg`,
+      type: v.imageType ?? 'image/jpeg',
+    }))
+  )
+
+  const map = new Map<string, string>()
+  withImage.forEach((v, i) => {
+    const url = urls[i]
+    if (url) map.set(v.id, url)
+  })
+  return map
+}
+
+export async function uploadVariantImagesForCreate(
+  storeId: string,
+  variants: GeneratedVariant[],
+  upload: (
+    storeId: string,
+    files: { uri: string; name: string; type: string }[]
+  ) => Promise<string[]>
+): Promise<Map<string, string>> {
+  return uploadLocalVariantImages(storeId, variants, upload)
 }

@@ -10,7 +10,7 @@ type Props = {
   onClose: () => void
   children: ReactNode
   footer?: ReactNode
-  scrollViewRef?: RefObject<ScrollView>
+  scrollViewRef?: RefObject<ScrollView | null>
 }
 
 export function FormModal({

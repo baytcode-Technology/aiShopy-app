@@ -1,356 +1,327 @@
-import { useEffect, useRef, useState } from 'react'
-import { LayoutChangeEvent, Pressable, ScrollView, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
-import { Caption, SectionTitle } from '@/components/ui/Typography'
-import { FormModal } from '@/components/store/FormModal'
+import { SleekModal } from '@/components/ui/Modal'
+import { OrderCartLine } from '@/components/store/order-create/OrderCartLine'
+import { OrderCustomerPickerModal } from '@/components/store/order-create/OrderCustomerPickerModal'
+import { OrderProductPickerModal } from '@/components/store/order-create/OrderProductPickerModal'
+import { OrderVariantPickerModal } from '@/components/store/order-create/OrderVariantPickerModal'
+import {
+  cartHasInsufficientStock,
+  cartLineKey,
+  type CartLine,
+  unitPrice,
+} from '@/components/store/order-create/types'
 import { createOrder } from '@src/api/orders'
-import { fetchProducts } from '@src/api/products'
-import { cn } from '@src/lib/cn'
-import { showError, showSuccess } from '@src/lib/toast'
+import { fetchProduct, fetchProducts } from '@src/api/products'
+import { customerDisplayName, customerDisplayPhone } from '@src/lib/customer-display'
+import { formatMoney } from '@src/lib/format-money'
+import { getProductStatus } from '@src/lib/product-status'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
-import type { Product } from '@src/types/product'
-
-type LineItem = {
-  productId: string
-  quantity: string
-}
+import type { Customer } from '@src/types/customer'
+import type { Product, ProductVariant } from '@src/types/product'
 
 type Props = {
   visible: boolean
   storeId: string
+  currency?: string
   onClose: () => void
   onCreated: () => void
 }
 
-export function CreateOrderModal({ visible, storeId, onClose, onCreated }: Props) {
+export function CreateOrderModal({ visible, storeId, currency, onClose, onCreated }: Props) {
   const [products, setProducts] = useState<Product[]>([])
-  const [whatsapp, setWhatsapp] = useState('')
-  const [customerName, setCustomerName] = useState('')
-  const [city, setCity] = useState('')
-  const [district, setDistrict] = useState('')
-  const [state, setState] = useState('')
-  const [region, setRegion] = useState('')
-  const [postcode, setPostcode] = useState('')
-  const [notes, setNotes] = useState('')
-  const [lines, setLines] = useState<LineItem[]>([{ productId: '', quantity: '1' }])
-  const [loading, setLoading] = useState(false)
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [cart, setCart] = useState<CartLine[]>([])
+  const [customer, setCustomer] = useState<Customer | null>(null)
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
 
-  const [whatsappError, setWhatsappError] = useState('')
-  const [nameError, setNameError] = useState('')
-  const [cityError, setCityError] = useState('')
-  const [districtError, setDistrictError] = useState('')
-  const [stateError, setStateError] = useState('')
-  const [regionError, setRegionError] = useState('')
-  const [postcodeError, setPostcodeError] = useState('')
-
-  const scrollViewRef = useRef<ScrollView>(null)
-  const fieldY = useRef<Record<string, number | undefined>>({})
-
-  const registerFieldY = (key: string) => (e: LayoutChangeEvent) => {
-    fieldY.current[key] = e.nativeEvent.layout.y
-  }
-
-  const scrollToField = (key: string) => {
-    const y = fieldY.current[key]
-    if (typeof y !== 'number') return
-    scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true })
-  }
+  const [productPickerOpen, setProductPickerOpen] = useState(false)
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false)
+  const [variantPickerOpen, setVariantPickerOpen] = useState(false)
+  const [pendingProduct, setPendingProduct] = useState<Product | null>(null)
+  const [pendingVariants, setPendingVariants] = useState<ProductVariant[]>([])
+  const [variantsLoading, setVariantsLoading] = useState(false)
 
   useEffect(() => {
     if (!visible || !storeId) return
+    setProductsLoading(true)
     fetchProducts(storeId)
-      .then((res) => setProducts(res.data.products.filter((p) => p.is_active)))
+      .then((res) =>
+        setProducts(res.data.products.filter((p) => getProductStatus(p) === 'active'))
+      )
       .catch((e) => showError(e))
+      .finally(() => setProductsLoading(false))
   }, [visible, storeId])
 
-  const reset = () => {
-    setWhatsapp('')
-    setCustomerName('')
-    setCity('')
-    setDistrict('')
-    setState('')
-    setRegion('')
-    setPostcode('')
-    setNotes('')
-    setLines([{ productId: '', quantity: '1' }])
-    setWhatsappError('')
-    setNameError('')
-    setCityError('')
-    setDistrictError('')
-    setStateError('')
-    setRegionError('')
-    setPostcodeError('')
-  }
+  const reset = useCallback(() => {
+    setCart([])
+    setCustomer(null)
+    setProductPickerOpen(false)
+    setCustomerPickerOpen(false)
+    setVariantPickerOpen(false)
+    setPendingProduct(null)
+    setPendingVariants([])
+  }, [])
 
   const handleClose = () => {
     reset()
     onClose()
   }
 
-  const addLine = () => setLines([...lines, { productId: '', quantity: '1' }])
+  const addToCart = (product: Product, variant: ProductVariant | null) => {
+    const key = cartLineKey(product.id, variant?.id ?? null)
+    setCart((prev) => {
+      const existing = prev.find((l) => l.key === key)
+      if (existing) {
+        return prev.map((l) =>
+          l.key === key ? { ...l, quantity: l.quantity + 1 } : l
+        )
+      }
+      return [
+        ...prev,
+        {
+          key,
+          productId: product.id,
+          variantId: variant?.id ?? null,
+          quantity: 1,
+          product,
+          variant,
+        },
+      ]
+    })
+    setProductPickerOpen(false)
+    setVariantPickerOpen(false)
+    setPendingProduct(null)
+    setPendingVariants([])
+  }
 
-  const handleSubmit = async () => {
-    const phone = whatsapp.trim()
-    const name = customerName.trim()
-    if (!phone || phone.length < 8) {
-      setWhatsappError('This field is required')
-      setNameError('')
-      setCityError('')
-      setDistrictError('')
-      setStateError('')
-      setRegionError('')
-      setPostcodeError('')
-      scrollToField('whatsapp')
-      return
+  const handleProductSelect = async (product: Product) => {
+    setPendingProduct(product)
+    setVariantsLoading(true)
+    try {
+      const res = await fetchProduct(product.id, storeId)
+      const active = res.data.variants.filter((v) => v.is_active)
+      if (active.length > 0) {
+        setPendingVariants(active)
+        setProductPickerOpen(false)
+        requestAnimationFrame(() => setVariantPickerOpen(true))
+      } else {
+        addToCart(product, null)
+      }
+    } catch (e) {
+      showError(e, 'Could not load product')
+      setPendingProduct(null)
+    } finally {
+      setVariantsLoading(false)
     }
-    if (!name) {
-      setNameError('This field is required')
-      setWhatsappError('')
-      setCityError('')
-      setDistrictError('')
-      setStateError('')
-      setRegionError('')
-      setPostcodeError('')
-      scrollToField('customerName')
-      return
-    }
-    if (!city.trim()) {
-      setCityError('This field is required')
-      setDistrictError('')
-      setStateError('')
-      setRegionError('')
-      setPostcodeError('')
-      setWhatsappError('')
-      setNameError('')
-      scrollToField('city')
-      return
-    }
-    if (!district.trim()) {
-      setDistrictError('This field is required')
-      setStateError('')
-      setRegionError('')
-      setPostcodeError('')
-      setWhatsappError('')
-      setNameError('')
-      setCityError('')
-      scrollToField('district')
-      return
-    }
-    if (!state.trim()) {
-      setStateError('This field is required')
-      setRegionError('')
-      setPostcodeError('')
-      setWhatsappError('')
-      setNameError('')
-      setCityError('')
-      setDistrictError('')
-      scrollToField('state')
-      return
-    }
-    if (!region.trim()) {
-      setRegionError('This field is required')
-      setWhatsappError('')
-      setNameError('')
-      setCityError('')
-      setDistrictError('')
-      setStateError('')
-      setPostcodeError('')
-      scrollToField('region')
-      return
-    }
-    if (!postcode.trim()) {
-      setPostcodeError('This field is required')
-      setWhatsappError('')
-      setNameError('')
-      setCityError('')
-      setDistrictError('')
-      setStateError('')
-      setRegionError('')
-      scrollToField('postcode')
+  }
+
+  const updateQuantity = (key: string, quantity: number) => {
+    setCart((prev) =>
+      prev.map((l) => (l.key === key ? { ...l, quantity: Math.max(1, quantity) } : l))
+    )
+  }
+
+  const removeLine = (key: string) => {
+    setCart((prev) => prev.filter((l) => l.key !== key))
+  }
+
+  const subtotal = useMemo(
+    () => cart.reduce((sum, l) => sum + unitPrice(l.product, l.variant) * l.quantity, 0),
+    [cart]
+  )
+
+  const taxAmount = 0
+  const total = subtotal
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) {
+      showError('Add at least one item')
       return
     }
 
-    const items = lines
-      .filter((l) => l.productId)
-      .map((l) => ({
-        product_id: l.productId,
-        quantity: Math.max(1, Number(l.quantity) || 1),
-      }))
+    const items = cart.map((l) => ({
+      product_id: l.productId,
+      quantity: l.quantity,
+      ...(l.variantId ? { variant_id: l.variantId } : {}),
+    }))
 
-    if (items.length === 0) {
-      showError('Add at least one product')
-      return
-    }
+    const phone = customer ? customerDisplayPhone(customer) : null
+    const name = customer?.name?.trim()
 
-    setLoading(true)
+    const overStock = cartHasInsufficientStock(cart)
+
+    setCheckoutLoading(true)
     try {
       await createOrder({
         store_id: storeId,
-        whatsapp_number: phone,
-        name,
-        payment_method: 'cod',
         items,
-        shipping_address: {
-          name,
-          phone_number: phone,
-          whatsapp_number: phone,
-          city: city.trim(),
-          district: district.trim(),
-          state: state.trim(),
-          region: region.trim(),
-          postcode: postcode.trim(),
-        },
-        notes: notes.trim() || undefined,
+        payment_method: 'cod',
+        offline: true,
+        ...(customer ? { customer_id: customer.id } : {}),
+        ...(phone && phone.length >= 8 ? { whatsapp_number: phone } : {}),
+        ...(name ? { name } : {}),
+        ...(name || phone
+          ? {
+              shipping_address: {
+                ...(name ? { name } : {}),
+                ...(phone ? { phone_number: phone, whatsapp_number: phone } : {}),
+              },
+            }
+          : {}),
       })
       reset()
       onCreated()
       onClose()
-      showSuccess('Order created successfully')
+      if (overStock) {
+        showWarning(
+          'Insufficient stock',
+          customer ? 'Order created — inventory went below zero' : 'Walk-in order created — inventory went below zero'
+        )
+      } else {
+        showSuccess(customer ? 'Order created' : 'Walk-in order created')
+      }
     } catch (e) {
       showError(e)
     } finally {
-      setLoading(false)
+      setCheckoutLoading(false)
     }
   }
 
   return (
-    <FormModal
-      visible={visible}
-      title="New order"
-      onClose={handleClose}
-      scrollViewRef={scrollViewRef}
-      footer={<Button label="Create order (COD)" loading={loading} onPress={handleSubmit} />}
-    >
-      <Input
-        label="Customer WhatsApp *"
-        value={whatsapp}
-        onChangeText={setWhatsapp}
-        placeholder="+919876543210"
-        keyboardType="phone-pad"
-        error={whatsappError || undefined}
-        containerOnLayout={registerFieldY('whatsapp')}
-      />
-      <Input
-        label="Customer name *"
-        value={customerName}
-        onChangeText={setCustomerName}
-        placeholder="John Doe"
-        error={nameError || undefined}
-        containerOnLayout={registerFieldY('customerName')}
-      />
-
-      <SectionTitle className="mt-1">Shipping address *</SectionTitle>
-      <Input
-        label="City"
-        value={city}
-        onChangeText={setCity}
-        placeholder="Mumbai"
-        error={cityError || undefined}
-        containerOnLayout={registerFieldY('city')}
-      />
-      <Input
-        label="District"
-        value={district}
-        onChangeText={setDistrict}
-        placeholder="Mumbai Suburban"
-        error={districtError || undefined}
-        containerOnLayout={registerFieldY('district')}
-      />
-      <Input
-        label="State"
-        value={state}
-        onChangeText={setState}
-        placeholder="Maharashtra"
-        error={stateError || undefined}
-        containerOnLayout={registerFieldY('state')}
-      />
-      <Input
-        label="Region"
-        value={region}
-        onChangeText={setRegion}
-        placeholder="West"
-        error={regionError || undefined}
-        containerOnLayout={registerFieldY('region')}
-      />
-      <Input
-        label="Postcode"
-        value={postcode}
-        onChangeText={setPostcode}
-        placeholder="400001"
-        error={postcodeError || undefined}
-        containerOnLayout={registerFieldY('postcode')}
-      />
-
-      <View className="flex-row items-center justify-between">
-        <SectionTitle>Line items *</SectionTitle>
-        <Pressable onPress={addLine}>
-          <View className="flex-row items-center gap-1">
-            <FontAwesome name="plus" size={12} color={Colors.brand.primary} />
-            <Text className="text-xs font-semibold text-ink">Add item</Text>
-          </View>
+    <>
+      <SleekModal
+        isOpen={visible}
+        onClose={handleClose}
+        title="Create order"
+        minHeightRatio={0.5}
+        maxHeightRatio={0.8}
+        footer={
+          <Button
+            label={`Checkout · ${formatMoney(total, currency)}`}
+            loading={checkoutLoading}
+            disabled={cart.length === 0}
+            onPress={handleCheckout}
+            size="lg"
+            className="bg-ink border-ink"
+          />
+        }
+      >
+        <Pressable
+          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border border-gray-200 bg-surface active:opacity-80"
+          onPress={() => setProductPickerOpen(true)}
+        >
+          <Text className="text-lg text-ink">+</Text>
+          <Text className="text-[15px] font-semibold text-ink">Add item</Text>
         </Pressable>
-      </View>
 
-      <ScrollView className="max-h-[220px]" nestedScrollEnabled>
-        {lines.map((line, index) => (
-          <Card key={index} className="mb-2 gap-1.5" padded>
-            <Caption>Product</Caption>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0 mb-1">
-              {products.map((p) => {
-                const active = line.productId === p.id
-                return (
-                  <Pressable
-                    key={p.id}
-                    className={cn(
-                      'border rounded-lg px-2.5 py-1.5 mr-1.5 max-w-[140px]',
-                      active ? 'bg-brand-primary border-ink' : 'border-gray-200'
-                    )}
-                    onPress={() => {
-                      const next = [...lines]
-                      next[index] = { ...line, productId: p.id }
-                      setLines(next)
-                    }}
-                  >
-                    <Text
-                      className={cn(
-                        'text-xs',
-                        active ? 'text-brand-on-primary font-semibold' : 'text-gray-600'
-                      )}
-                      numberOfLines={1}
-                    >
-                      {p.name}
-                    </Text>
-                  </Pressable>
-                )
-              })}
-            </ScrollView>
-            <Input
-              label="Qty"
-              value={line.quantity}
-              onChangeText={(quantity) => {
-                const next = [...lines]
-                next[index] = { ...line, quantity }
-                setLines(next)
-              }}
-              keyboardType="number-pad"
-            />
-          </Card>
-        ))}
-      </ScrollView>
+        <View className="flex-row gap-2">
+          <Pressable
+            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-gray-100 active:opacity-80"
+            onPress={() => setCustomerPickerOpen(true)}
+          >
+            <FontAwesome name="user-o" size={14} color={Colors.text.primary} />
+            <Text className="text-[14px] font-semibold text-ink">Add customer</Text>
+          </Pressable>
+        </View>
 
-      <Input
-        label="Notes"
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Delivery instructions"
-        multiline
-        numberOfLines={2}
-        inputClassName="min-h-16"
-        style={{ textAlignVertical: 'top' }}
+        {customer ? (
+          <View className="flex-row items-center rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+            <Pressable
+              className="flex-1 min-w-0 active:opacity-80"
+              onPress={() => setCustomerPickerOpen(true)}
+            >
+              <Text className="text-[14px] font-semibold text-ink" numberOfLines={1}>
+                {customerDisplayName(customer)}
+              </Text>
+              {customerDisplayPhone(customer) || customer.email ? (
+                <Text className="text-[13px] text-gray-500 mt-0.5" numberOfLines={1}>
+                  {customerDisplayPhone(customer) ?? customer.email}
+                </Text>
+              ) : null}
+            </Pressable>
+            <Pressable onPress={() => setCustomer(null)} hitSlop={8} className="p-1">
+              <Text className="text-sm text-gray-400 font-bold">✕</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {cart.length > 0 ? (
+          <View className="gap-0">
+            {cart.map((line) => (
+              <OrderCartLine
+                key={line.key}
+                line={line}
+                currency={currency}
+                onQuantityChange={(q) => updateQuantity(line.key, q)}
+                onRemove={() => removeLine(line.key)}
+              />
+            ))}
+
+            <View className="border-t border-gray-200 pt-4 mt-1 gap-2">
+              <View className="flex-row justify-between">
+                <Text className="text-[14px] text-gray-500">Items total</Text>
+                <Text className="text-[14px] text-ink">{formatMoney(subtotal, currency)}</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-[14px] text-gray-500">Subtotal (incl. tax)</Text>
+                <Text className="text-[14px] text-ink">{formatMoney(subtotal, currency)}</Text>
+              </View>
+              <View className="flex-row justify-between">
+                <Text className="text-[14px] text-gray-500">Tax (0%)</Text>
+                <Text className="text-[14px] text-ink">{formatMoney(taxAmount, currency)}</Text>
+              </View>
+              <View className="flex-row justify-between border-t border-gray-200 pt-3 mt-1">
+                <Text className="text-[16px] font-bold text-ink">Total</Text>
+                <Text className="text-[16px] font-bold text-ink">
+                  {formatMoney(total, currency)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <Text className="text-center text-gray-400 text-[14px] py-6">
+            Add items to start building this order
+          </Text>
+        )}
+      </SleekModal>
+
+      <OrderProductPickerModal
+        visible={productPickerOpen}
+        products={products}
+        loading={productsLoading}
+        currency={currency}
+        onClose={() => setProductPickerOpen(false)}
+        onSelectProduct={handleProductSelect}
       />
-    </FormModal>
+
+      <OrderVariantPickerModal
+        visible={variantPickerOpen}
+        product={pendingProduct}
+        variants={pendingVariants}
+        loading={variantsLoading}
+        currency={currency}
+        onClose={() => {
+          setVariantPickerOpen(false)
+          setPendingProduct(null)
+          setPendingVariants([])
+          setProductPickerOpen(true)
+        }}
+        onSelectVariant={(variant) => {
+          if (pendingProduct) addToCart(pendingProduct, variant)
+        }}
+      />
+
+      <OrderCustomerPickerModal
+        visible={customerPickerOpen}
+        storeId={storeId}
+        selectedCustomerId={customer?.id ?? null}
+        onClose={() => setCustomerPickerOpen(false)}
+        onSelectCustomer={setCustomer}
+      />
+    </>
   )
 }

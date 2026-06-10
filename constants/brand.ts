@@ -1,5 +1,5 @@
 /** App display name and logo asset. */
-export const APP_NAME = "AISHOPY";
+export const APP_NAME = "AiShopy";
 
 /** App icon (splash + home icon). */
 export const APP_ICON = require('@/assets/images/app_logo.jpg') as number

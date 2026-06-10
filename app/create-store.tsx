@@ -1,9 +1,11 @@
 import { AuthButton } from '@/components/auth/AuthButton'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthLayout } from '@/components/auth/AuthLayout'
+import { Button } from '@/components/ui/Button'
 import { Caption, SectionTitle } from '@/components/ui/Typography'
 import { createStore } from '@src/api/stores'
 import { env } from '@src/config/env'
+import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
@@ -18,7 +20,8 @@ import { useState } from 'react'
 type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>
 
 export default function CreateStoreScreen() {
-  const { activateStoreSession } = useStore()
+  const { signOut } = useAuth()
+  const { activateStoreSession, clearStore } = useStore()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
@@ -34,6 +37,12 @@ export default function CreateStoreScreen() {
     if (!slugTouched) {
       setSlug(slugifyFromName(value))
     }
+  }
+
+  const handleSignOut = async () => {
+    await clearStore()
+    await signOut()
+    router.replace('/(auth)/login' as Href)
   }
 
   const onSubmit = async () => {
@@ -81,6 +90,14 @@ export default function CreateStoreScreen() {
     <AuthLayout
       title="Create your store"
       subtitle="Required fields are marked with *. Optional fields can be added now or later."
+      footer={
+        <Button
+          label="Sign out"
+          variant="ghost"
+          onPress={() => void handleSignOut()}
+          className="w-full"
+        />
+      }
     >
       <SectionTitle className="mt-4 mb-1.5">Basics</SectionTitle>
       <AuthInput

@@ -5,6 +5,7 @@ import { LinkText, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   fetchChatMessages,
+  fetchInstagramMessages,
   mapApiMessageToChatMessage,
   mapSocketMessageToChatMessage,
   sendChatMessage,
@@ -13,7 +14,7 @@ import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
-import type { ChatMessage } from "@src/types/chat";
+import type { ChatChannel, ChatMessage } from "@src/types/chat";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -27,10 +28,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function initialsFromPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  const last2 = digits.slice(-2);
-  return (last2 || "WA").toUpperCase();
+function initialsFromLabel(label: string, fallback: string) {
+  const cleaned = label.replace(/^@/, "").trim();
+  if (!cleaned) return fallback;
+  const parts = cleaned.split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  }
+  return (cleaned.slice(0, 2) || fallback).toUpperCase();
 }
 
 function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
@@ -49,8 +54,12 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
 
 export default function ChatDetailScreen() {
   const { store } = useStore();
-  const { onMessageNew, onMessageStatus } = useChatSocket();
-  const { id, phone } = useLocalSearchParams<{ id: string; phone?: string }>();
+  const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
+  const { id, phone, channel: channelParam } = useLocalSearchParams<{
+    id: string;
+    phone?: string;
+    channel?: string;
+  }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,17 +67,31 @@ export default function ChatDetailScreen() {
 
   const conversationId = typeof id === "string" ? id : "";
   const customerPhone = typeof phone === "string" ? phone : "";
-  const title = useMemo(() => customerPhone || "Chat", [customerPhone]);
+  const channel: ChatChannel =
+    channelParam === "instagram" ? "instagram" : "whatsapp";
+  const title = useMemo(() => {
+    if (channel === "instagram" && customerPhone && !customerPhone.startsWith("@")) {
+      return customerPhone.length > 12 ? `IG ${customerPhone.slice(0, 8)}…` : customerPhone;
+    }
+    return customerPhone || "Chat";
+  }, [channel, customerPhone]);
 
   const loadMessages = useCallback(async () => {
     if (!store?.id || !conversationId) return;
     setIsLoading(true);
     try {
-      const res = await fetchChatMessages({
-        storeId: store.id,
-        conversationId,
-        limit: 50,
-      });
+      const res =
+        channel === "instagram"
+          ? await fetchInstagramMessages({
+              storeId: store.id,
+              conversationId,
+              limit: 50,
+            })
+          : await fetchChatMessages({
+              storeId: store.id,
+              conversationId,
+              limit: 50,
+            });
       const mapped = res.data.messages
         .slice()
         .reverse()
@@ -82,7 +105,7 @@ export default function ChatDetailScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [store?.id, conversationId]);
+  }, [store?.id, conversationId, channel]);
 
   useEffect(() => {
     void loadMessages();
@@ -91,11 +114,21 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     if (!conversationId) return;
 
-    const unsubNew = onMessageNew((payload) => {
+    const handleNew = (payload: {
+      conversationId: string;
+      message: {
+        id: string;
+        meta_message_id?: string;
+        direction: string;
+        type: string;
+        text_body: string | null;
+        status: string;
+        timestamp: string | null;
+      };
+    }) => {
       if (payload.conversationId !== conversationId) return;
       setMessages((prev) => {
         const incoming = mapSocketMessageToChatMessage(payload.message);
-        // Dedupe against optimistic + API-response messages
         if (
           prev.some(
             (m) =>
@@ -108,7 +141,10 @@ export default function ChatDetailScreen() {
         }
         return dedupeByIdAndMeta([...prev, incoming]);
       });
-    });
+    };
+
+    const unsubWa = onMessageNew(handleNew);
+    const unsubIg = onInstagramMessageNew(handleNew);
 
     const unsubStatus = onMessageStatus((payload) => {
       if (payload.conversationId !== conversationId) return;
@@ -127,10 +163,11 @@ export default function ChatDetailScreen() {
     });
 
     return () => {
-      unsubNew();
+      unsubWa();
+      unsubIg();
       unsubStatus();
     };
-  }, [conversationId, onMessageNew, onMessageStatus]);
+  }, [conversationId, onMessageNew, onInstagramMessageNew, onMessageStatus]);
 
   if (!conversationId) {
     return (
@@ -176,6 +213,7 @@ export default function ChatDetailScreen() {
         to: customerPhone,
         message: text,
         conversationId,
+        channel,
       });
 
       setMessages((prev) =>
@@ -199,6 +237,11 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const initials = initialsFromLabel(
+    customerPhone,
+    channel === "instagram" ? "IG" : "WA",
+  );
+
   return (
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
       <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
@@ -210,9 +253,13 @@ export default function ChatDetailScreen() {
           />
         </Pressable>
         <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
-          <Text className="text-brand-on-primary font-bold text-sm">
-            {initialsFromPhone(customerPhone)}
-          </Text>
+          {channel === "instagram" ? (
+            <FontAwesome name="instagram" size={18} color={Colors.brand.onPrimary} />
+          ) : (
+            <Text className="text-brand-on-primary font-bold text-sm">
+              {initials}
+            </Text>
+          )}
         </View>
         <View className="flex-1 min-w-0">
           <Text
@@ -222,7 +269,11 @@ export default function ChatDetailScreen() {
             {title}
           </Text>
           <Muted className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
-            {isLoading ? "Loading…" : customerPhone}
+            {isLoading
+              ? "Loading…"
+              : channel === "instagram"
+                ? "Instagram DM"
+                : customerPhone}
           </Muted>
         </View>
         <HeaderActionsRow settingsTone="onPrimary" />

@@ -1,0 +1,31 @@
+import type { Store, UpdateStorePayload } from '@src/types/store'
+
+export type StoreEditForm = {
+  name: string
+  industry: string
+  description: string
+  whatsapp_number: string
+  logo_url?: string | null
+}
+
+export function buildStoreUpdatePatch(
+  store: Store,
+  form: StoreEditForm
+): UpdateStorePayload {
+  const patch: UpdateStorePayload = {}
+  const name = form.name.trim()
+  const industry = form.industry.trim() || null
+  const description = form.description.trim() || null
+  const whatsapp = form.whatsapp_number.trim()
+
+  if (name !== store.name) patch.name = name
+  if (industry !== (store.industry ?? null)) patch.industry = industry
+  if (description !== (store.description ?? null)) patch.description = description
+  if (whatsapp !== store.whatsapp_number) patch.whatsapp_number = whatsapp
+
+  if (form.logo_url !== undefined && form.logo_url !== store.logo_url) {
+    patch.logo_url = form.logo_url
+  }
+
+  return patch
+}

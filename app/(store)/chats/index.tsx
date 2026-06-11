@@ -6,7 +6,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { fetchChats } from "@src/api/chats";
+import { fetchAllChats } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { showError } from "@src/lib/toast";
@@ -16,10 +16,14 @@ import { router, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
 
-function initialsFromPhone(phone: string) {
-  const digits = phone.replace(/\D/g, "");
-  const last2 = digits.slice(-2);
-  return (last2 || "WA").toUpperCase();
+function initialsFromLabel(label: string, fallback: string) {
+  const cleaned = label.replace(/^@/, "").trim();
+  if (!cleaned) return fallback;
+  const parts = cleaned.split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+  }
+  return (cleaned.slice(0, 2) || fallback).toUpperCase();
 }
 
 function formatTime(iso: string | null) {
@@ -30,7 +34,7 @@ function formatTime(iso: string | null) {
   });
 }
 
-function mapConversation(c: {
+function mapWhatsAppConversation(c: {
   id: string;
   customer_wa_number: string;
   last_message_at: string | null;
@@ -40,19 +44,59 @@ function mapConversation(c: {
   const phone = c.customer_wa_number;
   return {
     id: c.id,
+    channel: "whatsapp",
     title: phone,
     subtitle: c.last_message_preview ?? "—",
     time: formatTime(c.last_message_at),
+    sortAt: c.last_message_at,
     unread: c.unread_count ?? 0,
     online: false,
     phone,
-    initials: initialsFromPhone(phone),
+    initials: initialsFromLabel(phone, "WA"),
   };
+}
+
+function mapInstagramConversation(c: {
+  id: string;
+  customer_ig_id: string;
+  customer_ig_username: string | null;
+  last_message_at: string | null;
+  last_message_preview: string | null;
+  unread_count?: number;
+}): ChatListItem {
+  const title = c.customer_ig_username
+    ? `@${c.customer_ig_username}`
+    : c.customer_ig_id;
+  return {
+    id: c.id,
+    channel: "instagram",
+    title,
+    subtitle: c.last_message_preview ?? "—",
+    time: formatTime(c.last_message_at),
+    sortAt: c.last_message_at,
+    unread: c.unread_count ?? 0,
+    online: false,
+    phone: c.customer_ig_id,
+    initials: initialsFromLabel(title, "IG"),
+  };
+}
+
+function sortConversations(items: ChatListItem[]): ChatListItem[] {
+  return [...items].sort((a, b) => {
+    const ta = a.sortAt ? Date.parse(a.sortAt) : 0;
+    const tb = b.sortAt ? Date.parse(b.sortAt) : 0;
+    return tb - ta;
+  });
 }
 
 export default function MessagesListScreen() {
   const { store } = useStore();
-  const { onConversationUpdated, onMessageNew } = useChatSocket();
+  const {
+    onConversationUpdated,
+    onMessageNew,
+    onInstagramConversationUpdated,
+    onInstagramMessageNew,
+  } = useChatSocket();
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,8 +109,12 @@ export default function MessagesListScreen() {
       else setIsLoading(true);
 
       try {
-        const res = await fetchChats(store.id);
-        setItems(res.data.chats.map(mapConversation));
+        const { whatsapp, instagram } = await fetchAllChats(store.id);
+        const merged = [
+          ...whatsapp.map(mapWhatsAppConversation),
+          ...instagram.map(mapInstagramConversation),
+        ];
+        setItems(sortConversations(merged));
       } catch (e: unknown) {
         showError(
           "Failed to load chats",
@@ -85,15 +133,15 @@ export default function MessagesListScreen() {
   }, [loadChats]);
 
   useEffect(() => {
-    const unsubConversation = onConversationUpdated((payload) => {
+    const unsubWaConversation = onConversationUpdated((payload) => {
       setItems((prev) => {
-        const next = mapConversation(payload.conversation);
+        const next = mapWhatsAppConversation(payload.conversation);
         const without = prev.filter((item) => item.id !== next.id);
-        return [next, ...without];
+        return sortConversations([next, ...without]);
       });
     });
 
-    const unsubMessage = onMessageNew((payload) => {
+    const unsubWaMessage = onMessageNew((payload) => {
       setItems((prev) => {
         const existing = prev.find(
           (item) => item.id === payload.conversationId,
@@ -103,26 +151,77 @@ export default function MessagesListScreen() {
           return prev;
         }
 
-        const time = formatTime(payload.message.timestamp);
+        const sortAt = payload.message.timestamp;
+        const time = formatTime(sortAt);
         const updated: ChatListItem = {
           ...existing,
           subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
           time,
+          sortAt,
           unread:
             payload.message.direction === "inbound"
               ? existing.unread + 1
               : existing.unread,
         };
 
-        return [updated, ...prev.filter((item) => item.id !== updated.id)];
+        return sortConversations([
+          updated,
+          ...prev.filter((item) => item.id !== updated.id),
+        ]);
+      });
+    });
+
+    const unsubIgConversation = onInstagramConversationUpdated((payload) => {
+      setItems((prev) => {
+        const next = mapInstagramConversation(payload.conversation);
+        const without = prev.filter((item) => item.id !== next.id);
+        return sortConversations([next, ...without]);
+      });
+    });
+
+    const unsubIgMessage = onInstagramMessageNew((payload) => {
+      setItems((prev) => {
+        const existing = prev.find(
+          (item) => item.id === payload.conversationId,
+        );
+        if (!existing) {
+          void loadChats(true);
+          return prev;
+        }
+
+        const sortAt = payload.message.timestamp;
+        const time = formatTime(sortAt);
+        const updated: ChatListItem = {
+          ...existing,
+          subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
+          time,
+          sortAt,
+          unread:
+            payload.message.direction === "inbound"
+              ? existing.unread + 1
+              : existing.unread,
+        };
+
+        return sortConversations([
+          updated,
+          ...prev.filter((item) => item.id !== updated.id),
+        ]);
       });
     });
 
     return () => {
-      unsubConversation();
-      unsubMessage();
+      unsubWaConversation();
+      unsubWaMessage();
+      unsubIgConversation();
+      unsubIgMessage();
     };
-  }, [onConversationUpdated, onMessageNew, loadChats]);
+  }, [
+    onConversationUpdated,
+    onMessageNew,
+    onInstagramConversationUpdated,
+    onInstagramMessageNew,
+    loadChats,
+  ]);
 
   const conversations = useMemo(() => {
     let list = items;
@@ -139,10 +238,10 @@ export default function MessagesListScreen() {
   }, [items, search]);
 
   const headerSubtitle = useMemo(() => {
-    if (!store?.id) return "Connect your store to view WhatsApp chats";
+    if (!store?.id) return "Connect your store to view messages";
     if (isLoading && items.length === 0) return "Loading conversations…";
     const n = items.length;
-    if (n === 0) return "Conversations with customers";
+    if (n === 0) return "WhatsApp and Instagram conversations";
     return `${n} Conversation${n === 1 ? "" : "s"}`;
   }, [store?.id, isLoading, items.length]);
 
@@ -179,7 +278,7 @@ export default function MessagesListScreen() {
 
         <FlatList
           data={conversations}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => `${item.channel}:${item.id}`}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -192,7 +291,7 @@ export default function MessagesListScreen() {
               onPress={() =>
                 router.push({
                   pathname: `/(store)/chats/${item.id}`,
-                  params: { phone: item.phone },
+                  params: { phone: item.phone, channel: item.channel },
                 } as unknown as Href)
               }
             />
@@ -210,7 +309,7 @@ export default function MessagesListScreen() {
               <EmptyState
                 icon="comments"
                 title="No store yet"
-                description="Create a store to view WhatsApp messages."
+                description="Create a store to view messages."
               />
             )
           }

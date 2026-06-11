@@ -5,6 +5,8 @@ import type {
   CreateStorePayload,
   CreateStoreResponse,
   MyStoreResponse,
+  UpdateStorePayload,
+  UpdateStoreResponse,
 } from '@src/types/store'
 
 async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -24,6 +26,15 @@ export async function createStore(
 ): Promise<CreateStoreResponse> {
   return authFetch<CreateStoreResponse>(endpoints.stores, {
     method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateMyStore(
+  payload: UpdateStorePayload
+): Promise<UpdateStoreResponse> {
+  return authFetch<UpdateStoreResponse>(endpoints.storesMe, {
+    method: 'PATCH',
     body: JSON.stringify(payload),
   })
 }

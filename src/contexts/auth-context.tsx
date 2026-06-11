@@ -13,9 +13,15 @@ import {
   signInWithGoogleAuthCode as signInWithGoogleAuthCodeApi,
   verifyOtp as verifyOtpApi,
 } from '@src/api/auth'
-import { getAccessToken, saveTokens, clearTokens } from '@src/lib/auth-storage'
+import {
+  clearTokens,
+  getAccessToken,
+  getAuthUser,
+  saveAuthSession,
+} from '@src/lib/auth-storage'
 import { clearNativeGoogleSignInSession } from '@src/lib/google-native-session'
-import type { AuthUser } from '@src/types/auth'
+import { emailFromAccessToken } from '@src/lib/jwt-email'
+import type { AuthSession, AuthUser } from '@src/types/auth'
 
 type AuthContextValue = {
   isLoading: boolean
@@ -37,11 +43,11 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 async function applyAuthSession(
-  data: { user: AuthUser; session: { accessToken: string; refreshToken: string } },
+  data: { user: AuthUser; session: AuthSession },
   setUser: (user: AuthUser) => void,
   setIsAuthenticated: (value: boolean) => void
 ) {
-  await saveTokens(data.session.accessToken, data.session.refreshToken)
+  await saveAuthSession(data.session, data.user)
   setUser(data.user)
   setIsAuthenticated(true)
 }
@@ -53,9 +59,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [googleAuthInProgress, setGoogleAuthInProgress] = useState(false)
 
   useEffect(() => {
-    getAccessToken()
-      .then((token) => {
+    Promise.all([getAccessToken(), getAuthUser()])
+      .then(([token, savedUser]) => {
         setIsAuthenticated(Boolean(token))
+        if (savedUser) {
+          setUser(savedUser)
+        } else if (token) {
+          const email = emailFromAccessToken(token)
+          if (email) {
+            setUser({ id: '', email, createdAt: '', isNewUser: false })
+          }
+        }
       })
       .finally(() => setIsLoading(false))
   }, [])

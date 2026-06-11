@@ -15,4 +15,9 @@ export const endpoints = {
   whatsappConnect: "/api/whatsapp/connect",
   whatsappConnectionStatus: "/api/whatsapp/connection-status",
   whatsappSync: "/api/whatsapp/sync",
+  instagramConnect: "/api/instagram/connect",
+  instagramConnectionStatus: "/api/instagram/connection-status",
+  instagramSubscribeWebhooks: "/api/instagram/subscribe-webhooks",
+  instagramChats: "/api/instagram/chats",
+  instagramSend: "/api/instagram/send",
 } as const;

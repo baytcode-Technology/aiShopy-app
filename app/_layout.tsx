@@ -66,6 +66,7 @@ export default function RootLayout() {
             <Stack.Screen name="instagram-connect" />
             <Stack.Screen name="chat-boat" />
             <Stack.Screen name="settings" />
+            <Stack.Screen name="storefront" />
             <Stack.Screen name="account-coming-soon" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />

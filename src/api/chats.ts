@@ -1,8 +1,5 @@
-import axios from 'axios'
-import { apiFetch } from '@src/api/client'
+import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { env } from '@src/config/env'
-import { getAccessToken } from '@src/lib/auth-storage'
 import type { ChatChannel } from '@src/types/chat'
 
 export type ApiConversation = {
@@ -62,15 +59,9 @@ export type SendMessageResponse = {
   }
 }
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<T>(path, { ...init, token })
-}
-
 export async function fetchChats(storeId: string): Promise<ListChatsResponse> {
   const qs = new URLSearchParams({ store_id: storeId }).toString()
-  return authFetch<ListChatsResponse>(`${endpoints.whatsappChats}?${qs}`)
+  return authenticatedFetch<ListChatsResponse>(`${endpoints.whatsappChats}?${qs}`)
 }
 
 export type ListInstagramChatsResponse = {
@@ -81,7 +72,7 @@ export type ListInstagramChatsResponse = {
 
 export async function fetchInstagramChats(storeId: string): Promise<ListInstagramChatsResponse> {
   const qs = new URLSearchParams({ store_id: storeId }).toString()
-  return authFetch<ListInstagramChatsResponse>(`${endpoints.instagramChats}?${qs}`)
+  return authenticatedFetch<ListInstagramChatsResponse>(`${endpoints.instagramChats}?${qs}`)
 }
 
 export async function fetchAllChats(storeId: string): Promise<{
@@ -132,7 +123,7 @@ export async function fetchInstagramMessages(input: {
     ...(input.cursor ? { cursor: input.cursor } : {}),
   }).toString()
 
-  return authFetch<ListInstagramMessagesResponse>(
+  return authenticatedFetch<ListInstagramMessagesResponse>(
     `${endpoints.instagramChats}/${input.conversationId}/messages?${qs}`
   )
 }
@@ -149,7 +140,7 @@ export async function fetchChatMessages(input: {
     ...(input.cursor ? { cursor: input.cursor } : {}),
   }).toString()
 
-  return authFetch<ListMessagesResponse>(
+  return authenticatedFetch<ListMessagesResponse>(
     `${endpoints.whatsappChats}/${input.conversationId}/messages?${qs}`
   )
 }
@@ -160,37 +151,15 @@ export async function sendInstagramMessage(input: {
   message: string
   conversationId?: string
 }): Promise<SendMessageResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-
-  const base = env.apiBaseUrl.replace(/\/$/, '')
-  try {
-    const { data } = await axios.post<SendMessageResponse>(
-      `${base}${endpoints.instagramSend}`,
-      {
-        storeId: input.storeId,
-        to: input.to,
-        message: input.message,
-        conversationId: input.conversationId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 20_000,
-      }
-    )
-    return data
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const message =
-        (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message ??
-        err.message
-      throw new Error(message || 'Failed to send message')
-    }
-    throw err
-  }
+  return authenticatedFetch<SendMessageResponse>(endpoints.instagramSend, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      to: input.to,
+      message: input.message,
+      conversationId: input.conversationId,
+    }),
+  })
 }
 
 export async function sendChatMessage(input: {
@@ -203,37 +172,15 @@ export async function sendChatMessage(input: {
   if (input.channel === 'instagram') {
     return sendInstagramMessage(input)
   }
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-
-  const base = env.apiBaseUrl.replace(/\/$/, '')
-  try {
-    const { data } = await axios.post<SendMessageResponse>(
-      `${base}${endpoints.whatsappSend}`,
-      {
-        storeId: input.storeId,
-        to: input.to,
-        message: input.message,
-        conversationId: input.conversationId,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 20_000,
-      }
-    )
-    return data
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const message =
-        (err.response?.data as { error?: { message?: string } } | undefined)?.error?.message ??
-        err.message
-      throw new Error(message || 'Failed to send message')
-    }
-    throw err
-  }
+  return authenticatedFetch<SendMessageResponse>(endpoints.whatsappSend, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      to: input.to,
+      message: input.message,
+      conversationId: input.conversationId,
+    }),
+  })
 }
 
 export function mapApiMessageToChatMessage(m: ApiMessage) {

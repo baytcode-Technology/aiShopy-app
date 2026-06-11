@@ -1,44 +1,105 @@
-import { env } from "@src/config/env";
+import { env } from '@src/config/env'
+import {
+  ensureValidSession,
+  refreshSession,
+  SessionExpiredError,
+} from '@src/lib/session-manager'
 
 type FetchOptions = RequestInit & {
-  token?: string | null;
-};
+  token?: string | null
+}
 
-export async function apiFetch<T>(
-  path: string,
-  options: FetchOptions = {},
-): Promise<T> {
-  const { token, headers, ...rest } = options;
-  const base = env.apiBaseUrl.replace(/\/$/, "");
-  const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+export class ApiHttpError extends Error {
+  status: number
+  body: unknown
+
+  constructor(message: string, status: number, body: unknown) {
+    super(message)
+    this.name = 'ApiHttpError'
+    this.status = status
+    this.body = body
+  }
+}
+
+let onSessionExpiredCallback: (() => void) | null = null
+
+export function setOnSessionExpired(callback: (() => void) | null): void {
+  onSessionExpiredCallback = callback
+}
+
+function buildUrl(path: string): string {
+  const base = env.apiBaseUrl.replace(/\/$/, '')
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+function parseErrorMessage(body: unknown, fallback: string): string {
+  if (typeof body === 'object' && body !== null) {
+    if ('error' in body) {
+      const err = (body as { error?: { message?: string } }).error
+      if (err?.message) return err.message
+    }
+    if ('message' in body && typeof (body as { message?: string }).message === 'string') {
+      return (body as { message: string }).message
+    }
+  }
+  return fallback
+}
+
+export async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
+  const { token, headers, ...rest } = options
+  const url = buildUrl(path)
 
   const res = await fetch(url, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-  });
+  })
 
-  const text = await res.text();
-  let body: unknown = null;
+  const text = await res.text()
+  let body: unknown = null
   try {
-    body = text ? JSON.parse(text) : null;
+    body = text ? JSON.parse(text) : null
   } catch {
-    body = text;
+    body = text
   }
 
   if (!res.ok) {
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String(
-            (body as { error?: { message?: string } }).error?.message ??
-              res.statusText,
-          )
-        : res.statusText;
-    throw new Error(message || `HTTP ${res.status}`);
+    const message = parseErrorMessage(body, res.statusText || `HTTP ${res.status}`)
+    throw new ApiHttpError(message || `HTTP ${res.status}`, res.status, body)
   }
 
-  return body as T;
+  return body as T
+}
+
+export async function authenticatedFetch<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const run = async (isRetry: boolean): Promise<T> => {
+    const token = await ensureValidSession()
+    try {
+      return await apiFetch<T>(path, { ...options, token })
+    } catch (err) {
+      if (err instanceof ApiHttpError && err.status === 401 && !isRetry) {
+        try {
+          await refreshSession()
+          return run(true)
+        } catch {
+          onSessionExpiredCallback?.()
+          throw new SessionExpiredError()
+        }
+      }
+      throw err
+    }
+  }
+
+  return run(false)
+}
+
+/** Returns a valid access token for non-JSON requests (uploads, axios). */
+export async function getValidAccessToken(): Promise<string> {
+  return ensureValidSession()
 }

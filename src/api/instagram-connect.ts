@@ -1,6 +1,5 @@
-import { apiFetch } from '@src/api/client'
+import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { getAccessToken } from '@src/lib/auth-storage'
 
 export type InstagramConnectResponse = {
   success: boolean
@@ -25,19 +24,16 @@ function qs(storeId: string) {
 }
 
 export async function getInstagramConnectUrl(storeId: string): Promise<InstagramConnectResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<InstagramConnectResponse>(`${endpoints.instagramConnect}?${qs(storeId)}`, { token })
+  return authenticatedFetch<InstagramConnectResponse>(
+    `${endpoints.instagramConnect}?${qs(storeId)}`
+  )
 }
 
 export async function fetchInstagramConnectionStatus(
   storeId: string
 ): Promise<InstagramConnectionStatusResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<InstagramConnectionStatusResponse>(
-    `${endpoints.instagramConnectionStatus}?${qs(storeId)}`,
-    { token }
+  return authenticatedFetch<InstagramConnectionStatusResponse>(
+    `${endpoints.instagramConnectionStatus}?${qs(storeId)}`
   )
 }
 
@@ -45,10 +41,7 @@ export async function subscribeInstagramWebhooks(storeId: string): Promise<{
   success: boolean
   message: string
 }> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch(`${endpoints.instagramSubscribeWebhooks}?${qs(storeId)}`, {
+  return authenticatedFetch(`${endpoints.instagramSubscribeWebhooks}?${qs(storeId)}`, {
     method: 'POST',
-    token,
   })
 }

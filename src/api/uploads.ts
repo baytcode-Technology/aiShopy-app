@@ -1,7 +1,8 @@
 import { Platform } from 'react-native'
+import { ApiHttpError, getValidAccessToken } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { getAccessToken } from '@src/lib/auth-storage'
 import { prepareUploadFile } from '@src/lib/prepare-upload-file'
+import { refreshSession } from '@src/lib/session-manager'
 import { env } from '@src/config/env'
 
 export type LocalImageFile = {
@@ -16,19 +17,11 @@ export type UploadImagesResponse = {
   data: { urls: string[] }
 }
 
-export async function uploadProductImages(
+async function uploadWithToken(
   storeId: string,
-  files: LocalImageFile[]
+  prepared: Awaited<ReturnType<typeof prepareUploadFile>>[],
+  token: string
 ): Promise<string[]> {
-  const token = await getAccessToken()
-  if (!token) {
-    throw new Error('You are not signed in')
-  }
-
-  const prepared = await Promise.all(
-    files.map((file) => prepareUploadFile(file.uri, file.name, file.type))
-  )
-
   const formData = new FormData()
   formData.append('store_id', storeId)
 
@@ -75,9 +68,33 @@ export async function uploadProductImages(
       typeof body === 'object' && body !== null && 'error' in body
         ? String((body as { error?: { message?: string } }).error?.message ?? res.statusText)
         : res.statusText
-    throw new Error(message || `HTTP ${res.status}`)
+    throw new ApiHttpError(message || `HTTP ${res.status}`, res.status, body)
   }
 
   const parsed = body as UploadImagesResponse
   return parsed.data.urls
+}
+
+export async function uploadProductImages(
+  storeId: string,
+  files: LocalImageFile[]
+): Promise<string[]> {
+  const prepared = await Promise.all(
+    files.map((file) => prepareUploadFile(file.uri, file.name, file.type))
+  )
+
+  const run = async (isRetry: boolean): Promise<string[]> => {
+    const token = await getValidAccessToken()
+    try {
+      return await uploadWithToken(storeId, prepared, token)
+    } catch (err) {
+      if (err instanceof ApiHttpError && err.status === 401 && !isRetry) {
+        const newToken = await refreshSession()
+        return uploadWithToken(storeId, prepared, newToken)
+      }
+      throw err
+    }
+  }
+
+  return run(false)
 }

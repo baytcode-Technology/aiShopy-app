@@ -45,3 +45,12 @@ export async function signInWithGoogleAuthCode(input: {
     }),
   })
 }
+
+export async function refreshAuthSession(
+  refreshToken: string
+): Promise<ApiResponse<VerifyOtpData>> {
+  return apiFetch<ApiResponse<VerifyOtpData>>(endpoints.authRefresh, {
+    method: 'POST',
+    body: JSON.stringify({ refreshToken }),
+  })
+}

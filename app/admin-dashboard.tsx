@@ -57,6 +57,19 @@ export default function AdminDashboardScreen() {
           onPress={() => router.push('/chat-boat' as Href)}
         />
 
+        <MenuRow
+          label="Staff management"
+          value="Invite team & assign roles"
+          icon="users"
+          showChevron
+          onPress={() =>
+            router.push({
+              pathname: '/account-coming-soon',
+              params: { id: 'staff-management' },
+            })
+          }
+        />
+
         <View>
           <MenuRow
             label="Domain"

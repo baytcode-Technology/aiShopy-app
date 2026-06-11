@@ -7,20 +7,25 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { AppState } from 'react-native'
+import { router, type Href } from 'expo-router'
 import {
   sendSignInOtp,
   signInWithGoogle as signInWithGoogleApi,
   signInWithGoogleAuthCode as signInWithGoogleAuthCodeApi,
   verifyOtp as verifyOtpApi,
 } from '@src/api/auth'
+import { setOnSessionExpired } from '@src/api/client'
 import {
   clearTokens,
   getAccessToken,
   getAuthUser,
+  getRefreshToken,
   saveAuthSession,
 } from '@src/lib/auth-storage'
 import { clearNativeGoogleSignInSession } from '@src/lib/google-native-session'
 import { emailFromAccessToken } from '@src/lib/jwt-email'
+import { ensureValidSession } from '@src/lib/session-manager'
 import type { AuthSession, AuthUser } from '@src/types/auth'
 
 type AuthContextValue = {
@@ -42,6 +47,19 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+async function restoreUserFromStorage(): Promise<AuthUser | null> {
+  const savedUser = await getAuthUser()
+  if (savedUser) return savedUser
+
+  const token = await getAccessToken()
+  if (!token) return null
+
+  const email = emailFromAccessToken(token)
+  if (!email) return null
+
+  return { id: '', email, createdAt: '', isNewUser: false }
+}
+
 async function applyAuthSession(
   data: { user: AuthUser; session: AuthSession },
   setUser: (user: AuthUser) => void,
@@ -58,21 +76,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [googleAuthInProgress, setGoogleAuthInProgress] = useState(false)
 
-  useEffect(() => {
-    Promise.all([getAccessToken(), getAuthUser()])
-      .then(([token, savedUser]) => {
-        setIsAuthenticated(Boolean(token))
-        if (savedUser) {
-          setUser(savedUser)
-        } else if (token) {
-          const email = emailFromAccessToken(token)
-          if (email) {
-            setUser({ id: '', email, createdAt: '', isNewUser: false })
-          }
-        }
-      })
-      .finally(() => setIsLoading(false))
+  const signOut = useCallback(async () => {
+    setGoogleAuthInProgress(false)
+    await clearNativeGoogleSignInSession()
+    await clearTokens()
+    setUser(null)
+    setIsAuthenticated(false)
   }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const refreshToken = await getRefreshToken()
+        if (!refreshToken) {
+          setIsAuthenticated(false)
+          return
+        }
+
+        await ensureValidSession()
+        const restoredUser = await restoreUserFromStorage()
+        if (restoredUser) {
+          setUser(restoredUser)
+        }
+        setIsAuthenticated(true)
+      } catch {
+        await clearTokens()
+        setUser(null)
+        setIsAuthenticated(false)
+      } finally {
+        setIsLoading(false)
+      }
+    })()
+  }, [])
+
+  useEffect(() => {
+    setOnSessionExpired(() => {
+      void (async () => {
+        await signOut()
+        router.replace('/(auth)/login' as Href)
+      })()
+    })
+    return () => setOnSessionExpired(null)
+  }, [signOut])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return
+
+      void (async () => {
+        try {
+          const refreshToken = await getRefreshToken()
+          if (!refreshToken) return
+          await ensureValidSession()
+          const restoredUser = await restoreUserFromStorage()
+          if (restoredUser) {
+            setUser(restoredUser)
+          }
+          setIsAuthenticated(true)
+        } catch {
+          await signOut()
+          router.replace('/(auth)/login' as Href)
+        }
+      })()
+    })
+
+    return () => subscription.remove()
+  }, [signOut])
 
   const sendOtp = useCallback(async (email: string) => {
     await sendSignInOtp(email)
@@ -95,14 +164,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     []
   )
-
-  const signOut = useCallback(async () => {
-    setGoogleAuthInProgress(false)
-    await clearNativeGoogleSignInSession()
-    await clearTokens()
-    setUser(null)
-    setIsAuthenticated(false)
-  }, [])
 
   const value = useMemo(
     () => ({

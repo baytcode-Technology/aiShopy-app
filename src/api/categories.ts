@@ -1,6 +1,5 @@
-import { apiFetch } from '@src/api/client'
+import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { getAccessToken } from '@src/lib/auth-storage'
 import type {
   Category,
   CreateCategoryPayload,
@@ -9,23 +8,15 @@ import type {
   UpdateCategoryPayload,
 } from '@src/types/category'
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getAccessToken()
-  if (!token) {
-    throw new Error('You are not signed in')
-  }
-  return apiFetch<T>(path, { ...init, token })
-}
-
 export async function fetchCategories(storeId: string): Promise<ListCategoriesResponse> {
   const qs = new URLSearchParams({ store_id: storeId })
-  return authFetch<ListCategoriesResponse>(`${endpoints.categories}?${qs.toString()}`)
+  return authenticatedFetch<ListCategoriesResponse>(`${endpoints.categories}?${qs.toString()}`)
 }
 
 export async function createCategory(
   payload: CreateCategoryPayload
 ): Promise<CreateCategoryResponse> {
-  return authFetch<CreateCategoryResponse>(endpoints.categories, {
+  return authenticatedFetch<CreateCategoryResponse>(endpoints.categories, {
     method: 'POST',
     body: JSON.stringify({
       sort_order: 0,
@@ -51,7 +42,7 @@ export async function updateCategory(
   categoryId: string,
   payload: UpdateCategoryPayload
 ): Promise<UpdateCategoryResponse> {
-  return authFetch<UpdateCategoryResponse>(`${endpoints.categories}/${categoryId}`, {
+  return authenticatedFetch<UpdateCategoryResponse>(`${endpoints.categories}/${categoryId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
@@ -60,7 +51,7 @@ export async function updateCategory(
 export async function deleteCategory(
   categoryId: string
 ): Promise<{ success: boolean; message: string }> {
-  return authFetch(`${endpoints.categories}/${categoryId}`, {
+  return authenticatedFetch(`${endpoints.categories}/${categoryId}`, {
     method: 'DELETE',
   })
 }
@@ -70,7 +61,7 @@ export async function syncCategoryProducts(
   categoryId: string,
   productIds: string[]
 ): Promise<SyncCategoryProductsResponse> {
-  return authFetch<SyncCategoryProductsResponse>(
+  return authenticatedFetch<SyncCategoryProductsResponse>(
     `${endpoints.categories}/${categoryId}/products`,
     {
       method: 'PUT',

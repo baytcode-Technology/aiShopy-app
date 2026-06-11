@@ -1,6 +1,5 @@
-import { apiFetch } from '@src/api/client'
+import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { getAccessToken } from '@src/lib/auth-storage'
 
 export type WhatsAppConnectResponse = {
   success: boolean
@@ -47,28 +46,22 @@ function qs(storeId: string) {
 }
 
 export async function getWhatsAppConnectUrl(storeId: string): Promise<WhatsAppConnectResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<WhatsAppConnectResponse>(`${endpoints.whatsappConnect}?${qs(storeId)}`, { token })
+  return authenticatedFetch<WhatsAppConnectResponse>(
+    `${endpoints.whatsappConnect}?${qs(storeId)}`
+  )
 }
 
 export async function fetchWhatsAppConnectionStatus(
   storeId: string
 ): Promise<WhatsAppConnectionStatusResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<WhatsAppConnectionStatusResponse>(
-    `${endpoints.whatsappConnectionStatus}?${qs(storeId)}`,
-    { token }
+  return authenticatedFetch<WhatsAppConnectionStatusResponse>(
+    `${endpoints.whatsappConnectionStatus}?${qs(storeId)}`
   )
 }
 
 export async function triggerWhatsAppSync(storeId: string): Promise<WhatsAppTriggerSyncResponse> {
-  const token = await getAccessToken()
-  if (!token) throw new Error('You are not signed in')
-  return apiFetch<WhatsAppTriggerSyncResponse>(endpoints.whatsappSync, {
+  return authenticatedFetch<WhatsAppTriggerSyncResponse>(endpoints.whatsappSync, {
     method: 'POST',
-    token,
     body: JSON.stringify({ storeId }),
   })
 }

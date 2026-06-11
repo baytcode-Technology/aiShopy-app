@@ -1,6 +1,7 @@
 import { AuthButton } from '@/components/auth/AuthButton'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthLayout } from '@/components/auth/AuthLayout'
+import { IndustryPicker } from '@/components/store/IndustryPicker'
 import { Button } from '@/components/ui/Button'
 import { Caption, SectionTitle } from '@/components/ui/Typography'
 import { createStore } from '@src/api/stores'
@@ -146,11 +147,10 @@ export default function CreateStoreScreen() {
         maxLength={3}
         error={errors.currency}
       />
-      <AuthInput
-        label="Industry"
+      <IndustryPicker
+        variant="auth"
         value={industry}
-        onChangeText={setIndustry}
-        placeholder="e.g. Fashion, Electronics, Food"
+        onChange={setIndustry}
         error={errors.industry}
       />
       <AuthInput

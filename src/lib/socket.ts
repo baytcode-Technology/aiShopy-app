@@ -79,8 +79,6 @@ export function getChatSocket(): Socket | null {
 }
 
 export function connectChatSocket(token: string): Socket {
-  if (socket?.connected) return socket
-
   socket?.disconnect()
   socket = io(env.apiBaseUrl.replace(/\/$/, ''), {
     transports: ['websocket', 'polling'],
@@ -91,6 +89,10 @@ export function connectChatSocket(token: string): Socket {
   })
 
   return socket
+}
+
+export function reconnectChatSocket(token: string): Socket {
+  return connectChatSocket(token)
 }
 
 export function disconnectChatSocket(): void {

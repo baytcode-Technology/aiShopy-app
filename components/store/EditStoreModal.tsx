@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { FormModal } from '@/components/store/FormModal'
+import { IndustryPicker } from '@/components/store/IndustryPicker'
 import { StoreLogoPicker } from '@/components/store/StoreLogoPicker'
 import type { PickedImage } from '@/components/store/ProductImagePicker'
 import { updateMyStore } from '@src/api/stores'
@@ -104,12 +105,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
         label="Store logo"
       />
       <Input label="Store name *" value={name} onChangeText={setName} placeholder="My Shop" />
-      <Input
-        label="Industry"
-        value={industry}
-        onChangeText={setIndustry}
-        placeholder="e.g. Fashion, Electronics"
-      />
+      <IndustryPicker value={industry} onChange={setIndustry} />
       <Input
         label="Description"
         value={description}

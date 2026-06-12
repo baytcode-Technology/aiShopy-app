@@ -32,7 +32,8 @@ export const createStoreFormSchema = z.object({
       message: "Use a 3-letter currency code (e.g. INR)",
     }),
   description: z.string().trim().max(2000).optional().nullable(),
-  industry: z.string().trim().max(100).optional().nullable(),
+  industry: z.string().trim().max(1000).optional().nullable(),
+  country: z.string().trim().min(1, "Country is required").max(100),
 });
 
 export type CreateStoreFormValues = z.infer<typeof createStoreFormSchema>;
@@ -56,5 +57,6 @@ export function toCreateStorePayload(
     currency: values.currency,
     description: values.description?.trim() || null,
     industry: values.industry?.trim() || null,
+    country: values.country.trim(),
   };
 }

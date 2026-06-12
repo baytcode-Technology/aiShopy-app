@@ -8,7 +8,12 @@ import { Heading, Muted } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
 import { shadows } from '@src/lib/shadows'
 
-type FeatureId = 'payment-methods' | 'notifications' | 'printer' | 'subscription'
+type FeatureId =
+  | 'payment-methods'
+  | 'notifications'
+  | 'printer'
+  | 'subscription'
+  | 'staff-management'
 
 const FEATURES: Record<
   FeatureId,
@@ -46,6 +51,13 @@ const FEATURES: Record<
     icon: 'calendar',
     description:
       'View your AiShopy plan, billing history, and upgrade options. This will be available soon.',
+  },
+  'staff-management': {
+    title: 'Staff management',
+    subtitle: 'Roles & team access',
+    icon: 'users',
+    description:
+      'Invite staff, assign roles, and manage who can access your store inbox and orders. This will be available soon.',
   },
 }
 

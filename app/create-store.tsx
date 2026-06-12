@@ -1,12 +1,21 @@
 import { AuthButton } from '@/components/auth/AuthButton'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthLayout } from '@/components/auth/AuthLayout'
+import { CountryPickerField } from '@/components/store/CountryPickerField'
+import { CurrencyPickerField } from '@/components/store/CurrencyPickerField'
+import { IndustryPicker } from '@/components/store/IndustryPicker'
+import { PhoneNumberField } from '@/components/store/PhoneNumberField'
 import { Button } from '@/components/ui/Button'
 import { Caption, SectionTitle } from '@/components/ui/Typography'
 import { createStore } from '@src/api/stores'
 import { env } from '@src/config/env'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
+import {
+  DEFAULT_COUNTRY,
+  defaultCurrencyForCountry,
+  type CountryValue,
+} from '@src/lib/country-currency'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
   createStoreFormSchema,
@@ -15,7 +24,7 @@ import {
   type CreateStoreFormValues,
 } from '@src/validations/store.validation'
 import { router, type Href } from 'expo-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>
 
@@ -26,17 +35,28 @@ export default function CreateStoreScreen() {
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
-  const [currency, setCurrency] = useState('INR')
+  const [country, setCountry] = useState<CountryValue>(DEFAULT_COUNTRY)
+  const [currency, setCurrency] = useState('USD')
+  const [currencyTouched, setCurrencyTouched] = useState(false)
   const [description, setDescription] = useState('')
   const [industry, setIndustry] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
+  const prevCountryCode = useRef(country.cca2)
 
   const onNameChange = (value: string) => {
     setName(value)
     if (!slugTouched) {
       setSlug(slugifyFromName(value))
     }
+  }
+
+  const handleCountryChange = (next: CountryValue) => {
+    setCountry(next)
+    if (!currencyTouched || prevCountryCode.current === country.cca2) {
+      setCurrency(defaultCurrencyForCountry(next.cca2))
+    }
+    prevCountryCode.current = next.cca2
   }
 
   const handleSignOut = async () => {
@@ -51,6 +71,7 @@ export default function CreateStoreScreen() {
       slug,
       whatsapp_number: whatsappNumber,
       currency,
+      country: country.name,
       description: description || null,
       industry: industry || null,
     })
@@ -122,35 +143,33 @@ export default function CreateStoreScreen() {
       <Caption className="pl-1 -mt-1 mb-2.5">
         Your store domain: {slug || 'my-shop'}.{env.storefrontBaseDomain}
       </Caption>
-      <AuthInput
-        label="WhatsApp number *"
-        value={whatsappNumber}
-        onChangeText={setWhatsappNumber}
-        placeholder="+919876543210"
-        keyboardType="phone-pad"
-        error={errors.whatsapp_number}
+
+      <CountryPickerField
+        variant="auth"
+        value={country}
+        onChange={handleCountryChange}
+        error={errors.country}
       />
-      <AuthInput
-        label="Currency *"
+      <CurrencyPickerField
+        variant="auth"
         value={currency}
-        onChangeText={(v) =>
-          setCurrency(
-            v
-              .toUpperCase()
-              .replace(/[^A-Z]/g, '')
-              .slice(0, 3),
-          )
-        }
-        placeholder="INR"
-        autoCapitalize="characters"
-        maxLength={3}
+        onChange={(code) => {
+          setCurrencyTouched(true)
+          setCurrency(code)
+        }}
         error={errors.currency}
       />
-      <AuthInput
-        label="Industry"
+      <PhoneNumberField
+        variant="auth"
+        value={whatsappNumber}
+        onChange={setWhatsappNumber}
+        error={errors.whatsapp_number}
+      />
+
+      <IndustryPicker
+        variant="auth"
         value={industry}
-        onChangeText={setIndustry}
-        placeholder="e.g. Fashion, Electronics, Food"
+        onChange={setIndustry}
         error={errors.industry}
       />
       <AuthInput

@@ -1,6 +1,5 @@
-import { apiFetch } from '@src/api/client'
+import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
-import { getAccessToken } from '@src/lib/auth-storage'
 import type {
   CreateProductPayload,
   CreateProductResponse,
@@ -13,17 +12,9 @@ import type {
   UpdateProductVariantPayload,
 } from '@src/types/product'
 
-async function authFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await getAccessToken()
-  if (!token) {
-    throw new Error('You are not signed in')
-  }
-  return apiFetch<T>(path, { ...init, token })
-}
-
 export async function fetchProducts(storeId: string): Promise<ListProductsResponse> {
   const qs = new URLSearchParams({ store_id: storeId })
-  return authFetch<ListProductsResponse>(`${endpoints.products}?${qs.toString()}`)
+  return authenticatedFetch<ListProductsResponse>(`${endpoints.products}?${qs.toString()}`)
 }
 
 export async function fetchProduct(
@@ -31,7 +22,7 @@ export async function fetchProduct(
   storeId?: string
 ): Promise<GetProductResponse> {
   try {
-    return await authFetch<GetProductResponse>(`${endpoints.products}/${productId}`)
+    return await authenticatedFetch<GetProductResponse>(`${endpoints.products}/${productId}`)
   } catch (e) {
     const message = e instanceof Error ? e.message : ''
     const routeMissing =
@@ -82,7 +73,7 @@ export async function updateProduct(
   productId: string,
   payload: UpdateProductPayload
 ): Promise<UpdateProductResponse> {
-  return authFetch<UpdateProductResponse>(`${endpoints.products}/${productId}`, {
+  return authenticatedFetch<UpdateProductResponse>(`${endpoints.products}/${productId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
   })
@@ -98,7 +89,7 @@ export async function createProductVariant(
   productId: string,
   payload: CreateProductVariantPayload
 ): Promise<VariantResponse> {
-  return authFetch<VariantResponse>(`${endpoints.products}/${productId}/variants`, {
+  return authenticatedFetch<VariantResponse>(`${endpoints.products}/${productId}/variants`, {
     method: 'POST',
     body: JSON.stringify({
       price_delta: 0,
@@ -116,7 +107,7 @@ export async function updateProductVariant(
   variantId: string,
   payload: UpdateProductVariantPayload
 ): Promise<VariantResponse> {
-  return authFetch<VariantResponse>(
+  return authenticatedFetch<VariantResponse>(
     `${endpoints.products}/${productId}/variants/${variantId}`,
     {
       method: 'PATCH',
@@ -129,7 +120,7 @@ export async function deleteProductVariant(
   productId: string,
   variantId: string
 ): Promise<{ success: boolean; message: string }> {
-  return authFetch(`${endpoints.products}/${productId}/variants/${variantId}`, {
+  return authenticatedFetch(`${endpoints.products}/${productId}/variants/${variantId}`, {
     method: 'DELETE',
   })
 }
@@ -137,7 +128,7 @@ export async function deleteProductVariant(
 export async function createProduct(
   payload: CreateProductPayload
 ): Promise<CreateProductResponse> {
-  return authFetch<CreateProductResponse>(endpoints.products, {
+  return authenticatedFetch<CreateProductResponse>(endpoints.products, {
     method: 'POST',
     body: JSON.stringify({
       track_inventory: false,

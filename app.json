@@ -37,6 +37,7 @@
       "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
+      "./plugins/with-android-app-name.js",
       "expo-router",
       "expo-secure-store",
       [

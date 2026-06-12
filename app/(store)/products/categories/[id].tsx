@@ -6,7 +6,9 @@ import { CategoryActiveBadge } from '@/components/store/CategoryActiveBadge'
 import { CategoryDetailCover } from '@/components/store/CategoryDetailCover'
 import { CategoryInfoEditBlock } from '@/components/store/CategoryInfoEditBlock'
 import { EditCategoryModal } from '@/components/store/EditCategoryModal'
+import { CategorySubcategoriesSection } from '@/components/store/CategorySubcategoriesSection'
 import { CategoryProductsSection } from '@/components/store/CategoryProductsSection'
+import { CreateCategoryModal } from '@/components/store/CreateCategoryModal'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
 import { CreateProductModal } from '@/components/store/CreateProductModal'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
@@ -19,6 +21,7 @@ import { Muted } from '@/components/ui/Typography'
 import { deleteCategory, fetchCategories } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
 import { useStore } from '@src/contexts/store-context'
+import { getCategoryBreadcrumb, getDirectChildren } from '@src/lib/category-tree'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
@@ -40,6 +43,7 @@ export default function CategoryDetailScreen() {
   const [mainEditOpen, setMainEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [subcategoryModalOpen, setSubcategoryModalOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!store?.id || !categoryId) return
@@ -153,6 +157,23 @@ export default function CategoryDetailScreen() {
                 onUpdated={setCategory}
               />
 
+              {category.parent_id ? (
+                <Text className="text-[13px] text-gray-500 mb-4">
+                  {getCategoryBreadcrumb(category.id, categories)}
+                </Text>
+              ) : null}
+
+              <CategorySubcategoriesSection
+                children={getDirectChildren(categoryId, categories).map((child) => ({
+                  ...child,
+                  product_count: allProducts.filter((p) => p.category_id === child.id).length,
+                }))}
+                onPressChild={(childId) =>
+                  router.push(`/(store)/products/categories/${childId}` as Href)
+                }
+                onAddSubcategory={() => setSubcategoryModalOpen(true)}
+              />
+
               <CategoryProductsSection
                 products={products}
                 onPressProduct={(productId) =>
@@ -171,6 +192,14 @@ export default function CategoryDetailScreen() {
             categories={categories}
             initialCategoryId={categoryId}
             onClose={() => setProductModalOpen(false)}
+            onCreated={loadData}
+          />
+          <CreateCategoryModal
+            visible={subcategoryModalOpen}
+            storeId={store.id}
+            categories={categories}
+            defaultParentId={categoryId}
+            onClose={() => setSubcategoryModalOpen(false)}
             onCreated={loadData}
           />
           <EditCategoryModal

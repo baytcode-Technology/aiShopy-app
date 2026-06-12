@@ -8,15 +8,17 @@ import {
   type ReactNode,
 } from 'react'
 import {
-  connectChatSocket,
   disconnectChatSocket,
   joinStoreRoom,
+  reconnectChatSocket,
   SOCKET_EVENTS,
   type SocketConversationPayload,
+  type SocketInstagramConversationPayload,
+  type SocketInstagramMessagePayload,
   type SocketMessagePayload,
   type SocketStatusPayload,
 } from '@src/lib/socket'
-import { getAccessToken } from '@src/lib/auth-storage'
+import { ensureValidSession, onTokensRefreshed } from '@src/lib/session-manager'
 import { useStore } from '@src/contexts/store-context'
 
 type ChatSocketContextValue = {
@@ -24,6 +26,12 @@ type ChatSocketContextValue = {
   onMessageNew: (handler: (payload: SocketMessagePayload) => void) => () => void
   onMessageStatus: (handler: (payload: SocketStatusPayload) => void) => () => void
   onConversationUpdated: (handler: (payload: SocketConversationPayload) => void) => () => void
+  onInstagramMessageNew: (
+    handler: (payload: SocketInstagramMessagePayload) => void
+  ) => () => void
+  onInstagramConversationUpdated: (
+    handler: (payload: SocketInstagramConversationPayload) => void
+  ) => () => void
 }
 
 const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
@@ -34,21 +42,22 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const messageHandlers = useRef(new Set<(payload: SocketMessagePayload) => void>())
   const statusHandlers = useRef(new Set<(payload: SocketStatusPayload) => void>())
   const conversationHandlers = useRef(new Set<(payload: SocketConversationPayload) => void>())
+  const instagramMessageHandlers = useRef(
+    new Set<(payload: SocketInstagramMessagePayload) => void>()
+  )
+  const instagramConversationHandlers = useRef(
+    new Set<(payload: SocketInstagramConversationPayload) => void>()
+  )
 
   useEffect(() => {
     let cancelled = false
+    let detachSocketListeners: (() => void) | undefined
 
-    void (async () => {
-      if (!store?.id) {
-        disconnectChatSocket()
-        isConnectedRef.current = false
-        return
-      }
+    const connectWithToken = async (token: string) => {
+      if (cancelled || !store?.id) return
 
-      const token = await getAccessToken()
-      if (!token || cancelled) return
-
-      const socket = connectChatSocket(token)
+      detachSocketListeners?.()
+      const socket = reconnectChatSocket(token)
 
       const handleConnect = () => {
         isConnectedRef.current = true
@@ -70,12 +79,54 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       socket.on(SOCKET_EVENTS.CONVERSATION_UPDATED, (payload: SocketConversationPayload) => {
         conversationHandlers.current.forEach((handler) => handler(payload))
       })
+      socket.on(SOCKET_EVENTS.INSTAGRAM_MESSAGE_NEW, (payload: SocketInstagramMessagePayload) => {
+        instagramMessageHandlers.current.forEach((handler) => handler(payload))
+      })
+      socket.on(
+        SOCKET_EVENTS.INSTAGRAM_CONVERSATION_UPDATED,
+        (payload: SocketInstagramConversationPayload) => {
+          instagramConversationHandlers.current.forEach((handler) => handler(payload))
+        }
+      )
+
+      detachSocketListeners = () => {
+        socket.off('connect', handleConnect)
+        socket.off('disconnect', handleDisconnect)
+        socket.off(SOCKET_EVENTS.MESSAGE_NEW)
+        socket.off(SOCKET_EVENTS.MESSAGE_STATUS)
+        socket.off(SOCKET_EVENTS.CONVERSATION_UPDATED)
+        socket.off(SOCKET_EVENTS.INSTAGRAM_MESSAGE_NEW)
+        socket.off(SOCKET_EVENTS.INSTAGRAM_CONVERSATION_UPDATED)
+      }
 
       if (socket.connected) handleConnect()
-    })()
+    }
+
+    if (!store?.id) {
+      disconnectChatSocket()
+      isConnectedRef.current = false
+      return () => {
+        cancelled = true
+      }
+    }
+
+    void ensureValidSession()
+      .then((token) => connectWithToken(token))
+      .catch(() => {
+        disconnectChatSocket()
+        isConnectedRef.current = false
+      })
+
+    const unsubscribe = onTokensRefreshed((token) => {
+      void connectWithToken(token)
+    })
 
     return () => {
       cancelled = true
+      unsubscribe()
+      detachSocketListeners?.()
+      disconnectChatSocket()
+      isConnectedRef.current = false
     }
   }, [store?.id])
 
@@ -103,14 +154,42 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const onInstagramMessageNew = useCallback(
+    (handler: (payload: SocketInstagramMessagePayload) => void) => {
+      instagramMessageHandlers.current.add(handler)
+      return () => {
+        instagramMessageHandlers.current.delete(handler)
+      }
+    },
+    []
+  )
+
+  const onInstagramConversationUpdated = useCallback(
+    (handler: (payload: SocketInstagramConversationPayload) => void) => {
+      instagramConversationHandlers.current.add(handler)
+      return () => {
+        instagramConversationHandlers.current.delete(handler)
+      }
+    },
+    []
+  )
+
   const value = useMemo(
     () => ({
       isConnected: isConnectedRef.current,
       onMessageNew,
       onMessageStatus,
       onConversationUpdated,
+      onInstagramMessageNew,
+      onInstagramConversationUpdated,
     }),
-    [onMessageNew, onMessageStatus, onConversationUpdated]
+    [
+      onMessageNew,
+      onMessageStatus,
+      onConversationUpdated,
+      onInstagramMessageNew,
+      onInstagramConversationUpdated,
+    ]
   )
 
   return <ChatSocketContext.Provider value={value}>{children}</ChatSocketContext.Provider>

@@ -1,8 +1,12 @@
+export type ChatChannel = 'whatsapp' | 'instagram'
+
 export type ChatListItem = {
   id: string
+  channel: ChatChannel
   title: string
   subtitle: string
   time: string
+  sortAt: string | null
   unread: number
   online: boolean
   phone: string

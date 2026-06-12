@@ -11,6 +11,7 @@ export type Store = {
   wa_waba_id: string | null;
   wa_access_token: string | null;
   currency: string;
+  country: string;
   timezone: string;
   payment_config: Record<string, unknown>;
   ai_system_prompt: string | null;
@@ -35,8 +36,33 @@ export type CreateStorePayload = {
   slug: string;
   whatsapp_number: string;
   currency: string;
+  country: string;
   description?: string | null;
   industry?: string | null;
+  logo_url?: string | null;
+};
+
+/** Partial PATCH — only send fields that changed. */
+export type UpdateStorePayload = Partial<{
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  whatsapp_number: string;
+  currency: string;
+  country: string;
+  timezone: string;
+  industry: string | null;
+  ai_system_prompt: string | null;
+  ai_language: string | null;
+  is_active: boolean;
+}>;
+
+export type UpdateStoreResponse = {
+  success: boolean;
+  message: string;
+  data: { store: Store };
 };
 
 export type CreateStoreResponse = {

@@ -1,28 +1,77 @@
-import { Alert, ScrollView, Text, View } from 'react-native'
-import { router, type Href } from 'expo-router'
-import { Button } from '@/components/ui/Button'
-import { MenuRow } from '@/components/ui/MenuRow'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { Caption, Heading, Muted } from '@/components/ui/Typography'
-import { useAuth } from '@src/contexts/auth-context'
-import { useStore } from '@src/contexts/store-context'
-import { env } from '@src/config/env'
-import { shadows } from '@src/lib/shadows'
+import { EditStoreLogoModal } from "@/components/store/EditStoreLogoModal";
+import { EditStoreModal } from "@/components/store/EditStoreModal";
+import { StoreLogoEditLink } from "@/components/store/StoreLogoPicker";
+import { StorefrontUrlActions } from "@/components/store/StorefrontUrlActions";
+import { Button } from "@/components/ui/Button";
+import { MenuRow } from "@/components/ui/MenuRow";
+import { Screen, ScreenBody } from "@/components/ui/Screen";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { Caption, Heading, Muted } from "@/components/ui/Typography";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { env } from "@src/config/env";
+import { useAuth } from "@src/contexts/auth-context";
+import { useStore } from "@src/contexts/store-context";
+import { shadows } from "@src/lib/shadows";
+import { buildSubdomainUrl } from "@src/lib/storefront";
+import Colors from "@src/theme/colors";
+import type { Store } from "@src/types/store";
+import { router, type Href } from "expo-router";
+import { useState } from "react";
+import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+
+function StoreAvatar({ store }: { store: Store | null }) {
+  const letter = store?.name?.slice(0, 1).toUpperCase() ?? "S";
+
+  if (store?.logo_url) {
+    return (
+      <Image
+        source={{ uri: store.logo_url }}
+        className="w-16 h-16 rounded-2xl border border-gray-200 bg-gray-50"
+        resizeMode="cover"
+      />
+    );
+  }
+
+  return (
+    <View className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center">
+      <Text className="text-2xl font-extrabold text-ink">{letter}</Text>
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
-  const { user, signOut } = useAuth()
-  const { store, clearStore } = useStore()
+  const { user, signOut } = useAuth();
+  const {
+    store,
+    refreshStore,
+    activateStoreSession,
+    subdomainUrl,
+    clearStore,
+  } = useStore();
+  const [editOpen, setEditOpen] = useState(false);
+  const [logoOpen, setLogoOpen] = useState(false);
+
+  const handleStoreUpdated = async (updated: Store) => {
+    const url = subdomainUrl ?? buildSubdomainUrl(updated.slug);
+    await activateStoreSession(updated, url);
+    await refreshStore();
+  };
 
   const handleSignOut = async () => {
-    await clearStore()
-    await signOut()
-    router.replace('/(auth)/login' as Href)
-  }
+    await clearStore();
+    await signOut();
+    router.replace("/(auth)/login" as Href);
+  };
 
   const handleComingSoon = (feature: string) => {
-    Alert.alert('Coming soon', `${feature} will be available soon.`)
-  }
+    Alert.alert("Coming soon", `${feature} will be available soon.`);
+  };
+
+  const storefrontHost = store?.slug
+    ? `${store.slug}.${env.storefrontBaseDomain}`
+    : null;
+  const storefrontUrl =
+    subdomainUrl ?? (store?.slug ? buildSubdomainUrl(store.slug) : null);
 
   return (
     <Screen>
@@ -37,16 +86,39 @@ export default function SettingsScreen() {
       <ScreenBody className="flex-1">
         <View className="px-5 pt-2 pb-4">
           <View
-            className="rounded-[28px] border border-gray-200 bg-surface p-6"
+            className="rounded-[28px] border border-gray-200 bg-surface px-6 py-3 relative"
             style={shadows.card}
           >
-            <View className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center mb-5">
-              <Text className="text-xl font-extrabold text-ink">
-                {store?.name?.slice(0, 1).toUpperCase() ?? 'S'}
-              </Text>
+            <Pressable
+              onPress={() => setEditOpen(true)}
+              className="absolute top-5 right-5 flex-row items-center gap-1.5 px-3 py-2 rounded-full border border-gray-200 bg-gray-50"
+              hitSlop={8}
+            >
+              <FontAwesome
+                name="pencil"
+                size={12}
+                color={Colors.brand.primary}
+              />
+              <Text className="text-xs font-bold text-ink">Edit</Text>
+            </Pressable>
+
+            <View className="items-start mb-4">
+              <StoreAvatar store={store} />
+              <StoreLogoEditLink onPress={() => setLogoOpen(true)} />
             </View>
-            <Heading className="text-2xl tracking-tight">{store?.name ?? 'Your store'}</Heading>
-            <Muted className="mt-2 text-[15px]">{user?.email ?? ''}</Muted>
+
+            <Heading className="text-2xl tracking-tight pr-16">
+              {store?.name ?? "Your store"}
+            </Heading>
+            {user?.email ? (
+              <Muted className="mt-2 text-[15px]">{user.email}</Muted>
+            ) : null}
+            {storefrontHost && storefrontUrl ? (
+              <StorefrontUrlActions
+                url={storefrontUrl}
+                displayHost={storefrontHost}
+              />
+            ) : null}
           </View>
         </View>
 
@@ -58,17 +130,26 @@ export default function SettingsScreen() {
           <View className="gap-3">
             <MenuRow
               label="Storefront"
-              value={`${store?.slug}.${env.storefrontBaseDomain}`}
+              value={storefrontHost ?? "Your store link"}
               icon="globe"
+              showChevron
+              onPress={() => router.push("/storefront" as Href)}
             />
-            <MenuRow label="Currency" value={store?.currency ?? 'INR'} icon="money" />
+            <MenuRow
+              label="Currency"
+              value={store?.currency ?? "INR"}
+              icon="money"
+            />
             <MenuRow
               label="Payment methods"
               value="COD, cards & more"
               icon="credit-card"
               showChevron
               onPress={() =>
-                router.push({ pathname: '/account-coming-soon', params: { id: 'payment-methods' } })
+                router.push({
+                  pathname: "/account-coming-soon",
+                  params: { id: "payment-methods" },
+                })
               }
             />
             <MenuRow
@@ -77,7 +158,10 @@ export default function SettingsScreen() {
               icon="bell"
               showChevron
               onPress={() =>
-                router.push({ pathname: '/account-coming-soon', params: { id: 'notifications' } })
+                router.push({
+                  pathname: "/account-coming-soon",
+                  params: { id: "notifications" },
+                })
               }
             />
             <MenuRow
@@ -86,7 +170,10 @@ export default function SettingsScreen() {
               icon="print"
               showChevron
               onPress={() =>
-                router.push({ pathname: '/account-coming-soon', params: { id: 'printer' } })
+                router.push({
+                  pathname: "/account-coming-soon",
+                  params: { id: "printer" },
+                })
               }
             />
             <MenuRow
@@ -95,7 +182,10 @@ export default function SettingsScreen() {
               icon="calendar"
               showChevron
               onPress={() =>
-                router.push({ pathname: '/account-coming-soon', params: { id: 'subscription' } })
+                router.push({
+                  pathname: "/account-coming-soon",
+                  params: { id: "subscription" },
+                })
               }
             />
             <MenuRow
@@ -103,7 +193,7 @@ export default function SettingsScreen() {
               value="WhatsApp · Instagram · Chat Boat · Domain"
               icon="cog"
               showChevron
-              onPress={() => router.push('/admin-dashboard' as Href)}
+              onPress={() => router.push("/admin-dashboard" as Href)}
             />
 
             <View className="mt-2 gap-3">
@@ -116,28 +206,28 @@ export default function SettingsScreen() {
                 value=""
                 icon="comment-o"
                 showChevron
-                onPress={() => handleComingSoon('Send feedback')}
+                onPress={() => handleComingSoon("Send feedback")}
               />
               <MenuRow
                 label="Help center"
                 value=""
                 icon="question-circle-o"
                 showChevron
-                onPress={() => handleComingSoon('Help center')}
+                onPress={() => handleComingSoon("Help center")}
               />
               <MenuRow
                 label="Privacy policy"
                 value=""
                 icon="lock"
                 showChevron
-                onPress={() => handleComingSoon('Privacy policy')}
+                onPress={() => handleComingSoon("Privacy policy")}
               />
               <MenuRow
                 label="Terms"
                 value=""
                 icon="file-text-o"
                 showChevron
-                onPress={() => handleComingSoon('Terms')}
+                onPress={() => handleComingSoon("Terms")}
               />
             </View>
           </View>
@@ -152,7 +242,20 @@ export default function SettingsScreen() {
             />
           </View>
         </ScrollView>
+
+        <EditStoreModal
+          visible={editOpen}
+          store={store}
+          onClose={() => setEditOpen(false)}
+          onUpdated={handleStoreUpdated}
+        />
+        <EditStoreLogoModal
+          visible={logoOpen}
+          store={store}
+          onClose={() => setLogoOpen(false)}
+          onUpdated={handleStoreUpdated}
+        />
       </ScreenBody>
     </Screen>
-  )
+  );
 }

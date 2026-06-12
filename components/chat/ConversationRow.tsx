@@ -1,7 +1,9 @@
 import { Text, View } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AppPressable } from '@/components/ui/AppPressable'
 import { Badge } from '@/components/ui/Badge'
 import { Caption, Muted } from '@/components/ui/Typography'
+import Colors from '@src/theme/colors'
 import type { ChatListItem } from '@src/types/chat'
 
 type Props = {
@@ -25,9 +27,14 @@ export function ConversationRow({ conversation, onPress }: Props) {
       </View>
       <View className="flex-1 gap-1">
         <View className="flex-row justify-between items-center">
-          <Text className="flex-1 text-base font-bold text-ink mr-2" numberOfLines={1}>
-            {conversation.title}
-          </Text>
+          <View className="flex-1 flex-row items-center gap-1.5 mr-2 min-w-0">
+            {conversation.channel === 'instagram' ? (
+              <FontAwesome name="instagram" size={14} color={Colors.brand.primary} />
+            ) : null}
+            <Text className="flex-1 text-base font-bold text-ink" numberOfLines={1}>
+              {conversation.title}
+            </Text>
+          </View>
           <Caption>{conversation.time}</Caption>
         </View>
         <View className="flex-row items-center gap-2">

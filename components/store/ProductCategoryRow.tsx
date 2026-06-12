@@ -7,6 +7,7 @@ import { DetailSection } from '@/components/store/detail/DetailSection'
 import { SleekModal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { updateProduct } from '@src/api/products'
+import { getCategoryBreadcrumb } from '@src/lib/category-tree'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
@@ -36,8 +37,9 @@ export function ProductCategoryRow({
     setSelectedId(product.category_id)
   }, [product.category_id])
 
-  const categoryName =
-    categories.find((c) => c.id === product.category_id)?.name ?? 'Uncategorized'
+  const categoryName = product.category_id
+    ? getCategoryBreadcrumb(product.category_id, categories)
+    : 'Uncategorized'
 
   const handleCategoryCreated = async (category: Category) => {
     setCreateOpen(false)

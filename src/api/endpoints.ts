@@ -6,6 +6,7 @@ export const endpoints = {
   authRefresh: "/api/auth/refresh",
   storesMe: "/api/stores/me",
   stores: "/api/stores",
+  paymentConfig: "/api/stores/me/payment-config",
   products: "/api/products",
   categories: "/api/categories",
   industries: "/api/industries",

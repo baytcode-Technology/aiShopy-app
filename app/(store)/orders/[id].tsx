@@ -4,6 +4,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerSheet'
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
+import { OrderPaymentActions } from '@/components/store/OrderPaymentActions'
 import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
@@ -44,6 +45,36 @@ export default function OrderDetailScreen() {
       load()
     }, [load])
   )
+
+  const confirmPaymentReceived = async () => {
+    if (!order || !store?.id || saving) return
+    setSaving(true)
+    try {
+      const res = await updateOrder(order.id, {
+        store_id: store.id,
+        payment_status: 'paid',
+        order_status: order.order_status === 'pending' ? 'confirmed' : order.order_status,
+      })
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...res.data.order,
+              customers: prev.customers,
+              items: prev.items,
+              payment: prev.payment
+                ? { ...prev.payment, status: 'paid' }
+                : prev.payment,
+            }
+          : prev
+      )
+      showSuccess('Payment marked as received')
+    } catch (e) {
+      showError(e, 'Could not confirm payment')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const handleStatusChange = async (field: OrderStatusField, value: string) => {
     if (!order || !store?.id || saving) return
@@ -106,6 +137,12 @@ export default function OrderDetailScreen() {
             showsVerticalScrollIndicator={false}
           >
             <AnimatedFadeIn className="gap-2">
+              <OrderPaymentActions
+                order={order}
+                payment={order.payment ?? null}
+                saving={saving}
+                onConfirmPayment={confirmPaymentReceived}
+              />
               <View>
                 <OrderStatusRow
                   field="order_status"

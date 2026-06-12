@@ -79,6 +79,14 @@ export type Order = {
 
   items: OrderItem[]
 
+  payment?: {
+    id: string
+    provider: string
+    status: string
+    amount: number
+    currency: string
+  } | null
+
 }
 
 
@@ -191,7 +199,7 @@ export type CreateOrderPayload = {
 
   name?: string
 
-  payment_method?: 'cod' | 'razorpay'
+  payment_method?: 'cod' | 'razorpay' | 'upi'
 
   shipping_address?: CreateOrderShippingAddress
 

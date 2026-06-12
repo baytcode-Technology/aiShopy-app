@@ -5,6 +5,8 @@ export type StoreEditForm = {
   industry: string
   description: string
   whatsapp_number: string
+  country: string
+  currency: string
   logo_url?: string | null
 }
 
@@ -22,6 +24,10 @@ export function buildStoreUpdatePatch(
   if (industry !== (store.industry ?? null)) patch.industry = industry
   if (description !== (store.description ?? null)) patch.description = description
   if (whatsapp !== store.whatsapp_number) patch.whatsapp_number = whatsapp
+  if (form.country.trim() !== store.country) patch.country = form.country.trim()
+  if (form.currency.trim().toUpperCase() !== store.currency) {
+    patch.currency = form.currency.trim().toUpperCase()
+  }
 
   if (form.logo_url !== undefined && form.logo_url !== store.logo_url) {
     patch.logo_url = form.logo_url

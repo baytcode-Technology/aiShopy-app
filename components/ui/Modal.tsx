@@ -41,6 +41,8 @@ type Props = {
    * validation errors.
    */
   scrollViewRef?: RefObject<RNScrollView | null>
+  /** When false, body is a flex View (for FlatList / VirtualizedList children). */
+  bodyScroll?: boolean
 }
 
 export function SleekModal(props: Props) {
@@ -71,6 +73,7 @@ function SleekModalSheet({
   minHeightRatio,
   maxHeightRatio,
   scrollViewRef,
+  bodyScroll = true,
 }: Props) {
   const insets = useSafeAreaInsets()
   const { height: windowHeight } = useWindowDimensions()
@@ -107,6 +110,17 @@ function SleekModalSheet({
       return { sheetHeight: undefined, bodyHeight: undefined, scrollable: false }
     }
 
+    if (!bodyScroll) {
+      const fixedHeight = sheetMinHeight ?? sheetMaxHeight
+      const clamped = Math.min(sheetMaxHeight, Math.max(sheetMinHeight ?? fixedHeight, fixedHeight))
+      const body = Math.max(0, clamped - chromeHeight - footerHeight)
+      return {
+        sheetHeight: clamped,
+        bodyHeight: body,
+        scrollable: false,
+      }
+    }
+
     const naturalHeight = chromeHeight + footerHeight + contentHeight
     const clamped = Math.min(
       sheetMaxHeight,
@@ -121,6 +135,7 @@ function SleekModalSheet({
     }
   }, [
     usesSheetSizing,
+    bodyScroll,
     chromeHeight,
     footerHeight,
     contentHeight,
@@ -184,26 +199,37 @@ function SleekModalSheet({
             </View>
           </View>
 
-          <ScrollView
-            ref={scrollViewRef}
-            className={cn(!usesSheetSizing && 'max-h-[560px]', scrollClassName)}
-            style={
-              usesSheetSizing && bodyHeight != null
-                ? scrollable
-                  ? { height: bodyHeight }
-                  : { minHeight: bodyHeight }
-                : undefined
-            }
-            contentContainerClassName="px-6 py-5 gap-5"
-            contentContainerStyle={scrollContentContainerStyle}
-            onContentSizeChange={usesSheetSizing ? (_, h) => setContentHeight(h) : undefined}
-            scrollEnabled={usesSheetSizing ? scrollable : true}
-            keyboardShouldPersistTaps="handled"
-            automaticallyAdjustKeyboardInsets
-            showsVerticalScrollIndicator={usesSheetSizing && scrollable}
-          >
-            {children}
-          </ScrollView>
+          {bodyScroll ? (
+            <ScrollView
+              ref={scrollViewRef}
+              className={cn(!usesSheetSizing && 'max-h-[560px]', scrollClassName)}
+              style={
+                usesSheetSizing && bodyHeight != null
+                  ? scrollable
+                    ? { height: bodyHeight }
+                    : { minHeight: bodyHeight }
+                  : undefined
+              }
+              contentContainerClassName="px-6 py-5 gap-5"
+              contentContainerStyle={scrollContentContainerStyle}
+              onContentSizeChange={usesSheetSizing ? (_, h) => setContentHeight(h) : undefined}
+              scrollEnabled={usesSheetSizing ? scrollable : true}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              showsVerticalScrollIndicator={usesSheetSizing && scrollable}
+            >
+              {children}
+            </ScrollView>
+          ) : (
+            <View
+              className="px-6 py-5 flex-1"
+              style={
+                usesSheetSizing && bodyHeight != null ? { height: bodyHeight, flex: 1 } : { flex: 1 }
+              }
+            >
+              {children}
+            </View>
+          )}
 
           {footer ? (
             <View

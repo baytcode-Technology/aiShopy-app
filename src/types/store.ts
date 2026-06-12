@@ -11,6 +11,7 @@ export type Store = {
   wa_waba_id: string | null;
   wa_access_token: string | null;
   currency: string;
+  country: string;
   timezone: string;
   payment_config: Record<string, unknown>;
   ai_system_prompt: string | null;
@@ -35,6 +36,7 @@ export type CreateStorePayload = {
   slug: string;
   whatsapp_number: string;
   currency: string;
+  country: string;
   description?: string | null;
   industry?: string | null;
   logo_url?: string | null;
@@ -49,6 +51,7 @@ export type UpdateStorePayload = Partial<{
   banner_url: string | null;
   whatsapp_number: string;
   currency: string;
+  country: string;
   timezone: string;
   industry: string | null;
   ai_system_prompt: string | null;

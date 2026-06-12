@@ -136,6 +136,18 @@ export default function SettingsScreen() {
               onPress={() => router.push("/storefront" as Href)}
             />
             <MenuRow
+              label="Website"
+              value="UI design & customization"
+              icon="paint-brush"
+              showChevron
+              onPress={() =>
+                router.push({
+                  pathname: "/account-coming-soon",
+                  params: { id: "website" },
+                })
+              }
+            />
+            <MenuRow
               label="Currency"
               value={store?.currency ?? "INR"}
               icon="money"
@@ -145,12 +157,7 @@ export default function SettingsScreen() {
               value="COD, cards & more"
               icon="credit-card"
               showChevron
-              onPress={() =>
-                router.push({
-                  pathname: "/account-coming-soon",
-                  params: { id: "payment-methods" },
-                })
-              }
+              onPress={() => router.push("/payment-methods" as Href)}
             />
             <MenuRow
               label="Notifications"

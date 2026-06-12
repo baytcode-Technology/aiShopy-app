@@ -13,29 +13,22 @@ type Props = {
   onSelect: (id: string | null) => void
   label?: string
   emptyHint?: string
+  excludeCategoryId?: string
 }
 
-export function CategoryPicker({
+export function CategoryParentPicker({
   categories,
   selectedId,
   onSelect,
-  label = 'Category',
-  emptyHint = 'No categories yet — create one first (optional).',
+  label = 'Parent category',
+  emptyHint = 'No parent — this will be a top-level category.',
+  excludeCategoryId,
 }: Props) {
   const [open, setOpen] = useState(false)
 
-  if (categories.length === 0) {
-    return (
-      <View className="gap-2">
-        <Label>{label}</Label>
-        <Muted className="text-xs pl-1">{emptyHint}</Muted>
-      </View>
-    )
-  }
-
   const selectedLabel = selectedId
     ? getCategoryBreadcrumb(selectedId, categories)
-    : 'Uncategorized'
+    : 'None (top level)'
 
   return (
     <View className="gap-2">
@@ -49,6 +42,13 @@ export function CategoryPicker({
         </Text>
         <FontAwesome name="chevron-down" size={12} color={Colors.text.muted} />
       </Pressable>
+      {categories.length === 0 ? (
+        <Muted className="text-xs pl-1">{emptyHint}</Muted>
+      ) : (
+        <Muted className="text-xs pl-1">
+          Pick where this category lives — e.g. Men → Shirt → Linen shirt.
+        </Muted>
+      )}
 
       <CategoryTreeModal
         isOpen={open}
@@ -56,10 +56,11 @@ export function CategoryPicker({
         categories={categories}
         selectedId={selectedId}
         onSelect={onSelect}
-        title="Select category"
-        subtitle="Choose from your category tree"
+        title="Parent category"
+        subtitle="Choose a parent or keep as top level"
         showNoneOption
-        noneLabel="Uncategorized"
+        noneLabel="None (top level)"
+        excludeCategoryId={excludeCategoryId}
       />
     </View>
   )

@@ -11,6 +11,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import { AuthProvider } from '@src/contexts/auth-context'
 import { StoreProvider } from '@src/contexts/store-context'
+import { ChatSocketProvider } from '@src/contexts/chat-socket-context'
+import { StoreNotificationsProvider } from '@src/contexts/store-notifications-context'
 import { toastConfig } from '@/components/ui/ToastConfig'
 import Colors from '@src/theme/colors'
 
@@ -54,6 +56,8 @@ export default function RootLayout() {
     <SafeAreaProvider>
     <AuthProvider>
       <StoreProvider>
+        <ChatSocketProvider>
+          <StoreNotificationsProvider>
         <ThemeProvider value={AppTheme}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -67,12 +71,16 @@ export default function RootLayout() {
             <Stack.Screen name="chat-boat" />
             <Stack.Screen name="settings" />
             <Stack.Screen name="storefront" />
+            <Stack.Screen name="payment-methods" />
+            <Stack.Screen name="notifications" />
             <Stack.Screen name="account-coming-soon" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>
           <Toast config={toastConfig} />
         </ThemeProvider>
+          </StoreNotificationsProvider>
+        </ChatSocketProvider>
       </StoreProvider>
     </AuthProvider>
     </SafeAreaProvider>

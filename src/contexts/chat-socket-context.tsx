@@ -16,6 +16,7 @@ import {
   type SocketInstagramConversationPayload,
   type SocketInstagramMessagePayload,
   type SocketMessagePayload,
+  type SocketOrderNewPayload,
   type SocketStatusPayload,
 } from '@src/lib/socket'
 import { ensureValidSession, onTokensRefreshed } from '@src/lib/session-manager'
@@ -32,6 +33,7 @@ type ChatSocketContextValue = {
   onInstagramConversationUpdated: (
     handler: (payload: SocketInstagramConversationPayload) => void
   ) => () => void
+  onOrderNew: (handler: (payload: SocketOrderNewPayload) => void) => () => void
 }
 
 const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
@@ -48,6 +50,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const instagramConversationHandlers = useRef(
     new Set<(payload: SocketInstagramConversationPayload) => void>()
   )
+  const orderHandlers = useRef(new Set<(payload: SocketOrderNewPayload) => void>())
 
   useEffect(() => {
     let cancelled = false
@@ -88,6 +91,9 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
           instagramConversationHandlers.current.forEach((handler) => handler(payload))
         }
       )
+      socket.on(SOCKET_EVENTS.ORDER_NEW, (payload: SocketOrderNewPayload) => {
+        orderHandlers.current.forEach((handler) => handler(payload))
+      })
 
       detachSocketListeners = () => {
         socket.off('connect', handleConnect)
@@ -97,6 +103,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
         socket.off(SOCKET_EVENTS.CONVERSATION_UPDATED)
         socket.off(SOCKET_EVENTS.INSTAGRAM_MESSAGE_NEW)
         socket.off(SOCKET_EVENTS.INSTAGRAM_CONVERSATION_UPDATED)
+        socket.off(SOCKET_EVENTS.ORDER_NEW)
       }
 
       if (socket.connected) handleConnect()
@@ -174,6 +181,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const onOrderNew = useCallback((handler: (payload: SocketOrderNewPayload) => void) => {
+    orderHandlers.current.add(handler)
+    return () => {
+      orderHandlers.current.delete(handler)
+    }
+  }, [])
+
   const value = useMemo(
     () => ({
       isConnected: isConnectedRef.current,
@@ -182,6 +196,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       onConversationUpdated,
       onInstagramMessageNew,
       onInstagramConversationUpdated,
+      onOrderNew,
     }),
     [
       onMessageNew,
@@ -189,6 +204,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       onConversationUpdated,
       onInstagramMessageNew,
       onInstagramConversationUpdated,
+      onOrderNew,
     ]
   )
 

@@ -10,6 +10,7 @@ export const SOCKET_EVENTS = {
   CONVERSATION_UPDATED: 'whatsapp:conversation:updated',
   INSTAGRAM_MESSAGE_NEW: 'instagram:message:new',
   INSTAGRAM_CONVERSATION_UPDATED: 'instagram:conversation:updated',
+  ORDER_NEW: 'order:new',
 } as const
 
 export type SocketMessagePayload = {
@@ -71,6 +72,18 @@ export type SocketInstagramConversationPayload = {
     last_message_at: string | null
     last_message_preview: string | null
     unread_count: number
+  }
+}
+
+export type SocketOrderNewPayload = {
+  storeId: string
+  order: {
+    id: string
+    order_number: string
+    total: number
+    currency: string
+    source: string
+    store_slug: string
   }
 }
 

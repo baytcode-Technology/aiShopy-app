@@ -164,12 +164,7 @@ export default function SettingsScreen() {
               value="Orders, chats & alerts"
               icon="bell"
               showChevron
-              onPress={() =>
-                router.push({
-                  pathname: "/account-coming-soon",
-                  params: { id: "notifications" },
-                })
-              }
+              onPress={() => router.push("/notifications" as Href)}
             />
             <MenuRow
               label="Printer"

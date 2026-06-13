@@ -127,3 +127,40 @@ export function OrdersSkeletonList() {
     </View>
   )
 }
+
+function NotificationToggleRowSkeleton() {
+  return (
+    <View className="flex-row items-center justify-between gap-3 py-3">
+      <View className="flex-1 gap-2">
+        <Skeleton className="h-4 w-[38%] rounded-md" />
+        <Skeleton className="h-3 w-[72%] rounded-md" />
+      </View>
+      <Skeleton className="h-8 w-[52px] rounded-full" />
+    </View>
+  )
+}
+
+export function NotificationSettingsSkeleton() {
+  return (
+    <View className="gap-4">
+      <Skeleton className="h-10 w-full rounded-md" />
+      <View
+        className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-1"
+        style={shadows.card}
+      >
+        <Skeleton className="h-5 w-16 rounded-md mb-3" />
+        {[0, 1, 2].map((i) => (
+          <NotificationToggleRowSkeleton key={i} />
+        ))}
+      </View>
+      <View
+        className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-3"
+        style={shadows.card}
+      >
+        <Skeleton className="h-5 w-36 rounded-md" />
+        <Skeleton className="h-10 w-full rounded-md" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+      </View>
+    </View>
+  )
+}

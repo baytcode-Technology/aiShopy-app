@@ -1,7 +1,7 @@
 import { router } from 'expo-router'
 import { View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Heading, Muted } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
@@ -15,7 +15,7 @@ export default function ChatBoatScreen() {
         subtitle="Smart assistant for your store"
         onBack={() => router.back()}
       />
-      <ScreenBody className="px-5 pt-6">
+      <ScreenScrollBody contentContainerClassName="pt-6">
         <View
           className="items-center rounded-[28px] border border-gray-200 bg-surface px-8 py-12"
           style={shadows.card}
@@ -29,7 +29,7 @@ export default function ChatBoatScreen() {
             automate replies across your channels.
           </Muted>
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

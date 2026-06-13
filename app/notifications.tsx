@@ -1,16 +1,13 @@
 import { useCallback, useState } from 'react'
-import { Pressable, Switch, Text, View } from 'react-native'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { Switch, Text, View } from 'react-native'
 import { useFocusEffect } from 'expo-router'
-import { NotificationSoundPicker } from '@/components/notifications/NotificationSoundPicker'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Label, Muted } from '@/components/ui/Typography'
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
 } from '@src/api/notification-preferences'
-import { getNotificationSound } from '@src/lib/notification-sounds'
 import {
   ensureNotificationPermissions,
   setupAndroidNotificationChannels,
@@ -18,9 +15,17 @@ import {
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess } from '@src/lib/toast'
 import { useStoreNotifications } from '@src/contexts/store-notifications-context'
-import type { NotificationPreferences, NotificationSoundId } from '@src/types/notification-preferences'
+import type { NotificationPreferences } from '@src/types/notification-preferences'
 import Colors from '@src/theme/colors'
 import { router } from 'expo-router'
+
+function notificationSettingsErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : String(error)
+  if (message.includes('notification_preferences')) {
+    return 'Database update required: run migration 021_notification_preferences.sql on Supabase, then try again.'
+  }
+  return fallback
+}
 
 const DEFAULT_PREFS: NotificationPreferences = {
   chats: true,
@@ -32,7 +37,6 @@ const DEFAULT_PREFS: NotificationPreferences = {
 export default function NotificationsScreen() {
   const { refreshPreferences: refreshProviderPrefs } = useStoreNotifications()
   const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_PREFS)
-  const [soundExpanded, setSoundExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -42,7 +46,7 @@ export default function NotificationsScreen() {
       const res = await fetchNotificationPreferences()
       setPrefs(res.data.notification_preferences)
     } catch (e) {
-      showError(e, 'Could not load notification settings')
+      showError(e, notificationSettingsErrorMessage(e, 'Could not load notification settings'))
     } finally {
       setLoading(false)
     }
@@ -59,25 +63,26 @@ export default function NotificationsScreen() {
   const save = async (next: NotificationPreferences) => {
     setSaving(true)
     try {
-      const res = await updateNotificationPreferences(next)
+      const res = await updateNotificationPreferences({ ...next, sound_id: 'default' })
       setPrefs(res.data.notification_preferences)
       await refreshProviderPrefs()
       showSuccess('Notification settings saved')
     } catch (e) {
-      showError(e, 'Could not save notification settings')
+      showError(e, notificationSettingsErrorMessage(e, 'Could not save notification settings'))
       await load()
     } finally {
       setSaving(false)
     }
   }
 
-  const patchPref = <K extends keyof NotificationPreferences>(key: K, value: NotificationPreferences[K]) => {
-    const next = { ...prefs, [key]: value }
+  const patchPref = <K extends keyof NotificationPreferences>(
+    key: K,
+    value: NotificationPreferences[K]
+  ) => {
+    const next = { ...prefs, [key]: value, sound_id: 'default' as const }
     setPrefs(next)
     void save(next)
   }
-
-  const selectedSound = getNotificationSound(prefs.sound_id)
 
   return (
     <Screen>
@@ -86,13 +91,14 @@ export default function NotificationsScreen() {
         subtitle="Alerts & preferences"
         onBack={() => router.back()}
       />
-      <ScreenBody className="px-5 pt-2">
-        <Muted className="text-[14px] leading-5 mb-4">
-          Choose which store events play a sound and show alerts on this device.
+      <ScreenScrollBody contentContainerClassName="gap-4">
+        <Muted className="text-[14px] leading-5">
+          Choose which events show alerts. Uses your phone&apos;s default notification sound.
+          When the app is fully closed, Firebase push setup is required on Android.
         </Muted>
 
         <View
-          className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-4 mb-4"
+          className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-4"
           style={shadows.card}
         >
           <Label className="text-base">Alerts</Label>
@@ -121,34 +127,22 @@ export default function NotificationsScreen() {
         </View>
 
         <View
-          className="w-full rounded-[28px] border border-gray-200 bg-surface overflow-hidden"
+          className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-2"
           style={shadows.card}
         >
-          <Pressable
-            onPress={() => setSoundExpanded((v) => !v)}
-            className="flex-row items-center justify-between gap-3 px-4 py-5"
-          >
-            <View className="flex-1">
-              <Label className="text-base">Notification sound</Label>
-              <Muted className="mt-1 text-[13px]">{selectedSound.label}</Muted>
-            </View>
-            <FontAwesome
-              name={soundExpanded ? 'chevron-up' : 'chevron-down'}
-              size={14}
-              color={Colors.text.muted}
-            />
-          </Pressable>
-
-          {soundExpanded ? (
-            <View className="px-4 pb-5 border-t border-gray-100 pt-2">
-              <NotificationSoundPicker
-                value={prefs.sound_id}
-                onChange={(id: NotificationSoundId) => patchPref('sound_id', id)}
-              />
-            </View>
-          ) : null}
+          <Label className="text-base">Notification sound</Label>
+          <Muted className="text-[13px] leading-5">
+            Custom sounds and previews are coming soon. Alerts currently use your phone&apos;s
+            default notification tone.
+          </Muted>
+          <View className="mt-2 rounded-xl bg-gray-100 border border-gray-200 px-4 py-3">
+            <Text className="text-[13px] font-bold text-ink mb-1">Coming soon</Text>
+            <Muted className="text-[13px] leading-5">
+              Pick different ringtones per alert type and upload your own sound.
+            </Muted>
+          </View>
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

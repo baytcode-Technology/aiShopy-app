@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { View, type ViewProps } from 'react-native'
+import { ScrollView, View, type ScrollViewProps, type ViewProps } from 'react-native'
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
 import { cn } from '@src/lib/cn'
 
@@ -27,5 +27,33 @@ export function ScreenBody({ children, className, ...props }: ViewProps) {
     <View className={cn('flex-1', className)} {...props}>
       {children}
     </View>
+  )
+}
+
+type ScreenScrollBodyProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
+  children: ReactNode
+  className?: string
+  contentContainerClassName?: string
+}
+
+/** Scrollable body for settings / card pages that can overflow on small screens. */
+export function ScreenScrollBody({
+  children,
+  className,
+  contentContainerClassName,
+  showsVerticalScrollIndicator = false,
+  keyboardShouldPersistTaps = 'handled',
+  ...props
+}: ScreenScrollBodyProps) {
+  return (
+    <ScrollView
+      className={cn('flex-1', className)}
+      contentContainerClassName={cn('px-5 pt-2 pb-8 grow', contentContainerClassName)}
+      showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+      {...props}
+    >
+      {children}
+    </ScrollView>
   )
 }

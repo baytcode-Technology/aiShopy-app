@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser'
 import { router } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Heading, Muted } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
@@ -121,7 +121,7 @@ export default function InstagramConnectScreen() {
         subtitle={subtitle}
         onBack={() => router.back()}
       />
-      <ScreenBody className="px-5 pt-10 gap-6">
+      <ScreenScrollBody contentContainerClassName="pt-10 gap-6">
         <View className="items-center justify-center gap-4">
           {phase === 'loading' || phase === 'oauth' || phase === 'polling' ? (
             <ActivityIndicator color={Colors.brand.primary} size="large" />
@@ -203,7 +203,7 @@ export default function InstagramConnectScreen() {
             </>
           ) : null}
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

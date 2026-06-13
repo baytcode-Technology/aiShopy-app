@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { AppState, Platform } from 'react-native'
+import { Platform } from 'react-native'
 import { router, usePathname } from 'expo-router'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
@@ -17,11 +17,11 @@ import {
   fetchNotificationPreferences,
   registerPushToken,
 } from '@src/api/notification-preferences'
-import { androidChannelIdForSound } from '@src/lib/notification-sounds'
+import { isViewingConversation, showStoreAlert } from '@src/lib/store-alerts'
 import {
+  ALERTS_CHANNEL_ID,
   addNotificationResponseListener,
   getExpoPushToken,
-  presentLocalNotification,
   setupAndroidNotificationChannels,
 } from '@src/lib/push-notifications'
 import type { NotificationPreferences } from '@src/types/notification-preferences'
@@ -80,16 +80,20 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
     void setupAndroidNotificationChannels()
 
     void (async () => {
-      const token = await getExpoPushToken()
-      if (!token) return
+      try {
+        const token = await getExpoPushToken()
+        if (!token) return
 
-      await registerPushToken({
-        expo_push_token: token,
-        platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
-        sound_channel_id: androidChannelIdForSound(prefsRef.current.sound_id),
-      })
+        await registerPushToken({
+          expo_push_token: token,
+          platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
+          sound_channel_id: ALERTS_CHANNEL_ID,
+        })
+      } catch (err) {
+        console.warn('[push] Could not register push token:', err)
+      }
     })()
-  }, [isAuthenticated, store?.id, preferences.sound_id])
+  }, [isAuthenticated, store?.id])
 
   useEffect(() => {
     return addNotificationResponseListener((data) => {
@@ -119,15 +123,13 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
 
   useEffect(() => {
     return onMessageNew((payload) => {
-      if (AppState.currentState !== 'active') return
       if (!prefsRef.current.chats) return
       if (payload.message.direction !== 'inbound') return
-      if (pathnameRef.current.includes(payload.conversationId)) return
+      if (isViewingConversation(pathnameRef.current, payload.conversationId)) return
 
-      void presentLocalNotification({
+      void showStoreAlert({
         title: 'WhatsApp',
         body: `${payload.message.from_number}: ${payload.message.text_body ?? '[message]'}`,
-        soundId: prefsRef.current.sound_id,
         data: {
           type: 'chat',
           channel: 'whatsapp',
@@ -139,15 +141,13 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
 
   useEffect(() => {
     return onInstagramMessageNew((payload) => {
-      if (AppState.currentState !== 'active') return
       if (!prefsRef.current.chats) return
       if (payload.message.direction !== 'inbound') return
-      if (pathnameRef.current.includes(payload.conversationId)) return
+      if (isViewingConversation(pathnameRef.current, payload.conversationId)) return
 
-      void presentLocalNotification({
+      void showStoreAlert({
         title: 'Instagram',
         body: payload.message.text_body ?? 'New message',
-        soundId: prefsRef.current.sound_id,
         data: {
           type: 'chat',
           channel: 'instagram',
@@ -159,7 +159,6 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
 
   useEffect(() => {
     return onOrderNew((payload: SocketOrderNewPayload) => {
-      if (AppState.currentState !== 'active') return
       const source = payload.order.source
       if (source === 'storefront') {
         if (!prefsRef.current.online_orders) return
@@ -172,10 +171,9 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
       const label = source === 'storefront' ? 'New online order' : 'POS order'
       const total = `${payload.order.currency} ${Number(payload.order.total).toFixed(2)}`
 
-      void presentLocalNotification({
+      void showStoreAlert({
         title: payload.order.store_slug,
         body: `${label} · ${payload.order.order_number} · ${total}`,
-        soundId: prefsRef.current.sound_id,
         data: {
           type: 'order',
           orderId: payload.order.id,

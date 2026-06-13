@@ -2,12 +2,9 @@ import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import { AppState, Platform, type AppStateStatus } from 'react-native'
 import Constants from 'expo-constants'
-import {
-  androidChannelIdForSound,
-  NOTIFICATION_SOUNDS,
-  soundFileNameForId,
-} from '@src/lib/notification-sounds'
-import type { NotificationSoundId } from '@src/types/notification-preferences'
+
+/** Single Android channel — uses the phone default notification sound. */
+export const ALERTS_CHANNEL_ID = 'aishopy-alerts'
 
 let appState: AppStateStatus = AppState.currentState
 AppState.addEventListener('change', (next) => {
@@ -17,7 +14,7 @@ AppState.addEventListener('change', (next) => {
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: appState !== 'active',
-    shouldPlaySound: appState !== 'active',
+    shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: appState !== 'active',
     shouldShowList: appState !== 'active',
@@ -37,15 +34,12 @@ export async function ensureNotificationPermissions(): Promise<boolean> {
 export async function setupAndroidNotificationChannels(): Promise<void> {
   if (Platform.OS !== 'android') return
 
-  for (const sound of NOTIFICATION_SOUNDS) {
-    await Notifications.setNotificationChannelAsync(androidChannelIdForSound(sound.id), {
-      name: `AiShopy ${sound.label}`,
-      importance: Notifications.AndroidImportance.HIGH,
-      sound: soundFileNameForId(sound.id),
-      vibrationPattern: [0, 250, 120, 250],
-      lightColor: '#0a0a0b',
-    })
-  }
+  await Notifications.setNotificationChannelAsync(ALERTS_CHANNEL_ID, {
+    name: 'AiShopy alerts',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 120, 250],
+    lightColor: '#0a0a0b',
+  })
 }
 
 export async function getExpoPushToken(): Promise<string | null> {
@@ -65,25 +59,27 @@ export async function getExpoPushToken(): Promise<string | null> {
     return null
   }
 
-  const token = await Notifications.getExpoPushTokenAsync({ projectId })
-  return token.data
+  try {
+    const token = await Notifications.getExpoPushTokenAsync({ projectId })
+    return token.data
+  } catch (err) {
+    console.warn('[push] Expo push token unavailable (FCM not configured):', err)
+    return null
+  }
 }
 
 export async function presentLocalNotification(input: {
   title: string
   body: string
-  soundId: NotificationSoundId
   data?: Record<string, string>
 }): Promise<void> {
-  const channelId = androidChannelIdForSound(input.soundId)
-
   await Notifications.scheduleNotificationAsync({
     content: {
       title: input.title,
       body: input.body,
-      sound: soundFileNameForId(input.soundId),
+      sound: 'default',
       data: input.data,
-      ...(Platform.OS === 'android' ? { channelId } : {}),
+      ...(Platform.OS === 'android' ? { channelId: ALERTS_CHANNEL_ID } : {}),
     },
     trigger: null,
   })

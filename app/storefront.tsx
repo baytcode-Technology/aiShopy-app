@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { Image, Text, View } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import { StorefrontUrlActions } from '@/components/store/StorefrontUrlActions'
@@ -54,7 +54,7 @@ export default function StorefrontScreen() {
         onBack={() => router.back()}
         showSettings={false}
       />
-      <ScreenBody className="px-5 pt-2">
+      <ScreenScrollBody>
         <Muted className="text-[14px] leading-5 mb-4">
           This is the store your customers visit online. Share the link on
           WhatsApp, Instagram, or anywhere you sell.
@@ -93,7 +93,7 @@ export default function StorefrontScreen() {
             )}
           </View>
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

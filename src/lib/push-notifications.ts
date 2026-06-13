@@ -1,23 +1,18 @@
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
-import { AppState, Platform, type AppStateStatus } from 'react-native'
+import { Platform } from 'react-native'
 import Constants from 'expo-constants'
 
 /** Single Android channel — uses the phone default notification sound. */
 export const ALERTS_CHANNEL_ID = 'aishopy-alerts'
 
-let appState: AppStateStatus = AppState.currentState
-AppState.addEventListener('change', (next) => {
-  appState = next
-})
-
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: appState !== 'active',
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
-    shouldShowBanner: appState !== 'active',
-    shouldShowList: appState !== 'active',
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 })
 

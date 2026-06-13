@@ -4,20 +4,17 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { Platform } from 'react-native'
-import { router, usePathname } from 'expo-router'
+import { router } from 'expo-router'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { useChatSocket } from '@src/contexts/chat-socket-context'
 import {
   fetchNotificationPreferences,
   registerPushToken,
 } from '@src/api/notification-preferences'
-import { isViewingConversation, showStoreAlert } from '@src/lib/store-alerts'
 import {
   ALERTS_CHANNEL_ID,
   addNotificationResponseListener,
@@ -25,7 +22,6 @@ import {
   setupAndroidNotificationChannels,
 } from '@src/lib/push-notifications'
 import type { NotificationPreferences } from '@src/types/notification-preferences'
-import type { SocketOrderNewPayload } from '@src/lib/socket'
 
 const DEFAULT_PREFS: NotificationPreferences = {
   chats: true,
@@ -44,20 +40,7 @@ const StoreNotificationsContext = createContext<StoreNotificationsContextValue |
 export function StoreNotificationsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const { store } = useStore()
-  const pathname = usePathname()
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFS)
-  const prefsRef = useRef(preferences)
-  const pathnameRef = useRef(pathname)
-
-  const { onMessageNew, onInstagramMessageNew, onOrderNew } = useChatSocket()
-
-  useEffect(() => {
-    prefsRef.current = preferences
-  }, [preferences])
-
-  useEffect(() => {
-    pathnameRef.current = pathname
-  }, [pathname])
 
   const refreshPreferences = useCallback(async () => {
     if (!store?.id) return
@@ -120,69 +103,6 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
       }
     })
   }, [])
-
-  useEffect(() => {
-    return onMessageNew((payload) => {
-      if (!prefsRef.current.chats) return
-      if (payload.message.direction !== 'inbound') return
-      if (isViewingConversation(pathnameRef.current, payload.conversationId)) return
-
-      void showStoreAlert({
-        title: 'WhatsApp',
-        body: `${payload.message.from_number}: ${payload.message.text_body ?? '[message]'}`,
-        data: {
-          type: 'chat',
-          channel: 'whatsapp',
-          conversationId: payload.conversationId,
-        },
-      })
-    })
-  }, [onMessageNew])
-
-  useEffect(() => {
-    return onInstagramMessageNew((payload) => {
-      if (!prefsRef.current.chats) return
-      if (payload.message.direction !== 'inbound') return
-      if (isViewingConversation(pathnameRef.current, payload.conversationId)) return
-
-      void showStoreAlert({
-        title: 'Instagram',
-        body: payload.message.text_body ?? 'New message',
-        data: {
-          type: 'chat',
-          channel: 'instagram',
-          conversationId: payload.conversationId,
-        },
-      })
-    })
-  }, [onInstagramMessageNew])
-
-  useEffect(() => {
-    return onOrderNew((payload: SocketOrderNewPayload) => {
-      const source = payload.order.source
-      if (source === 'storefront') {
-        if (!prefsRef.current.online_orders) return
-      } else if (source === 'offline') {
-        if (!prefsRef.current.pos_orders) return
-      } else {
-        return
-      }
-
-      const label = source === 'storefront' ? 'New online order' : 'POS order'
-      const total = `${payload.order.currency} ${Number(payload.order.total).toFixed(2)}`
-
-      void showStoreAlert({
-        title: payload.order.store_slug,
-        body: `${label} · ${payload.order.order_number} · ${total}`,
-        data: {
-          type: 'order',
-          orderId: payload.order.id,
-          orderNumber: payload.order.order_number,
-          source: payload.order.source,
-        },
-      })
-    })
-  }, [onOrderNew])
 
   const value = useMemo(
     () => ({

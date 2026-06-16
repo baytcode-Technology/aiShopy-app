@@ -1,4 +1,5 @@
 import { CreateOrderModal } from "@/components/store/CreateOrderModal";
+import { OrderActiveFilterChips } from "@/components/store/OrderActiveFilterChips";
 import { OrderCard } from "@/components/store/OrderCard";
 import { OrderFilterModal } from "@/components/store/OrderFilterModal";
 import { OrderSearchBar } from "@/components/store/order-create/OrderSearchBar";
@@ -14,7 +15,9 @@ import { filterOrdersList } from "@src/lib/filter-orders";
 import {
   EMPTY_ORDER_FILTERS,
   hasActiveOrderFilters,
+  removeOrderFilterChip,
   type OrderFilters,
+  type OrderStatusField,
 } from "@src/lib/order-status";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
@@ -58,6 +61,12 @@ export default function OrdersScreen() {
 
   const filtersActive = hasActiveOrderFilters(filters);
 
+  const clearAllFilters = () => setFilters(EMPTY_ORDER_FILTERS);
+
+  const removeFilter = (field: OrderStatusField, value: string) => {
+    setFilters((prev) => removeOrderFilterChip(prev, field, value));
+  };
+
   return (
     <Screen>
       <ScreenHeader
@@ -67,7 +76,7 @@ export default function OrdersScreen() {
         subtitle="Manage customer orders & COD"
       />
       <ScreenBody className="flex-1">
-        <View className="flex-row items-center gap-2.5 px-4 py-2">
+        <View className="flex-row items-start gap-2.5 px-4 py-2">
           <View className="flex-1">
             <OrderSearchBar
               value={searchQuery}
@@ -75,23 +84,31 @@ export default function OrdersScreen() {
               placeholder="Search by customer name or phone"
             />
           </View>
-          <Pressable
-            onPress={() => setFilterOpen(true)}
-            className={`w-12 h-12 rounded-2xl border items-center justify-center active:opacity-85 ${
-              filtersActive
-                ? "border-ink bg-gray-100"
-                : "border-gray-200 bg-gray-50"
-            }`}
-          >
-            <FontAwesome
-              name="sliders"
-              size={18}
-              color={
-                filtersActive ? Colors.brand.primary : Colors.text.secondary
-              }
-            />
-          </Pressable>
+          <View className="items-center gap-1">
+            <Pressable
+              onPress={() => setFilterOpen(true)}
+              className={`w-12 h-12 rounded-2xl border items-center justify-center active:opacity-85 ${
+                filtersActive
+                  ? "border-ink bg-gray-100"
+                  : "border-gray-200 bg-gray-50"
+              }`}
+            >
+              <FontAwesome
+                name="sliders"
+                size={18}
+                color={
+                  filtersActive ? Colors.brand.primary : Colors.text.secondary
+                }
+              />
+            </Pressable>
+          </View>
         </View>
+
+        <OrderActiveFilterChips
+          filters={filters}
+          onRemove={removeFilter}
+          onClearAll={clearAllFilters}
+        />
 
         {loading ? (
           <View className="px-4">

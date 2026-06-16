@@ -15,7 +15,8 @@ import { useStore } from "@src/contexts/store-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, type Href } from "expo-router";
+import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -67,6 +68,11 @@ export default function ChatDetailScreen() {
 
   const conversationId = typeof id === "string" ? id : "";
   const customerPhone = typeof phone === "string" ? phone : "";
+  const chatsListHref = "/(store)/chats" as Href;
+
+  useNavigateBackTo(chatsListHref);
+
+  const goBackToChats = () => router.navigate(chatsListHref);
   const channel: ChatChannel =
     channelParam === "instagram" ? "instagram" : "whatsapp";
   const title = useMemo(() => {
@@ -175,7 +181,7 @@ export default function ChatDetailScreen() {
         <Text className="text-center mt-10 text-ink font-semibold">
           Conversation not found
         </Text>
-        <Pressable className="mt-4" onPress={() => router.back()}>
+        <Pressable className="mt-4" onPress={goBackToChats}>
           <LinkText>Go back</LinkText>
         </Pressable>
       </SafeAreaView>
@@ -245,7 +251,7 @@ export default function ChatDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
       <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
-        <Pressable className="p-1" onPress={() => router.back()} hitSlop={12}>
+        <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
           <FontAwesome
             name="chevron-left"
             size={18}

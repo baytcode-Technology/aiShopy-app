@@ -4,17 +4,19 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { Platform } from 'react-native'
-import { router } from 'expo-router'
+import * as Notifications from 'expo-notifications'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
 import {
   fetchNotificationPreferences,
   registerPushToken,
 } from '@src/api/notification-preferences'
+import { navigateFromNotificationData } from '@src/lib/notification-navigation'
 import {
   ALERTS_CHANNEL_ID,
   addNotificationResponseListener,
@@ -41,6 +43,7 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
   const { isAuthenticated } = useAuth()
   const { store } = useStore()
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_PREFS)
+  const initialNotificationHandled = useRef(false)
 
   const refreshPreferences = useCallback(async () => {
     if (!store?.id) return
@@ -79,30 +82,26 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
   }, [isAuthenticated, store?.id])
 
   useEffect(() => {
-    return addNotificationResponseListener((data) => {
-      const type = typeof data.type === 'string' ? data.type : ''
-      if (type === 'chat') {
-        const conversationId =
-          typeof data.conversationId === 'string' ? data.conversationId : null
-        const channel = typeof data.channel === 'string' ? data.channel : 'whatsapp'
-        if (conversationId) {
-          router.push(`/(store)/chats/${conversationId}?channel=${channel}` as never)
-        } else {
-          router.push('/(store)/chats' as never)
-        }
-        return
-      }
+    if (!isAuthenticated || !store?.id) return
 
-      if (type === 'order') {
-        const orderId = typeof data.orderId === 'string' ? data.orderId : null
-        if (orderId) {
-          router.push(`/(store)/orders/${orderId}` as never)
-        } else {
-          router.push('/(store)/orders' as never)
-        }
-      }
+    return addNotificationResponseListener((data) => {
+      navigateFromNotificationData(data)
     })
-  }, [])
+  }, [isAuthenticated, store?.id])
+
+  useEffect(() => {
+    if (!isAuthenticated || !store?.id || initialNotificationHandled.current) return
+
+    void (async () => {
+      const response = await Notifications.getLastNotificationResponseAsync()
+      initialNotificationHandled.current = true
+
+      const data = response?.notification.request.content.data
+      if (data && typeof data === 'object') {
+        navigateFromNotificationData(data as Record<string, unknown>)
+      }
+    })()
+  }, [isAuthenticated, store?.id])
 
   const value = useMemo(
     () => ({

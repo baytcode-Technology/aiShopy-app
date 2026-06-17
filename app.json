@@ -20,6 +20,7 @@
     "android": {
       "label": "AiShopy",
       "package": "com.aishopy.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"
@@ -28,7 +29,8 @@
       "predictiveBackGestureEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -51,6 +53,13 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/app_logo.jpg",
+          "color": "#0a0a0b"
+        }
       ]
     ],
     "experiments": {
@@ -62,6 +71,6 @@
         "projectId": "005f6373-309d-4dfa-bf83-aac91cb2205b"
       }
     },
-    "owner": "muhammed_nuaim"
+    "owner": "BaytCode"
   }
 }

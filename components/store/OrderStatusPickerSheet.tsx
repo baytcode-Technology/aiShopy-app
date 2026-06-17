@@ -4,6 +4,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import {
   changeStatusSheetTitle,
   formatOrderStatusLabel,
+  getOrderStatusBadgeColors,
   statusOptionsForField,
   type OrderStatusField,
 } from '@src/lib/order-status'
@@ -60,19 +61,35 @@ export function OrderStatusPickerSheet({
 
           {options.map((option) => {
             const active = option === currentValue
+            const colors = getOrderStatusBadgeColors(option)
             return (
               <Pressable
                 key={option}
                 onPress={() => onSelect(option)}
-                className="py-3.5 active:opacity-80"
+                className="py-2.5 active:opacity-80"
               >
-                <Text
-                  className={`text-[16px] font-medium ${
-                    active ? 'text-ink font-bold' : 'text-ink'
-                  }`}
-                >
-                  {formatOrderStatusLabel(option)}
-                </Text>
+                <View className="flex-row items-center justify-between gap-3">
+                  <View
+                    className="px-3 py-1.5 rounded-full border"
+                    style={{
+                      backgroundColor: colors.background,
+                      borderColor: active ? colors.text : colors.border,
+                      borderWidth: active ? 2 : 1,
+                    }}
+                  >
+                    <Text
+                      className="text-[14px] font-semibold"
+                      style={{ color: colors.text }}
+                    >
+                      {formatOrderStatusLabel(option)}
+                    </Text>
+                  </View>
+                  {active ? (
+                    <FontAwesome name="check" size={16} color={colors.text} />
+                  ) : (
+                    <View className="w-4" />
+                  )}
+                </View>
               </Pressable>
             )
           })}

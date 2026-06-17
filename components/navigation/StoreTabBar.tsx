@@ -2,6 +2,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { UnreadCountBadge } from '@/components/ui/UnreadCountBadge'
+import { useStoreUnread } from '@src/contexts/store-unread-context'
 import { cn } from '@src/lib/cn'
 import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
@@ -28,6 +30,12 @@ const TAB_PILL_RADIUS = 18
 export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets()
   const bottom = Math.max(insets.bottom, 10)
+  const { ordersUnreadCount, chatsUnreadCount } = useStoreUnread()
+
+  const tabBadgeCount: Record<string, number> = {
+    orders: ordersUnreadCount,
+    chats: chatsUnreadCount,
+  }
 
   return (
     <View className="px-5 pt-2" style={{ paddingBottom: bottom }}>
@@ -65,6 +73,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
             }
 
             const iconName = icons[route.name] ?? 'circle'
+            const badgeCount = tabBadgeCount[route.name] ?? 0
 
             return (
               <Pressable
@@ -84,11 +93,18 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
                       pressed && !focused && styles.tabPillPressed,
                     ]}
                   >
-                    <FontAwesome
-                      name={iconName}
-                      size={20}
-                      color={focused ? Colors.brand.primary : Colors.text.muted}
-                    />
+                    <View style={styles.iconWrap}>
+                      <FontAwesome
+                        name={iconName}
+                        size={20}
+                        color={focused ? Colors.brand.primary : Colors.text.muted}
+                      />
+                      {badgeCount > 0 ? (
+                        <View style={styles.tabBadge}>
+                          <UnreadCountBadge count={badgeCount} />
+                        </View>
+                      ) : null}
+                    </View>
                     <Text
                       className={cn(
                         'text-[10px] font-bold mt-1 tracking-wide',
@@ -130,5 +146,17 @@ const styles = StyleSheet.create({
   },
   tabPillPressed: {
     opacity: 0.8,
+  },
+  iconWrap: {
+    position: 'relative',
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
   },
 })

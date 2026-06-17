@@ -21,7 +21,7 @@ export function PaymentMethodConfigLayout({ title, subtitle, children, footer }:
       <ScreenBody className="flex-1">
         <ScrollView
           className="flex-1"
-          contentContainerClassName="px-5 pt-2 pb-6 gap-4"
+          contentContainerClassName="px-5 pt-2 pb-6 gap-4 grow"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >

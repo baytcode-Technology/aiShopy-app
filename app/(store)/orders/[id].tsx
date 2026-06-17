@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, View } from 'react-native'
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerSheet'
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
@@ -11,6 +11,8 @@ import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
 import { useStore } from '@src/contexts/store-context'
+import { useStoreUnread } from '@src/contexts/store-unread-context'
+import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
 import type { OrderStatusField } from '@src/lib/order-status'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Order } from '@src/types/order'
@@ -21,6 +23,10 @@ export default function OrderDetailScreen() {
   const id = Array.isArray(idParam) ? idParam[0] : idParam
   const router = useRouter()
   const { store } = useStore()
+  const { markOrderViewed } = useStoreUnread()
+  const ordersListHref = '/(store)/orders' as Href
+
+  useNavigateBackTo(ordersListHref)
 
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,6 +50,13 @@ export default function OrderDetailScreen() {
     useCallback(() => {
       load()
     }, [load])
+  )
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return
+      void markOrderViewed(id)
+    }, [id, markOrderViewed])
   )
 
   const confirmPaymentReceived = async () => {
@@ -111,7 +124,7 @@ export default function OrderDetailScreen() {
     <Screen variant="shell" edges={['top']}>
       <DetailScreenHeader
         title={order ? `Order ${order.order_number}` : 'Order'}
-        onBack={() => router.back()}
+        onBack={() => router.navigate(ordersListHref)}
       />
 
       {loading ? (

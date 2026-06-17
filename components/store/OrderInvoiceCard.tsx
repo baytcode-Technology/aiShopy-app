@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { IconButton } from '@/components/ui/IconButton'
 import { Caption, Muted } from '@/components/ui/Typography'
+import { OrderInvoiceItemsTable } from '@/components/store/OrderInvoiceItemsTable'
 import {
   countOrderItems,
   formatOrderInvoiceDate,
@@ -10,7 +11,6 @@ import {
   formatStorefrontHost,
   formatStoreWhatsApp,
   getOrderChannelLabel,
-  getOrderItemLabel,
   hasShippingAddress,
   isPosOrder,
 } from '@src/lib/order-invoice'
@@ -151,19 +151,7 @@ export function OrderInvoiceCard({ order, store }: Props) {
 
       <View>
         <Text className="text-[15px] font-bold text-ink mb-2">Items</Text>
-        {items.map((item) => (
-          <View
-            key={item.id}
-            className="flex-row items-start justify-between py-2 border-b border-gray-100"
-          >
-            <Text className="flex-1 text-[14px] font-semibold text-ink pr-3" numberOfLines={3}>
-              {item.quantity}× {getOrderItemLabel(item)}
-            </Text>
-            <Text className="text-[14px] font-semibold text-ink">
-              {formatMoney(item.total_price, currency)}
-            </Text>
-          </View>
-        ))}
+        <OrderInvoiceItemsTable items={items} currency={currency} />
       </View>
 
       <View className="gap-0.5">

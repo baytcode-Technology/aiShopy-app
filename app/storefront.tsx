@@ -1,35 +1,15 @@
 import { useCallback } from 'react'
-import { Image, Text, View } from 'react-native'
+import { View } from 'react-native'
 import { router, useFocusEffect } from 'expo-router'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Caption, Heading, Muted } from '@/components/ui/Typography'
+import { StoreAvatar } from '@/components/store/StoreAvatar'
 import { StorefrontUrlActions } from '@/components/store/StorefrontUrlActions'
 import { env } from '@src/config/env'
 import { useStore } from '@src/contexts/store-context'
 import { shadows } from '@src/lib/shadows'
 import { buildSubdomainUrl } from '@src/lib/storefront'
-import type { Store } from '@src/types/store'
-
-function StoreAvatar({ store }: { store: Store | null }) {
-  const letter = store?.name?.slice(0, 1).toUpperCase() ?? 'S'
-
-  if (store?.logo_url) {
-    return (
-      <Image
-        source={{ uri: store.logo_url }}
-        className="w-16 h-16 rounded-2xl border border-gray-200 bg-gray-50"
-        resizeMode="cover"
-      />
-    )
-  }
-
-  return (
-    <View className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center">
-      <Text className="text-2xl font-extrabold text-ink">{letter}</Text>
-    </View>
-  )
-}
 
 export default function StorefrontScreen() {
   const { store, subdomainUrl, refreshStore } = useStore()
@@ -54,7 +34,7 @@ export default function StorefrontScreen() {
         onBack={() => router.back()}
         showSettings={false}
       />
-      <ScreenBody className="px-5 pt-2">
+      <ScreenScrollBody>
         <Muted className="text-[14px] leading-5 mb-4">
           This is the store your customers visit online. Share the link on
           WhatsApp, Instagram, or anywhere you sell.
@@ -93,7 +73,7 @@ export default function StorefrontScreen() {
             )}
           </View>
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

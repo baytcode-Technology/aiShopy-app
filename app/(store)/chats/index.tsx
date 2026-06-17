@@ -9,11 +9,12 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { fetchAllChats } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatListItem } from "@src/types/chat";
-import { router, type Href } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
 
 function initialsFromLabel(label: string, fallback: string) {
@@ -89,8 +90,14 @@ function sortConversations(items: ChatListItem[]): ChatListItem[] {
   });
 }
 
+type LoadChatsOptions = {
+  refresh?: boolean;
+  silent?: boolean;
+};
+
 export default function MessagesListScreen() {
   const { store } = useStore();
+  const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();
   const {
     onConversationUpdated,
     onMessageNew,
@@ -101,20 +108,28 @@ export default function MessagesListScreen() {
   const [items, setItems] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const itemsLengthRef = useRef(0);
 
   const loadChats = useCallback(
-    async (refresh = false) => {
+    async (options?: boolean | LoadChatsOptions) => {
       if (!store?.id) return;
+
+      const opts: LoadChatsOptions =
+        typeof options === "boolean" ? { refresh: options } : (options ?? {});
+      const { refresh = false, silent = false } = opts;
+
       if (refresh) setIsRefreshing(true);
-      else setIsLoading(true);
+      else if (!silent) setIsLoading(true);
 
       try {
         const { whatsapp, instagram } = await fetchAllChats(store.id);
-        const merged = [
+        const merged = sortConversations([
           ...whatsapp.map(mapWhatsAppConversation),
           ...instagram.map(mapInstagramConversation),
-        ];
-        setItems(sortConversations(merged));
+        ]).map((item) =>
+          isActiveChat(item.id) ? { ...item, unread: 0 } : item,
+        );
+        setItems(merged);
       } catch (e: unknown) {
         showError(
           "Failed to load chats",
@@ -125,17 +140,36 @@ export default function MessagesListScreen() {
         setIsRefreshing(false);
       }
     },
-    [store?.id],
+    [store?.id, isActiveChat],
   );
 
   useEffect(() => {
-    void loadChats();
-  }, [loadChats]);
+    itemsLengthRef.current = items.length;
+  }, [items.length]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadChats({ silent: itemsLengthRef.current > 0 });
+    }, [loadChats]),
+  );
+
+  useEffect(() => {
+    syncChatsUnread(items);
+  }, [items, syncChatsUnread]);
+
+  useEffect(() => {
+    return onChatsInvalidate(() => {
+      void loadChats({ silent: true });
+    });
+  }, [onChatsInvalidate, loadChats]);
 
   useEffect(() => {
     const unsubWaConversation = onConversationUpdated((payload) => {
       setItems((prev) => {
         const next = mapWhatsAppConversation(payload.conversation);
+        if (isActiveChat(next.id)) {
+          next.unread = 0;
+        }
         const without = prev.filter((item) => item.id !== next.id);
         return sortConversations([next, ...without]);
       });
@@ -147,21 +181,23 @@ export default function MessagesListScreen() {
           (item) => item.id === payload.conversationId,
         );
         if (!existing) {
-          void loadChats(true);
+          void loadChats({ silent: true });
           return prev;
         }
 
         const sortAt = payload.message.timestamp;
         const time = formatTime(sortAt);
+        const isInbound = payload.message.direction === "inbound";
         const updated: ChatListItem = {
           ...existing,
           subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
           time,
           sortAt,
-          unread:
-            payload.message.direction === "inbound"
-              ? existing.unread + 1
-              : existing.unread,
+          unread: isInbound
+            ? isActiveChat(payload.conversationId)
+              ? 0
+              : existing.unread + 1
+            : existing.unread,
         };
 
         return sortConversations([
@@ -174,6 +210,9 @@ export default function MessagesListScreen() {
     const unsubIgConversation = onInstagramConversationUpdated((payload) => {
       setItems((prev) => {
         const next = mapInstagramConversation(payload.conversation);
+        if (isActiveChat(next.id)) {
+          next.unread = 0;
+        }
         const without = prev.filter((item) => item.id !== next.id);
         return sortConversations([next, ...without]);
       });
@@ -185,21 +224,23 @@ export default function MessagesListScreen() {
           (item) => item.id === payload.conversationId,
         );
         if (!existing) {
-          void loadChats(true);
+          void loadChats({ silent: true });
           return prev;
         }
 
         const sortAt = payload.message.timestamp;
         const time = formatTime(sortAt);
+        const isInbound = payload.message.direction === "inbound";
         const updated: ChatListItem = {
           ...existing,
           subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
           time,
           sortAt,
-          unread:
-            payload.message.direction === "inbound"
-              ? existing.unread + 1
-              : existing.unread,
+          unread: isInbound
+            ? isActiveChat(payload.conversationId)
+              ? 0
+              : existing.unread + 1
+            : existing.unread,
         };
 
         return sortConversations([
@@ -221,6 +262,7 @@ export default function MessagesListScreen() {
     onInstagramConversationUpdated,
     onInstagramMessageNew,
     loadChats,
+    isActiveChat,
   ]);
 
   const conversations = useMemo(() => {
@@ -255,7 +297,7 @@ export default function MessagesListScreen() {
         right={
           <AppPressable
             hitSlop={12}
-            onPress={() => void loadChats(true)}
+            onPress={() => void loadChats({ refresh: true })}
             accessibilityLabel="Refresh conversations"
             containerClassName="w-10 h-10 rounded-full border border-gray-200 bg-surface items-center justify-center"
           >
@@ -282,7 +324,7 @@ export default function MessagesListScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={() => void loadChats(true)}
+              onRefresh={() => void loadChats({ refresh: true })}
             />
           }
           renderItem={({ item }) => (

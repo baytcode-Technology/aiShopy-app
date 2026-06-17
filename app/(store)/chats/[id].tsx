@@ -12,11 +12,13 @@ import {
 } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
+import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -54,6 +56,7 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
 
 export default function ChatDetailScreen() {
   const { store } = useStore();
+  const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
   const { id, phone, channel: channelParam } = useLocalSearchParams<{
     id: string;
@@ -64,9 +67,15 @@ export default function ChatDetailScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const conversationId = typeof id === "string" ? id : "";
   const customerPhone = typeof phone === "string" ? phone : "";
+  const chatsListHref = "/(store)/chats" as Href;
+
+  useNavigateBackTo(chatsListHref);
+
+  const goBackToChats = () => router.navigate(chatsListHref);
   const channel: ChatChannel =
     channelParam === "instagram" ? "instagram" : "whatsapp";
   const title = useMemo(() => {
@@ -76,40 +85,91 @@ export default function ChatDetailScreen() {
     return customerPhone || "Chat";
   }, [channel, customerPhone]);
 
-  const loadMessages = useCallback(async () => {
-    if (!store?.id || !conversationId) return;
-    setIsLoading(true);
-    try {
-      const res =
-        channel === "instagram"
-          ? await fetchInstagramMessages({
-              storeId: store.id,
-              conversationId,
-              limit: 50,
-            })
-          : await fetchChatMessages({
-              storeId: store.id,
-              conversationId,
-              limit: 50,
-            });
-      const mapped = res.data.messages
-        .slice()
-        .reverse()
-        .map((m) => mapApiMessageToChatMessage(m));
-      setMessages(mapped);
-    } catch (e: unknown) {
-      showError(
-        "Failed to load messages",
-        e instanceof Error ? e.message : "Unknown error",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [store?.id, conversationId, channel]);
+  const loadMessages = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!store?.id || !conversationId) return;
+      const silent = options?.silent ?? false;
+      if (!silent) setIsLoading(true);
+      try {
+        const res =
+          channel === "instagram"
+            ? await fetchInstagramMessages({
+                storeId: store.id,
+                conversationId,
+                limit: 50,
+              })
+            : await fetchChatMessages({
+                storeId: store.id,
+                conversationId,
+                limit: 50,
+              });
+        const mapped = res.data.messages
+          .slice()
+          .reverse()
+          .map((m) => mapApiMessageToChatMessage(m));
+        setMessages(mapped);
+      } catch (e: unknown) {
+        if (!silent) {
+          showError(
+            "Failed to load messages",
+            e instanceof Error ? e.message : "Unknown error",
+          );
+        }
+      } finally {
+        if (!silent) setIsLoading(false);
+      }
+    },
+    [store?.id, conversationId, channel],
+  );
 
   useEffect(() => {
     void loadMessages();
   }, [loadMessages]);
+
+  const markReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleMarkReadRef = useRef<() => void>(() => {});
+
+  const scheduleMarkRead = useCallback(() => {
+    if (markReadTimerRef.current) {
+      clearTimeout(markReadTimerRef.current);
+    }
+    markReadTimerRef.current = setTimeout(() => {
+      markReadTimerRef.current = null;
+      void markChatRead(conversationId, channel);
+    }, 500);
+  }, [conversationId, channel, markChatRead]);
+
+  scheduleMarkReadRef.current = scheduleMarkRead;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId) return;
+      setActiveChat({ conversationId, channel });
+      void markChatRead(conversationId, channel);
+      return () => {
+        setActiveChat(null);
+        if (markReadTimerRef.current) {
+          clearTimeout(markReadTimerRef.current);
+          markReadTimerRef.current = null;
+        }
+      };
+    }, [conversationId, channel, markChatRead, setActiveChat]),
+  );
+
+  useEffect(() => {
+    return onActiveChatMessage((id) => {
+      if (id === conversationId) {
+        void loadMessages({ silent: true });
+      }
+    });
+  }, [conversationId, onActiveChatMessage, loadMessages]);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    });
+  }, [messages.length]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -141,6 +201,9 @@ export default function ChatDetailScreen() {
         }
         return dedupeByIdAndMeta([...prev, incoming]);
       });
+      if (payload.message.direction === "inbound") {
+        scheduleMarkReadRef.current();
+      }
     };
 
     const unsubWa = onMessageNew(handleNew);
@@ -175,7 +238,7 @@ export default function ChatDetailScreen() {
         <Text className="text-center mt-10 text-ink font-semibold">
           Conversation not found
         </Text>
-        <Pressable className="mt-4" onPress={() => router.back()}>
+        <Pressable className="mt-4" onPress={goBackToChats}>
           <LinkText>Go back</LinkText>
         </Pressable>
       </SafeAreaView>
@@ -245,7 +308,7 @@ export default function ChatDetailScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
       <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
-        <Pressable className="p-1" onPress={() => router.back()} hitSlop={12}>
+        <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
           <FontAwesome
             name="chevron-left"
             size={18}
@@ -285,10 +348,14 @@ export default function ChatDetailScreen() {
         keyboardVerticalOffset={0}
       >
         <FlatList
+          ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => <MessageBubble message={item} />}
           contentContainerClassName="p-4 pb-2 flex-grow"
+          onContentSizeChange={() => {
+            listRef.current?.scrollToEnd({ animated: true });
+          }}
         />
 
         <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">

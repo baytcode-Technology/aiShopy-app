@@ -1,5 +1,6 @@
 import { EditStoreLogoModal } from "@/components/store/EditStoreLogoModal";
 import { EditStoreModal } from "@/components/store/EditStoreModal";
+import { StoreAvatar } from "@/components/store/StoreAvatar";
 import { StoreLogoEditLink } from "@/components/store/StoreLogoPicker";
 import { StorefrontUrlActions } from "@/components/store/StorefrontUrlActions";
 import { Button } from "@/components/ui/Button";
@@ -17,27 +18,7 @@ import Colors from "@src/theme/colors";
 import type { Store } from "@src/types/store";
 import { router, type Href } from "expo-router";
 import { useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
-
-function StoreAvatar({ store }: { store: Store | null }) {
-  const letter = store?.name?.slice(0, 1).toUpperCase() ?? "S";
-
-  if (store?.logo_url) {
-    return (
-      <Image
-        source={{ uri: store.logo_url }}
-        className="w-16 h-16 rounded-2xl border border-gray-200 bg-gray-50"
-        resizeMode="cover"
-      />
-    );
-  }
-
-  return (
-    <View className="w-16 h-16 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center">
-      <Text className="text-2xl font-extrabold text-ink">{letter}</Text>
-    </View>
-  );
-}
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -164,12 +145,7 @@ export default function SettingsScreen() {
               value="Orders, chats & alerts"
               icon="bell"
               showChevron
-              onPress={() =>
-                router.push({
-                  pathname: "/account-coming-soon",
-                  params: { id: "notifications" },
-                })
-              }
+              onPress={() => router.push("/notifications" as Href)}
             />
             <MenuRow
               label="Printer"

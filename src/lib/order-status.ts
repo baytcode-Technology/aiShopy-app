@@ -144,6 +144,45 @@ export function hasActiveOrderFilters(filters: OrderFilters): boolean {
   )
 }
 
+export type OrderFilterChip = {
+  field: OrderStatusField
+  value: string
+  label: string
+}
+
+const FILTER_CHIP_FIELDS: OrderStatusField[] = [
+  'order_status',
+  'payment_status',
+  'fulfillment_status',
+]
+
+export function getOrderFilterChips(filters: OrderFilters): OrderFilterChip[] {
+  const chips: OrderFilterChip[] = []
+
+  for (const field of FILTER_CHIP_FIELDS) {
+    for (const value of filters[field]) {
+      chips.push({
+        field,
+        value,
+        label: `${statusFieldTitle(field)}: ${formatOrderStatusLabel(value)}`,
+      })
+    }
+  }
+
+  return chips
+}
+
+export function removeOrderFilterChip(
+  filters: OrderFilters,
+  field: OrderStatusField,
+  value: string
+): OrderFilters {
+  return {
+    ...filters,
+    [field]: filters[field].filter((item) => item !== value),
+  }
+}
+
 export function formatOrderListDate(iso: string): string {
   const d = new Date(iso)
   const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })

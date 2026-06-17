@@ -49,4 +49,12 @@ export const toastConfig = {
       props={props}
     />
   ),
+  alert: (props: BaseToastProps) => (
+    <ToastCard
+      borderClass="border-l-ink border-gray-200"
+      bgClass="bg-surface"
+      titleClass="text-ink"
+      props={props}
+    />
+  ),
 }

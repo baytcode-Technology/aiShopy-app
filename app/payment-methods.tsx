@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 import { router, useFocusEffect, type Href } from 'expo-router'
 import { MenuRow } from '@/components/ui/MenuRow'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
+import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Muted } from '@/components/ui/Typography'
 import { fetchPaymentConfig } from '@src/api/payment-config'
@@ -40,7 +40,7 @@ export default function PaymentMethodsScreen() {
         subtitle="Checkout & payouts"
         onBack={() => router.back()}
       />
-      <ScreenBody className="px-5 pt-2">
+      <ScreenScrollBody>
         <Muted className="text-[14px] leading-5 mb-4">
           Choose how customers pay at checkout. Connect and manage each method below.
         </Muted>
@@ -68,7 +68,7 @@ export default function PaymentMethodsScreen() {
             onPress={() => router.push('/payment-methods/upi' as Href)}
           />
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   )
 }

@@ -7,6 +7,8 @@ export const endpoints = {
   storesMe: "/api/stores/me",
   stores: "/api/stores",
   paymentConfig: "/api/stores/me/payment-config",
+  notificationPreferences: "/api/stores/me/notification-preferences",
+  pushToken: "/api/stores/me/push-token",
   products: "/api/products",
   categories: "/api/categories",
   industries: "/api/industries",

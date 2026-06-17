@@ -1,5 +1,5 @@
 import { MenuRow } from "@/components/ui/MenuRow";
-import { Screen, ScreenBody } from "@/components/ui/Screen";
+import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -27,7 +27,7 @@ export default function AdminDashboardScreen() {
         onBack={() => router.back()}
         showSettings
       />
-      <ScreenBody className="px-5 pt-2 gap-4">
+      <ScreenScrollBody contentContainerClassName="gap-4">
         <Muted className="text-[14px] leading-5 mb-1">
           Link your business accounts through Meta. Manage your store domain
           below.
@@ -139,7 +139,7 @@ export default function AdminDashboardScreen() {
             </View>
           ) : null}
         </View>
-      </ScreenBody>
+      </ScreenScrollBody>
     </Screen>
   );
 }

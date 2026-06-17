@@ -1,11 +1,7 @@
 import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import {
-  formatOrderStatusLabel,
-  statusFieldIcon,
-  statusFieldTitle,
-  type OrderStatusField,
-} from '@src/lib/order-status'
+import { OrderStatusBadge } from '@/components/store/OrderStatusBadge'
+import { statusFieldIcon, statusFieldTitle, type OrderStatusField } from '@src/lib/order-status'
 import Colors from '@src/theme/colors'
 
 type Props = {
@@ -28,9 +24,7 @@ export function OrderStatusRow({ field, value, onPress, disabled }: Props) {
       <Text className="flex-1 text-[15px] font-semibold text-ink ml-2">
         {statusFieldTitle(field)}
       </Text>
-      <Text className="text-[15px] font-semibold text-gray-500">
-        {formatOrderStatusLabel(value)}
-      </Text>
+      <OrderStatusBadge value={value} />
     </Pressable>
   )
 }

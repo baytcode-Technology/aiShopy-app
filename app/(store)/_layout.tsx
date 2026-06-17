@@ -1,7 +1,7 @@
 import { AppLogo } from "@/components/brand/AppLogo";
 import { StoreTabBar } from "@/components/navigation/StoreTabBar";
 import { useAuth } from "@src/contexts/auth-context";
-import { ChatSocketProvider } from "@src/contexts/chat-socket-context";
+import { StoreUnreadProvider } from "@src/contexts/store-unread-context";
 import { useStore } from "@src/contexts/store-context";
 import Colors from "@src/theme/colors";
 import { Redirect, Tabs } from "expo-router";
@@ -29,7 +29,7 @@ export default function StoreLayout() {
   }
 
   return (
-    <ChatSocketProvider>
+    <StoreUnreadProvider>
       <Tabs
         tabBar={(props) => <StoreTabBar {...props} />}
         screenOptions={{
@@ -41,6 +41,6 @@ export default function StoreLayout() {
         <Tabs.Screen name="orders" options={{ title: "Orders" }} />
         <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />
       </Tabs>
-    </ChatSocketProvider>
+    </StoreUnreadProvider>
   );
 }

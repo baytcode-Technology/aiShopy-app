@@ -39,15 +39,61 @@ export function getOrderChannelLabel(order: Pick<Order, 'source'>): string {
   return isPosOrder(order) ? 'POS' : 'Online'
 }
 
+export type OrderItemSnapshotProduct = {
+  name?: string
+  thumbnail_url?: string | null
+  images?: string[]
+}
+
+export type OrderItemSnapshotVariant = {
+  name?: string
+  image_url?: string | null
+}
+
+export type ParsedOrderItemSnapshot = {
+  productName: string
+  variantName: string | null
+  thumbnailUrl: string | null
+}
+
+function readSnapshotRecord(snapshot: Record<string, unknown>) {
+  const product = snapshot.product as OrderItemSnapshotProduct | undefined
+  const variant = snapshot.variant as OrderItemSnapshotVariant | null | undefined
+  const legacyProductName =
+    typeof snapshot.product_name === 'string' ? snapshot.product_name : undefined
+  const legacyVariantName =
+    typeof snapshot.variant_name === 'string' ? snapshot.variant_name : undefined
+
+  const productName = product?.name?.trim() || legacyProductName?.trim() || 'Product'
+  const variantName = variant?.name?.trim() || legacyVariantName?.trim() || null
+
+  const productImages = Array.isArray(product?.images)
+    ? product.images.filter((url): url is string => typeof url === 'string' && url.length > 0)
+    : []
+
+  const thumbnailUrl =
+    variant?.image_url?.trim() ||
+    product?.thumbnail_url?.trim() ||
+    productImages[0] ||
+    null
+
+  return { productName, variantName, thumbnailUrl }
+}
+
+export function parseOrderItemSnapshot(item: OrderItem): ParsedOrderItemSnapshot {
+  const snapshot = item.snapshot
+  if (!snapshot || typeof snapshot !== 'object') {
+    return { productName: 'Product', variantName: null, thumbnailUrl: null }
+  }
+  return readSnapshotRecord(snapshot as Record<string, unknown>)
+}
+
 export function getOrderItemLabel(item: OrderItem): string {
-  const snapshot = item.snapshot as {
-    product_name?: string
-    variant_name?: string
+  const { productName, variantName } = parseOrderItemSnapshot(item)
+  if (variantName) {
+    return `${productName} · ${variantName}`
   }
-  if (snapshot.variant_name) {
-    return `${snapshot.product_name ?? 'Product'} · ${snapshot.variant_name}`
-  }
-  return snapshot.product_name ?? 'Product'
+  return productName
 }
 
 export function countOrderItems(items: OrderItem[]): number {
@@ -86,15 +132,26 @@ type InvoiceContext = {
 }
 
 function invoiceItemsRows(order: Order, currency: string): string {
-  return (order.items ?? [])
+  const header = `<tr>
+    <th style="text-align:left;font-size:11px;color:#9ca3af;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid #e5e7eb">Product</th>
+    <th style="text-align:left;font-size:11px;color:#9ca3af;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid #e5e7eb">Variant</th>
+    <th style="text-align:center;font-size:11px;color:#9ca3af;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid #e5e7eb">Qty</th>
+    <th style="text-align:right;font-size:11px;color:#9ca3af;text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid #e5e7eb">Price</th>
+  </tr>`
+
+  const rows = (order.items ?? [])
     .map((item) => {
-      const label = getOrderItemLabel(item)
+      const { productName, variantName } = parseOrderItemSnapshot(item)
       return `<tr>
-        <td>${item.quantity}× ${escapeHtml(label)}</td>
+        <td>${escapeHtml(productName)}</td>
+        <td>${variantName ? escapeHtml(variantName) : ''}</td>
+        <td style="text-align:center">${item.quantity}</td>
         <td style="text-align:right">${escapeHtml(formatMoney(item.total_price, currency))}</td>
       </tr>`
     })
     .join('')
+
+  return header + rows
 }
 
 function invoiceTotalsRows(order: Order, currency: string): string {
@@ -168,7 +225,7 @@ export function buildInvoiceHtml({ order, store }: InvoiceContext): string {
     h2 { font-size: 16px; margin: 24px 0 8px; }
     h3 { font-size: 14px; margin: 20px 0 6px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    td { padding: 8px 0; vertical-align: top; border-bottom: 1px solid #eee; }
+    td, th { padding: 8px 4px; vertical-align: top; border-bottom: 1px solid #eee; }
     .totals td { border-bottom: none; }
     .totals tr:last-child td { border-top: 2px solid #111; padding-top: 12px; }
   </style>
@@ -207,10 +264,11 @@ export function buildInvoicePlainText({ order, store }: InvoiceContext): string 
     `Order date: ${formatOrderInvoiceDate(order.created_at)}`,
     '',
     'Items',
-    ...(order.items ?? []).map(
-      (item) =>
-        `${item.quantity}x ${getOrderItemLabel(item)} — ${formatMoney(item.total_price, currency)}`
-    ),
+    ...(order.items ?? []).map((item) => {
+      const { productName, variantName } = parseOrderItemSnapshot(item)
+      const variantPart = variantName ? ` (${variantName})` : ''
+      return `${item.quantity}x ${productName}${variantPart} — ${formatMoney(item.total_price, currency)}`
+    }),
     '',
     `Items total (${countOrderItems(order.items ?? [])}): ${formatMoney(order.subtotal, currency)}`,
     `Subtotal: ${formatMoney(order.subtotal, currency)}`,

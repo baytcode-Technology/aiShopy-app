@@ -18,6 +18,9 @@ import type { ChatChannel, ChatListItem } from '@src/types/chat'
 import type { Order } from '@src/types/order'
 
 const CHAT_REFRESH_DEBOUNCE_MS = 300
+const MARK_CHAT_READ_DEBOUNCE_MS = 500
+
+type ActiveChat = { conversationId: string; channel: ChatChannel }
 
 type StoreUnreadContextValue = {
   ordersUnreadCount: number
@@ -29,6 +32,9 @@ type StoreUnreadContextValue = {
   isOrderUnviewed: (order: Order) => boolean
   onOrderViewed: (handler: (orderId: string) => void) => () => void
   onChatsInvalidate: (handler: () => void) => () => void
+  onActiveChatMessage: (handler: (conversationId: string) => void) => () => void
+  setActiveChat: (chat: ActiveChat | null) => void
+  isActiveChat: (conversationId: string) => boolean
   markOrderViewed: (orderId: string) => Promise<void>
   markChatRead: (conversationId: string, channel: ChatChannel) => Promise<void>
 }
@@ -53,8 +59,11 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   const [viewedOrderIds, setViewedOrderIds] = useState<Set<string>>(() => new Set())
   const orderViewedListeners = useRef(new Set<(orderId: string) => void>())
   const chatsInvalidateListeners = useRef(new Set<() => void>())
+  const activeChatMessageListeners = useRef(new Set<(conversationId: string) => void>())
   const markingOrderIds = useRef(new Set<string>())
   const chatRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const markChatReadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const activeChatRef = useRef<ActiveChat | null>(null)
 
   const isOrderUnviewed = useCallback(
     (order: Order) => !order.merchant_viewed_at && !viewedOrderIds.has(order.id),
@@ -69,7 +78,10 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   )
 
   const syncChatsUnread = useCallback((items: ChatListItem[]) => {
-    setChatsUnreadCount(items.filter((c) => c.unread > 0).length)
+    const activeId = activeChatRef.current?.conversationId
+    setChatsUnreadCount(
+      items.filter((c) => c.unread > 0 && c.id !== activeId).length
+    )
   }, [])
 
   const refreshOrdersUnread = useCallback(async () => {
@@ -86,8 +98,9 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     if (!store?.id) return
     try {
       const { whatsapp, instagram } = await fetchAllChats(store.id)
+      const activeId = activeChatRef.current?.conversationId
       const count = [...whatsapp, ...instagram].filter(
-        (c) => (c.unread_count ?? 0) > 0
+        (c) => (c.unread_count ?? 0) > 0 && c.id !== activeId
       ).length
       setChatsUnreadCount(count)
     } catch {
@@ -95,20 +108,68 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [store?.id])
 
+  const setActiveChat = useCallback((chat: ActiveChat | null) => {
+    activeChatRef.current = chat
+  }, [])
+
+  const isActiveChat = useCallback((conversationId: string) => {
+    return activeChatRef.current?.conversationId === conversationId
+  }, [])
+
   const invalidateChats = useCallback(() => {
     chatsInvalidateListeners.current.forEach((handler) => handler())
   }, [])
 
-  const scheduleChatsRefresh = useCallback(() => {
-    invalidateChats()
-    if (chatRefreshTimer.current) {
-      clearTimeout(chatRefreshTimer.current)
-    }
-    chatRefreshTimer.current = setTimeout(() => {
-      chatRefreshTimer.current = null
-      void refreshChatsUnread()
-    }, CHAT_REFRESH_DEBOUNCE_MS)
-  }, [invalidateChats, refreshChatsUnread])
+  const notifyActiveChatMessage = useCallback((conversationId: string) => {
+    activeChatMessageListeners.current.forEach((handler) => handler(conversationId))
+  }, [])
+
+  const markChatRead = useCallback(
+    async (conversationId: string, channel: ChatChannel) => {
+      if (!store?.id) return
+      try {
+        await markChatReadApi({ storeId: store.id, conversationId, channel })
+        await refreshChatsUnread()
+      } catch {
+        // Socket update may still clear row unread.
+      }
+    },
+    [store?.id, refreshChatsUnread]
+  )
+
+  const scheduleMarkChatRead = useCallback(
+    (conversationId: string, channel: ChatChannel) => {
+      if (markChatReadTimer.current) {
+        clearTimeout(markChatReadTimer.current)
+      }
+      markChatReadTimer.current = setTimeout(() => {
+        markChatReadTimer.current = null
+        void markChatRead(conversationId, channel)
+      }, MARK_CHAT_READ_DEBOUNCE_MS)
+    },
+    [markChatRead]
+  )
+
+  const scheduleChatsRefresh = useCallback(
+    (conversationId?: string) => {
+      const active = activeChatRef.current
+      if (conversationId && active?.conversationId === conversationId) {
+        notifyActiveChatMessage(conversationId)
+        scheduleMarkChatRead(conversationId, active.channel)
+        return
+      }
+
+      invalidateChats()
+      if (chatRefreshTimer.current) {
+        clearTimeout(chatRefreshTimer.current)
+      }
+      chatRefreshTimer.current = setTimeout(() => {
+        chatRefreshTimer.current = null
+        void refreshChatsUnread()
+      }, CHAT_REFRESH_DEBOUNCE_MS)
+    },
+    [invalidateChats, refreshChatsUnread, scheduleMarkChatRead, notifyActiveChatMessage]
+  )
 
   const onOrderViewed = useCallback((handler: (orderId: string) => void) => {
     orderViewedListeners.current.add(handler)
@@ -124,11 +185,19 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const onActiveChatMessage = useCallback((handler: (conversationId: string) => void) => {
+    activeChatMessageListeners.current.add(handler)
+    return () => {
+      activeChatMessageListeners.current.delete(handler)
+    }
+  }, [])
+
   useEffect(() => {
     if (!store?.id) {
       setOrdersUnreadCount(0)
       setChatsUnreadCount(0)
       setViewedOrderIds(new Set())
+      activeChatRef.current = null
       return
     }
     void refreshOrdersUnread()
@@ -143,17 +212,17 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   }, [onOrderNew])
 
   useEffect(() => {
-    const unsubWaMessage = onMessageNew(() => {
-      scheduleChatsRefresh()
+    const unsubWaMessage = onMessageNew((payload) => {
+      scheduleChatsRefresh(payload.conversationId)
     })
-    const unsubIgMessage = onInstagramMessageNew(() => {
-      scheduleChatsRefresh()
+    const unsubIgMessage = onInstagramMessageNew((payload) => {
+      scheduleChatsRefresh(payload.conversationId)
     })
-    const unsubWaConversation = onConversationUpdated(() => {
-      scheduleChatsRefresh()
+    const unsubWaConversation = onConversationUpdated((payload) => {
+      scheduleChatsRefresh(payload.conversation.id)
     })
-    const unsubIgConversation = onInstagramConversationUpdated(() => {
-      scheduleChatsRefresh()
+    const unsubIgConversation = onInstagramConversationUpdated((payload) => {
+      scheduleChatsRefresh(payload.conversation.id)
     })
 
     return () => {
@@ -175,7 +244,9 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
 
     return addNotificationReceivedListener((data) => {
       if (data.type === 'chat') {
-        scheduleChatsRefresh()
+        const conversationId =
+          typeof data.conversationId === 'string' ? data.conversationId : undefined
+        scheduleChatsRefresh(conversationId)
       }
     })
   }, [store?.id, scheduleChatsRefresh])
@@ -184,6 +255,9 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     return () => {
       if (chatRefreshTimer.current) {
         clearTimeout(chatRefreshTimer.current)
+      }
+      if (markChatReadTimer.current) {
+        clearTimeout(markChatReadTimer.current)
       }
     }
   }, [])
@@ -222,19 +296,6 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     [store?.id, viewedOrderIds]
   )
 
-  const markChatRead = useCallback(
-    async (conversationId: string, channel: ChatChannel) => {
-      if (!store?.id) return
-      try {
-        await markChatReadApi({ storeId: store.id, conversationId, channel })
-        await refreshChatsUnread()
-      } catch {
-        // Socket update may still clear row unread.
-      }
-    },
-    [store?.id, refreshChatsUnread]
-  )
-
   const value = useMemo(
     () => ({
       ordersUnreadCount,
@@ -246,6 +307,9 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
       isOrderUnviewed,
       onOrderViewed,
       onChatsInvalidate,
+      onActiveChatMessage,
+      setActiveChat,
+      isActiveChat,
       markOrderViewed,
       markChatRead,
     }),
@@ -259,6 +323,9 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
       isOrderUnviewed,
       onOrderViewed,
       onChatsInvalidate,
+      onActiveChatMessage,
+      setActiveChat,
+      isActiveChat,
       markOrderViewed,
       markChatRead,
     ]

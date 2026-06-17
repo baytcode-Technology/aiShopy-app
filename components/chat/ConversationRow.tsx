@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AppPressable } from '@/components/ui/AppPressable'
-import { Badge } from '@/components/ui/Badge'
+import { UnreadCountBadge } from '@/components/ui/UnreadCountBadge'
 import { Caption, Muted } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
 import type { ChatListItem } from '@src/types/chat'
@@ -42,7 +42,7 @@ export function ConversationRow({ conversation, onPress }: Props) {
             {conversation.subtitle}
           </Muted>
           {conversation.unread > 0 ? (
-            <Badge label={String(conversation.unread)} tone="active" className="min-w-[22px]" />
+            <UnreadCountBadge count={conversation.unread} />
           ) : null}
         </View>
       </View>

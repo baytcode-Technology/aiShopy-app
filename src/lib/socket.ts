@@ -84,6 +84,7 @@ export type SocketOrderNewPayload = {
     currency: string
     source: string
     store_slug: string
+    item_quantity?: number
   }
 }
 

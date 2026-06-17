@@ -12,10 +12,11 @@ import {
 } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
-import { router, useLocalSearchParams, type Href } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
 import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -55,6 +56,7 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
 
 export default function ChatDetailScreen() {
   const { store } = useStore();
+  const { markChatRead } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
   const { id, phone, channel: channelParam } = useLocalSearchParams<{
     id: string;
@@ -116,6 +118,13 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     void loadMessages();
   }, [loadMessages]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId) return;
+      void markChatRead(conversationId, channel);
+    }, [conversationId, channel, markChatRead])
+  );
 
   useEffect(() => {
     if (!conversationId) return;

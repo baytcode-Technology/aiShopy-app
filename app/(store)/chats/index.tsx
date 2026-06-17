@@ -9,10 +9,11 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { fetchAllChats } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatListItem } from "@src/types/chat";
-import { router, type Href } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
 
@@ -91,6 +92,7 @@ function sortConversations(items: ChatListItem[]): ChatListItem[] {
 
 export default function MessagesListScreen() {
   const { store } = useStore();
+  const { syncChatsUnread, onChatsInvalidate } = useStoreUnread();
   const {
     onConversationUpdated,
     onMessageNew,
@@ -128,9 +130,21 @@ export default function MessagesListScreen() {
     [store?.id],
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      void loadChats();
+    }, [loadChats]),
+  );
+
   useEffect(() => {
-    void loadChats();
-  }, [loadChats]);
+    syncChatsUnread(items);
+  }, [items, syncChatsUnread]);
+
+  useEffect(() => {
+    return onChatsInvalidate(() => {
+      void loadChats(true);
+    });
+  }, [onChatsInvalidate, loadChats]);
 
   useEffect(() => {
     const unsubWaConversation = onConversationUpdated((payload) => {

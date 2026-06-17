@@ -14,6 +14,7 @@ import Colors from '@src/theme/colors'
 import { router, useFocusEffect, type Href } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
+
 type Stats = {
   products: number
   categories: number
@@ -118,7 +119,8 @@ export default function DashboardScreen() {
             icon="plug"
             showChevron
             onPress={() => router.push('/admin-dashboard' as Href)}
-          />        </ScrollView>
+          />
+        </ScrollView>
       </ScreenBody>
     </Screen>
   )

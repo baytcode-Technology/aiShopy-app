@@ -71,6 +71,10 @@ export type Order = {
 
   notes: string | null
 
+  merchant_viewed_at?: string | null
+
+  item_quantity?: number
+
   created_at: string
 
   updated_at: string

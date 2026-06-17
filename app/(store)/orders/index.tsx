@@ -11,6 +11,7 @@ import { OrdersSkeletonList } from "@/components/ui/Skeleton";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { fetchOrders } from "@src/api/orders";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { filterOrdersList } from "@src/lib/filter-orders";
 import {
   EMPTY_ORDER_FILTERS,
@@ -23,11 +24,12 @@ import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { Order } from "@src/types/order";
 import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 
 export default function OrdersScreen() {
   const { store } = useStore();
+  const { syncOrdersUnread, onOrderViewed } = useStoreUnread();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -41,18 +43,33 @@ export default function OrdersScreen() {
     try {
       const res = await fetchOrders(store.id);
       setOrders(res.data.orders);
+      syncOrdersUnread(res.data.orders);
     } catch (e) {
       showError(e, "Could not load orders");
     } finally {
       setLoading(false);
     }
-  }, [store?.id]);
+  }, [store?.id, syncOrdersUnread]);
 
   useFocusEffect(
     useCallback(() => {
       loadOrders();
     }, [loadOrders]),
   );
+
+  useEffect(() => {
+    return onOrderViewed((orderId) => {
+      setOrders((prev) => {
+        const next = prev.map((o) =>
+          o.id === orderId
+            ? { ...o, merchant_viewed_at: o.merchant_viewed_at ?? new Date().toISOString() }
+            : o
+        );
+        syncOrdersUnread(next);
+        return next;
+      });
+    });
+  }, [onOrderViewed, syncOrdersUnread]);
 
   const filteredOrders = useMemo(
     () => filterOrdersList(orders, searchQuery, filters),

@@ -78,4 +78,14 @@ export async function createOrder(payload: CreateOrderPayload): Promise<CreateOr
 
 }
 
+export async function markOrderViewed(
+  storeId: string,
+  orderId: string
+): Promise<{ success: boolean; message: string }> {
+  const qs = new URLSearchParams({ store_id: storeId })
+  return authenticatedFetch(`${endpoints.orders}/${orderId}/viewed?${qs.toString()}`, {
+    method: 'PATCH',
+  })
+}
+
 

@@ -91,3 +91,15 @@ export function addNotificationResponseListener(
   })
   return () => sub.remove()
 }
+
+export function addNotificationReceivedListener(
+  handler: (data: Record<string, unknown>) => void
+): () => void {
+  const sub = Notifications.addNotificationReceivedListener((notification) => {
+    const data = notification.request.content.data
+    if (data && typeof data === 'object') {
+      handler(data as Record<string, unknown>)
+    }
+  })
+  return () => sub.remove()
+}

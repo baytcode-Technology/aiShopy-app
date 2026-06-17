@@ -183,6 +183,19 @@ export async function sendChatMessage(input: {
   })
 }
 
+export async function markChatRead(input: {
+  storeId: string
+  conversationId: string
+  channel: ChatChannel
+}): Promise<{ success: boolean; message: string }> {
+  const qs = new URLSearchParams({ store_id: input.storeId }).toString()
+  const base =
+    input.channel === 'instagram' ? endpoints.instagramChats : endpoints.whatsappChats
+  return authenticatedFetch(`${base}/${input.conversationId}/mark-read?${qs}`, {
+    method: 'POST',
+  })
+}
+
 export function mapApiMessageToChatMessage(m: ApiMessage) {
   const time = m.timestamp
     ? new Date(m.timestamp).toLocaleTimeString([], {

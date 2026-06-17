@@ -11,6 +11,7 @@ import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
 import { useStore } from '@src/contexts/store-context'
+import { useStoreUnread } from '@src/contexts/store-unread-context'
 import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
 import type { OrderStatusField } from '@src/lib/order-status'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -22,6 +23,7 @@ export default function OrderDetailScreen() {
   const id = Array.isArray(idParam) ? idParam[0] : idParam
   const router = useRouter()
   const { store } = useStore()
+  const { markOrderViewed } = useStoreUnread()
   const ordersListHref = '/(store)/orders' as Href
 
   useNavigateBackTo(ordersListHref)
@@ -48,6 +50,13 @@ export default function OrderDetailScreen() {
     useCallback(() => {
       load()
     }, [load])
+  )
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return
+      void markOrderViewed(id)
+    }, [id, markOrderViewed])
   )
 
   const confirmPaymentReceived = async () => {

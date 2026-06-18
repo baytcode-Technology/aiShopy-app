@@ -15,7 +15,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aishopy.app"
+      "bundleIdentifier": "com.aishopy.app",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "upi",
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "gpay",
+          "credpay",
+          "bhim"
+        ]
+      }
     },
     "android": {
       "label": "AiShopy",
@@ -31,7 +42,15 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
-      ]
+      ],
+      "manifest": {
+        "queries": [
+          { "intent": { "action": "VIEW", "data": [{ "scheme": "upi" }] } },
+          { "intent": { "action": "VIEW", "data": [{ "scheme": "tez" }] } },
+          { "intent": { "action": "VIEW", "data": [{ "scheme": "phonepe" }] } },
+          { "intent": { "action": "VIEW", "data": [{ "scheme": "paytmmp" }] } }
+        ]
+      }
     },
     "web": {
       "bundler": "metro",

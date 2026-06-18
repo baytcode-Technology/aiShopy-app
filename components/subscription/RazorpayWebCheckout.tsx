@@ -1,8 +1,15 @@
 import Colors from '@src/theme/colors'
 import type { SubscriptionCheckoutData } from '@src/api/subscriptions'
+import {
+  openExternalPaymentUrl,
+  shouldOpenExternally,
+} from '@src/lib/razorpay-webview-url'
 import { useMemo } from 'react'
-import { ActivityIndicator, Modal, Pressable, Text, View } from 'react-native'
-import { WebView, type WebViewMessageEvent } from 'react-native-webview'
+import { ActivityIndicator, Modal, Platform, Pressable, Text, View } from 'react-native'
+import {
+  WebView,
+  type WebViewMessageEvent,
+} from 'react-native-webview'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 
 export type RazorpayPaymentResult = {
@@ -20,6 +27,8 @@ type Props = {
   onSuccess: (payment: RazorpayPaymentResult) => void
   onDismiss: () => void
 }
+
+const CHECKOUT_BASE_URL = 'https://aishopy.io'
 
 function buildCheckoutHtml(input: {
   key: string
@@ -93,6 +102,12 @@ function buildCheckoutHtml(input: {
 </html>`
 }
 
+function handleExternalUrl(url: string | undefined) {
+  if (!shouldOpenExternally(url)) return false
+  void openExternalPaymentUrl(url!).catch(() => {})
+  return true
+}
+
 export function RazorpayWebCheckout({
   visible,
   checkout,
@@ -161,8 +176,18 @@ export function RazorpayWebCheckout({
 
         <WebView
           originWhitelist={['*']}
-          source={{ html }}
+          source={{ html, baseUrl: CHECKOUT_BASE_URL }}
           onMessage={handleMessage}
+          onShouldStartLoadWithRequest={(request) => !handleExternalUrl(request.url)}
+          onOpenWindow={(event) => {
+            handleExternalUrl(event.nativeEvent.targetUrl)
+          }}
+          onError={(event) => {
+            if (shouldOpenExternally(event.nativeEvent.url)) return
+          }}
+          onHttpError={(event) => {
+            if (shouldOpenExternally(event.nativeEvent.url)) return
+          }}
           startInLoadingState
           renderLoading={() => (
             <View className="flex-1 items-center justify-center">
@@ -171,7 +196,13 @@ export function RazorpayWebCheckout({
           )}
           javaScriptEnabled
           domStorageEnabled
-          setSupportMultipleWindows={false}
+          setSupportMultipleWindows
+          {...(Platform.OS === 'android'
+            ? {
+                mixedContentMode: 'always' as const,
+                thirdPartyCookiesEnabled: true,
+              }
+            : {})}
         />
       </View>
     </Modal>

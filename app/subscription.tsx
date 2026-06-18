@@ -3,7 +3,7 @@ import { RazorpayWebCheckout } from '@/components/subscription/RazorpayWebChecko
 import { Button } from '@/components/ui/Button'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { Muted } from '@/components/ui/Typography'
+import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import {
   createSubscriptionCheckout,
   verifySubscriptionPayment,
@@ -11,7 +11,7 @@ import {
 } from '@src/api/subscriptions'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { showError, showSuccess, showWarning } from '@src/lib/toast'
+import { showError, showWarning } from '@src/lib/toast'
 import {
   BUSINESS_FEATURES,
   ENTERPRISE_FEATURES,
@@ -23,9 +23,12 @@ import {
   hasPremiumAccess,
   isCurrentPlan,
 } from '@src/lib/subscription'
-import { router } from 'expo-router'
+import { shadows } from '@src/lib/shadows'
+import Colors from '@src/theme/colors'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { router, type Href } from 'expo-router'
 import { useState } from 'react'
-import { Alert, Linking, Platform } from 'react-native'
+import { Alert, Linking, Platform, Text, View } from 'react-native'
 
 const SUPPORT_EMAIL = 'support@aishopy.io'
 
@@ -35,9 +38,11 @@ export default function SubscriptionScreen() {
   const [subscribing, setSubscribing] = useState(false)
   const [checkoutSession, setCheckoutSession] = useState<SubscriptionCheckoutData | null>(null)
   const premium = hasPremiumAccess(store)
+  const currentPlan = getStorePlan(store)
   const businessPrice = getBusinessPriceLabel(store)
   const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at)
   const onBusinessPlan = isCurrentPlan(store, 'business')
+  const onEnterprisePlan = isCurrentPlan(store, 'enterprise')
 
   const handleSubscribe = async () => {
     if (Platform.OS === 'web') {
@@ -74,7 +79,7 @@ export default function SubscriptionScreen() {
 
       setCheckoutSession(null)
       await refreshStore()
-      showSuccess('Subscription activated', 'Your Business plan is now active.')
+      router.replace('/subscription-success' as Href)
     } catch (error) {
       showError(error, 'Payment received but activation failed. Contact support.')
     } finally {
@@ -100,49 +105,84 @@ export default function SubscriptionScreen() {
     <Screen>
       <ScreenHeader
         title="Subscription"
-        subtitle="Choose the plan that fits your store"
+        subtitle={premium ? 'Your active plan' : 'Choose the plan that fits your store'}
         onBack={() => router.back()}
         showSettings
       />
       <ScreenScrollBody contentContainerClassName="gap-5 pb-10">
-        {store ? (
+        {premium ? (
+          <View
+            className="rounded-[28px] border-2 border-brand-green bg-[#E8F8EC] px-6 py-5"
+            style={shadows.card}
+          >
+            <View className="flex-row items-start justify-between gap-3">
+              <View className="flex-1">
+                <Caption className="text-[10px] uppercase tracking-widest text-brand-green font-bold mb-2">
+                  Active plan
+                </Caption>
+                <Heading className="text-2xl tracking-tight text-ink">
+                  {getPlanLabel(currentPlan)}
+                </Heading>
+                {expiryLabel ? (
+                  <View className="flex-row items-center gap-2 mt-3">
+                    <FontAwesome name="calendar" size={14} color="#EF4444" />
+                    <Text className="text-[15px] font-semibold text-[#EF4444]">
+                      Valid until {expiryLabel}
+                    </Text>
+                  </View>
+                ) : null}
+                <Muted className="mt-2 text-[13px] leading-5">
+                  Your subscription stays active through the end of this date.
+                </Muted>
+              </View>
+              <View className="w-12 h-12 rounded-full bg-brand-green/15 items-center justify-center">
+                <FontAwesome name="check" size={18} color={Colors.brand.green} />
+              </View>
+            </View>
+          </View>
+        ) : store ? (
           <Muted className="text-[14px] leading-5">
             Current plan:{' '}
             <Muted className="font-semibold text-ink">
-              {getPlanLabel(getStorePlan(store))}
+              {getPlanLabel(currentPlan)}
             </Muted>
-            {premium && expiryLabel ? ` · Renews ${expiryLabel}` : null}
           </Muted>
         ) : null}
 
-        <PlanCard
-          emoji="🆓"
-          title="Starter"
-          price="₹0 / month"
-          features={STARTER_FEATURES}
-          isCurrent={isCurrentPlan(store, 'starter')}
-        />
+        {!premium ? (
+          <PlanCard
+            emoji="🆓"
+            title="Starter"
+            price="₹0 / month"
+            features={STARTER_FEATURES}
+            isCurrent={isCurrentPlan(store, 'starter')}
+          />
+        ) : null}
 
         <PlanCard
           emoji="🚀"
           title="Business"
           price={businessPrice}
-          subtitle="Everything in Starter +"
+          subtitle={premium ? undefined : 'Everything in Starter +'}
           features={BUSINESS_FEATURES}
-          highlight={!premium}
+          highlight={onBusinessPlan}
           isCurrent={onBusinessPlan}
           footer={
-            <>
-              {onBusinessPlan && expiryLabel ? (
-                <Muted className="text-[13px] mb-3">Active until {expiryLabel}</Muted>
-              ) : null}
+            onBusinessPlan ? (
               <Button
-                label={onBusinessPlan ? 'Renew plan' : 'Subscribe'}
+                label="Renew plan"
                 onPress={() => void handleSubscribe()}
                 loading={subscribing}
                 className="w-full"
               />
-            </>
+            ) : !premium ? (
+              <Button
+                label="Subscribe"
+                onPress={() => void handleSubscribe()}
+                loading={subscribing}
+                className="w-full"
+              />
+            ) : null
           }
         />
 
@@ -150,23 +190,19 @@ export default function SubscriptionScreen() {
           emoji="🏢"
           title="Enterprise"
           price="Let's Talk"
-          subtitle="Everything in Business +"
+          subtitle={premium ? undefined : 'Everything in Business +'}
           features={ENTERPRISE_FEATURES}
-          isCurrent={isCurrentPlan(store, 'enterprise')}
+          highlight={onEnterprisePlan}
+          isCurrent={onEnterprisePlan}
           footer={
-            <>
-              {isCurrentPlan(store, 'enterprise') && expiryLabel ? (
-                <Muted className="text-[13px] mb-3">Active until {expiryLabel}</Muted>
-              ) : null}
-              {!isCurrentPlan(store, 'enterprise') ? (
-                <Button
-                  label="Let's Talk"
-                  variant="outline"
-                  onPress={handleEnterpriseContact}
-                  className="w-full"
-                />
-              ) : null}
-            </>
+            !onEnterprisePlan ? (
+              <Button
+                label="Let's Talk"
+                variant="outline"
+                onPress={handleEnterpriseContact}
+                className="w-full"
+              />
+            ) : null
           }
         />
       </ScreenScrollBody>

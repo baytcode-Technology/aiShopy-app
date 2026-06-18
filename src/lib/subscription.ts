@@ -45,6 +45,26 @@ const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   enterprise: 'Enterprise',
 }
 
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})/
+
+export function normalizeSubscriptionDate(expiresAt: string): string {
+  const match = DATE_ONLY_RE.exec(expiresAt.trim())
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`
+  }
+
+  const date = new Date(expiresAt)
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function getSubscriptionExpiryEndMs(expiresAt: string): number {
+  const [year, month, day] = normalizeSubscriptionDate(expiresAt).split('-').map(Number)
+  return Date.UTC(year, month - 1, day, 23, 59, 59, 999)
+}
+
 export function isIndiaStore(store: Pick<Store, 'country'> | null | undefined): boolean {
   return store?.country === 'India'
 }
@@ -65,7 +85,7 @@ export function isPremiumPlan(plan: SubscriptionPlan): boolean {
 
 export function isSubscriptionExpired(expiresAt: string | null | undefined): boolean {
   if (!expiresAt) return false
-  return new Date(expiresAt).getTime() <= Date.now()
+  return Date.now() > getSubscriptionExpiryEndMs(expiresAt)
 }
 
 export function hasPremiumAccess(
@@ -96,7 +116,10 @@ export function isCurrentPlan(
 
 export function formatSubscriptionExpiry(expiresAt: string | null | undefined): string | null {
   if (!expiresAt) return null
-  return new Date(expiresAt).toLocaleDateString(undefined, {
+
+  const [year, month, day] = normalizeSubscriptionDate(expiresAt).split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

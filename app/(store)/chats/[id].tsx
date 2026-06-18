@@ -14,6 +14,7 @@ import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
+import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
 import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
@@ -78,6 +79,13 @@ export default function ChatDetailScreen() {
   const goBackToChats = () => router.navigate(chatsListHref);
   const channel: ChatChannel =
     channelParam === "instagram" ? "instagram" : "whatsapp";
+
+  useEffect(() => {
+    if (store && !hasPremiumAccess(store)) {
+      router.replace("/subscription" as Href);
+    }
+  }, [store]);
+
   const title = useMemo(() => {
     if (channel === "instagram" && customerPhone && !customerPhone.startsWith("@")) {
       return customerPhone.length > 12 ? `IG ${customerPhone.slice(0, 8)}…` : customerPhone;

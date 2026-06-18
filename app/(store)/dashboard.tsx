@@ -1,73 +1,78 @@
-import { StoreAvatar } from '@/components/store/StoreAvatar'
-import { MenuRow } from '@/components/ui/MenuRow'
-import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { Caption, Heading } from '@/components/ui/Typography'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { fetchCategories } from '@src/api/categories'
-import { fetchChats } from '@src/api/chats'
-import { fetchOrders } from '@src/api/orders'
-import { fetchProducts } from '@src/api/products'
-import { useStore } from '@src/contexts/store-context'
-import { shadows } from '@src/lib/shadows'
-import Colors from '@src/theme/colors'
-import { router, useFocusEffect, type Href } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { StoreAvatar } from "@/components/store/StoreAvatar";
+import { Screen, ScreenBody } from "@/components/ui/Screen";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { Caption, Heading } from "@/components/ui/Typography";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { fetchCategories } from "@src/api/categories";
+import { fetchChats } from "@src/api/chats";
+import { fetchOrders } from "@src/api/orders";
+import { fetchProducts } from "@src/api/products";
+import { useStore } from "@src/contexts/store-context";
+import { shadows } from "@src/lib/shadows";
+import Colors from "@src/theme/colors";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 type Stats = {
-  products: number
-  categories: number
-  orders: number
-  chats: number
-}
+  products: number;
+  categories: number;
+  orders: number;
+  chats: number;
+};
 
 export default function DashboardScreen() {
-  const { store } = useStore()
+  const { store } = useStore();
   const [stats, setStats] = useState<Stats>({
     products: 0,
     categories: 0,
     orders: 0,
     chats: 0,
-  })
-  const [loading, setLoading] = useState(true)
+  });
+  const [loading, setLoading] = useState(true);
 
   const loadStats = useCallback(async () => {
-    if (!store?.id) return
-    setLoading(true)
+    if (!store?.id) return;
+    setLoading(true);
     try {
-      const [productsRes, categoriesRes, ordersRes, chatsRes] = await Promise.all([
-        fetchProducts(store.id),
-        fetchCategories(store.id),
-        fetchOrders(store.id),
-        fetchChats(store.id),
-      ])
+      const [productsRes, categoriesRes, ordersRes, chatsRes] =
+        await Promise.all([
+          fetchProducts(store.id),
+          fetchCategories(store.id),
+          fetchOrders(store.id),
+          fetchChats(store.id),
+        ]);
       setStats({
         products: productsRes.data.products.length,
         categories: categoriesRes.data.categories.length,
         orders: ordersRes.data.orders.length,
         chats: chatsRes.data.chats.length,
-      })
+      });
     } catch {
       // Keep last known stats on refresh failure
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [store?.id])
+  }, [store?.id]);
 
   useFocusEffect(
     useCallback(() => {
-      void loadStats()
-    }, [loadStats])
-  )
+      void loadStats();
+    }, [loadStats]),
+  );
 
   const subtitle = loading
-    ? 'Loading overview…'
-    : `${stats.products} products · ${stats.orders} orders · ${stats.chats} chats`
+    ? "Loading overview…"
+    : `${stats.products} products · ${stats.orders} orders · ${stats.chats} chats`;
 
   return (
     <Screen>
-      <ScreenHeader showLogo variant="tab" title="Dashboard" subtitle={subtitle} />
+      <ScreenHeader
+        showLogo
+        variant="tab"
+        title="Dashboard"
+        subtitle={subtitle}
+      />
       <ScreenBody className="flex-1">
         <ScrollView
           className="flex-1"
@@ -81,7 +86,9 @@ export default function DashboardScreen() {
             <View className="flex-row items-center gap-4 mb-5">
               <StoreAvatar store={store} size="sm" />
               <View className="flex-1">
-                <Heading className="text-2xl tracking-tight">{store?.name ?? 'Your store'}</Heading>
+                <Heading className="text-2xl tracking-tight">
+                  {store?.name ?? "Your store"}
+                </Heading>
               </View>
             </View>
 
@@ -90,40 +97,34 @@ export default function DashboardScreen() {
                 label="Products"
                 value={stats.products}
                 icon="th-large"
-                onPress={() => router.push('/(store)/products' as Href)}
+                onPress={() => router.push("/(store)/products" as Href)}
               />
               <StatCard
                 label="Categories"
                 value={stats.categories}
                 icon="folder-open-o"
-                onPress={() => router.push('/(store)/products/categories' as Href)}
+                onPress={() =>
+                  router.push("/(store)/products/categories" as Href)
+                }
               />
               <StatCard
                 label="Orders"
                 value={stats.orders}
                 icon="shopping-bag"
-                onPress={() => router.push('/(store)/orders' as Href)}
+                onPress={() => router.push("/(store)/orders" as Href)}
               />
               <StatCard
                 label="Chats"
                 value={stats.chats}
                 icon="comments"
-                onPress={() => router.push('/(store)/chats' as Href)}
+                onPress={() => router.push("/(store)/chats" as Href)}
               />
             </View>
           </View>
-
-          <MenuRow
-            label="Admin Dashboard"
-            value="WhatsApp · Instagram · Chat Boat · Domain"
-            icon="plug"
-            showChevron
-            onPress={() => router.push('/admin-dashboard' as Href)}
-          />
         </ScrollView>
       </ScreenBody>
     </Screen>
-  )
+  );
 }
 
 function StatCard({
@@ -132,10 +133,10 @@ function StatCard({
   icon,
   onPress,
 }: {
-  label: string
-  value: number
-  icon: React.ComponentProps<typeof FontAwesome>['name']
-  onPress: () => void
+  label: string;
+  value: number;
+  icon: React.ComponentProps<typeof FontAwesome>["name"];
+  onPress: () => void;
 }) {
   return (
     <Pressable
@@ -148,5 +149,5 @@ function StatCard({
         {label}
       </Caption>
     </Pressable>
-  )
+  );
 }

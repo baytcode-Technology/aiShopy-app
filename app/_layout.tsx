@@ -74,6 +74,7 @@ export default function RootLayout() {
             <Stack.Screen name="payment-methods" />
             <Stack.Screen name="notifications" />
             <Stack.Screen name="account-coming-soon" />
+            <Stack.Screen name="subscription" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
           </Stack>

@@ -1,5 +1,5 @@
 import Toast from 'react-native-toast-message'
-import { getErrorMessage } from '@src/lib/api-error'
+import { getErrorMessage, isSubscriptionLimitError } from '@src/lib/api-error'
 
 export function showSuccess(message: string, subtitle?: string) {
   Toast.show({
@@ -12,16 +12,6 @@ export function showSuccess(message: string, subtitle?: string) {
   })
 }
 
-export function showError(error: unknown, fallback = 'Something went wrong') {
-  Toast.show({
-    type: 'error',
-    text1: 'Failed',
-    text2: getErrorMessage(error, fallback),
-    position: 'top',
-    visibilityTime: 4500,
-  })
-}
-
 export function showWarning(message: string, subtitle?: string) {
   Toast.show({
     type: 'error',
@@ -30,5 +20,26 @@ export function showWarning(message: string, subtitle?: string) {
     position: 'top',
     visibilityTime: 4500,
     topOffset: 56,
+  })
+}
+
+export function showSubscriptionLimitError() {
+  showWarning(
+    'You have exceeded your store limit',
+    'Upgrade your plan in Settings → Subscription'
+  )
+}
+
+export function showError(error: unknown, fallback = 'Something went wrong') {
+  if (isSubscriptionLimitError(error)) {
+    showSubscriptionLimitError()
+    return
+  }
+  Toast.show({
+    type: 'error',
+    text1: 'Failed',
+    text2: getErrorMessage(error, fallback),
+    position: 'top',
+    visibilityTime: 4500,
   })
 }

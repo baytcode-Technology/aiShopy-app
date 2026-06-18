@@ -1,0 +1,59 @@
+import { authenticatedFetch } from './client'
+import { endpoints } from './endpoints'
+
+export type SubscriptionCheckoutData = {
+  checkout_id: string
+  key_id: string
+  order_id: string
+  amount: number
+  currency: string
+  plan: 'business'
+  store_name: string
+}
+
+export type CreateSubscriptionCheckoutResponse = {
+  success: boolean
+  message: string
+  data: SubscriptionCheckoutData
+}
+
+export type VerifySubscriptionPaymentPayload = {
+  checkout_id: string
+  razorpay_order_id: string
+  razorpay_payment_id: string
+  razorpay_signature: string
+}
+
+export type VerifySubscriptionPaymentResponse = {
+  success: boolean
+  message: string
+  data: {
+    store: {
+      subscription_plan: string
+      subscription_expires_at: string | null
+    }
+    subscription_plan: string
+    subscription_expires_at: string | null
+  }
+}
+
+export async function createSubscriptionCheckout(): Promise<SubscriptionCheckoutData> {
+  const res = await authenticatedFetch<CreateSubscriptionCheckoutResponse>(
+    endpoints.subscriptionsCheckout,
+    { method: 'POST' }
+  )
+  return res.data
+}
+
+export async function verifySubscriptionPayment(
+  payload: VerifySubscriptionPaymentPayload
+): Promise<VerifySubscriptionPaymentResponse['data']> {
+  const res = await authenticatedFetch<VerifySubscriptionPaymentResponse>(
+    endpoints.subscriptionsVerify,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }
+  )
+  return res.data
+}

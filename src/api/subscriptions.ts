@@ -9,6 +9,20 @@ export type SubscriptionCheckoutData = {
   currency: string
   plan: 'business'
   store_name: string
+  is_trial: boolean
+  regular_amount: number
+}
+
+export type SubscriptionPricingData = {
+  trial_eligible: boolean
+  currency: 'INR' | 'USD'
+  charge_amount: number
+  charge_minor_units: number
+  regular_amount: number
+  regular_minor_units: number
+  is_trial: boolean
+  price_label: string
+  compare_at_label: string
 }
 
 export type CreateSubscriptionCheckoutResponse = {
@@ -35,6 +49,14 @@ export type VerifySubscriptionPaymentResponse = {
     subscription_plan: string
     subscription_expires_at: string | null
   }
+}
+
+export async function fetchSubscriptionPricing(): Promise<SubscriptionPricingData> {
+  const res = await authenticatedFetch<{
+    success: boolean
+    data: SubscriptionPricingData
+  }>(endpoints.subscriptionsPricing)
+  return res.data
 }
 
 export async function createSubscriptionCheckout(): Promise<SubscriptionCheckoutData> {

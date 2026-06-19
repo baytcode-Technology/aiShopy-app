@@ -6,8 +6,10 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import {
   createSubscriptionCheckout,
+  fetchSubscriptionPricing,
   verifySubscriptionPayment,
   type SubscriptionCheckoutData,
+  type SubscriptionPricingData,
 } from '@src/api/subscriptions'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
@@ -27,7 +29,7 @@ import { shadows } from '@src/lib/shadows'
 import Colors from '@src/theme/colors'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, type Href } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, Linking, Platform, Text, View } from 'react-native'
 
 const SUPPORT_EMAIL = 'support@aishopy.io'
@@ -36,13 +38,29 @@ export default function SubscriptionScreen() {
   const { user } = useAuth()
   const { store, refreshStore } = useStore()
   const [subscribing, setSubscribing] = useState(false)
+  const [pricing, setPricing] = useState<SubscriptionPricingData | null>(null)
   const [checkoutSession, setCheckoutSession] = useState<SubscriptionCheckoutData | null>(null)
   const premium = hasPremiumAccess(store)
   const currentPlan = getStorePlan(store)
-  const businessPrice = getBusinessPriceLabel(store)
+  const businessPrice = premium
+    ? getBusinessPriceLabel(store)
+    : (pricing?.price_label ?? getBusinessPriceLabel(store))
+  const businessCompareAtPrice =
+    !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
   const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at)
   const onBusinessPlan = isCurrentPlan(store, 'business')
   const onEnterprisePlan = isCurrentPlan(store, 'enterprise')
+
+  useEffect(() => {
+    if (premium) {
+      setPricing(null)
+      return
+    }
+
+    void fetchSubscriptionPricing()
+      .then(setPricing)
+      .catch(() => setPricing(null))
+  }, [premium, store?.id])
 
   const handleSubscribe = async () => {
     if (Platform.OS === 'web') {
@@ -100,6 +118,8 @@ export default function SubscriptionScreen() {
       )
     })
   }
+
+  const subscribeLabel = pricing?.trial_eligible ? 'Start trial' : 'Subscribe'
 
   return (
     <Screen>
@@ -163,9 +183,10 @@ export default function SubscriptionScreen() {
           emoji="🚀"
           title="Business"
           price={businessPrice}
+          compareAtPrice={businessCompareAtPrice}
           subtitle={premium ? undefined : 'Everything in Starter +'}
           features={BUSINESS_FEATURES}
-          highlight={onBusinessPlan}
+          highlight={onBusinessPlan || (!premium && pricing?.trial_eligible)}
           isCurrent={onBusinessPlan}
           footer={
             onBusinessPlan ? (
@@ -177,7 +198,7 @@ export default function SubscriptionScreen() {
               />
             ) : !premium ? (
               <Button
-                label="Subscribe"
+                label={subscribeLabel}
                 onPress={() => void handleSubscribe()}
                 loading={subscribing}
                 className="w-full"

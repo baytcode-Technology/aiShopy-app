@@ -11,6 +11,7 @@ type Props = {
   emoji: string
   title: string
   price: string
+  compareAtPrice?: string
   subtitle?: string
   features: readonly string[]
   isCurrent?: boolean
@@ -23,6 +24,7 @@ export function PlanCard({
   emoji,
   title,
   price,
+  compareAtPrice,
   subtitle,
   features,
   isCurrent = false,
@@ -45,6 +47,9 @@ export function PlanCard({
             <Text className="text-2xl mb-2">{emoji}</Text>
             <Heading className="text-xl tracking-tight">{title}</Heading>
             <Text className="text-2xl font-extrabold text-ink mt-2">{price}</Text>
+            {compareAtPrice ? (
+              <Text className="text-[15px] text-gray-400 line-through mt-1">{compareAtPrice}</Text>
+            ) : null}
             {subtitle ? (
               <Muted className="mt-1.5 text-[13px] leading-5">{subtitle}</Muted>
             ) : null}

@@ -3,6 +3,7 @@ import { RazorpayWebCheckout } from '@/components/subscription/RazorpayWebChecko
 import { Button } from '@/components/ui/Button'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
+import { SubscriptionPlanCardsSkeleton } from '@/components/ui/Skeleton'
 import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import {
   createSubscriptionCheckout,
@@ -24,6 +25,7 @@ import {
   getStorePlan,
   hasPremiumAccess,
   isCurrentPlan,
+  type SubscriptionPlan,
 } from '@src/lib/subscription'
 import { shadows } from '@src/lib/shadows'
 import Colors from '@src/theme/colors'
@@ -39,27 +41,40 @@ export default function SubscriptionScreen() {
   const { store, refreshStore } = useStore()
   const [subscribing, setSubscribing] = useState(false)
   const [pricing, setPricing] = useState<SubscriptionPricingData | null>(null)
+  const [pricingLoading, setPricingLoading] = useState(true)
   const [checkoutSession, setCheckoutSession] = useState<SubscriptionCheckoutData | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('starter')
   const premium = hasPremiumAccess(store)
   const currentPlan = getStorePlan(store)
-  const businessPrice = premium
-    ? getBusinessPriceLabel(store)
-    : (pricing?.price_label ?? getBusinessPriceLabel(store))
-  const businessCompareAtPrice =
-    !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
   const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at)
   const onBusinessPlan = isCurrentPlan(store, 'business')
   const onEnterprisePlan = isCurrentPlan(store, 'enterprise')
+  const onStarterPlan = isCurrentPlan(store, 'starter')
+
+  const businessPrice = premium
+    ? getBusinessPriceLabel(store)
+    : pricing?.price_label
+  const businessCompareAtPrice =
+    !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
+  const businessTone =
+    !premium && pricing?.trial_eligible ? ('trial-offer' as const) : ('default' as const)
+
+  useEffect(() => {
+    setSelectedPlan(currentPlan)
+  }, [currentPlan, store?.id])
 
   useEffect(() => {
     if (premium) {
       setPricing(null)
+      setPricingLoading(false)
       return
     }
 
+    setPricingLoading(true)
     void fetchSubscriptionPricing()
       .then(setPricing)
       .catch(() => setPricing(null))
+      .finally(() => setPricingLoading(false))
   }, [premium, store?.id])
 
   const handleSubscribe = async () => {
@@ -120,6 +135,7 @@ export default function SubscriptionScreen() {
   }
 
   const subscribeLabel = pricing?.trial_eligible ? 'Start trial' : 'Subscribe'
+  const showPlanCards = premium || !pricingLoading
 
   return (
     <Screen>
@@ -169,63 +185,75 @@ export default function SubscriptionScreen() {
           </Muted>
         ) : null}
 
-        {!premium ? (
-          <PlanCard
-            emoji="🆓"
-            title="Starter"
-            price="₹0 / month"
-            features={STARTER_FEATURES}
-            isCurrent={isCurrentPlan(store, 'starter')}
-          />
-        ) : null}
+        {!showPlanCards ? (
+          <SubscriptionPlanCardsSkeleton count={!premium ? 3 : 2} />
+        ) : (
+          <>
+            {!premium ? (
+              <PlanCard
+                emoji="🆓"
+                title="Starter"
+                price="₹0 / month"
+                features={STARTER_FEATURES}
+                isCurrent={onStarterPlan}
+                selected={selectedPlan === 'starter'}
+                tone={onStarterPlan ? 'starter-limited' : 'default'}
+                onPress={() => setSelectedPlan('starter')}
+              />
+            ) : null}
 
-        <PlanCard
-          emoji="🚀"
-          title="Business"
-          price={businessPrice}
-          compareAtPrice={businessCompareAtPrice}
-          subtitle={premium ? undefined : 'Everything in Starter +'}
-          features={BUSINESS_FEATURES}
-          highlight={onBusinessPlan || (!premium && pricing?.trial_eligible)}
-          isCurrent={onBusinessPlan}
-          footer={
-            onBusinessPlan ? (
-              <Button
-                label="Renew plan"
-                onPress={() => void handleSubscribe()}
-                loading={subscribing}
-                className="w-full"
-              />
-            ) : !premium ? (
-              <Button
-                label={subscribeLabel}
-                onPress={() => void handleSubscribe()}
-                loading={subscribing}
-                className="w-full"
-              />
-            ) : null
-          }
-        />
+            <PlanCard
+              emoji="🚀"
+              title="Business"
+              price={businessPrice ?? getBusinessPriceLabel(store)}
+              compareAtPrice={businessCompareAtPrice}
+              subtitle={premium ? undefined : 'Everything in Starter +'}
+              features={BUSINESS_FEATURES}
+              selected={selectedPlan === 'business'}
+              tone={businessTone}
+              isCurrent={onBusinessPlan}
+              onPress={() => setSelectedPlan('business')}
+              footer={
+                onBusinessPlan ? (
+                  <Button
+                    label="Renew plan"
+                    onPress={() => void handleSubscribe()}
+                    loading={subscribing}
+                    className="w-full"
+                  />
+                ) : !premium ? (
+                  <Button
+                    label={subscribeLabel}
+                    onPress={() => void handleSubscribe()}
+                    loading={subscribing}
+                    className="w-full"
+                  />
+                ) : null
+              }
+            />
 
-        <PlanCard
-          emoji="🏢"
-          title="Enterprise"
-          price="Let's Talk"
-          subtitle={premium ? undefined : 'Everything in Business +'}
-          features={ENTERPRISE_FEATURES}
-          highlight={onEnterprisePlan}
-          isCurrent={onEnterprisePlan}
-          footer={
-            !onEnterprisePlan ? (
-              <Button
-                label="Let's Talk"
-                variant="outline"
-                onPress={handleEnterpriseContact}
-                className="w-full"
-              />
-            ) : null
-          }
-        />
+            <PlanCard
+              emoji="🏢"
+              title="Enterprise"
+              price="Let's Talk"
+              subtitle={premium ? undefined : 'Everything in Business +'}
+              features={ENTERPRISE_FEATURES}
+              selected={selectedPlan === 'enterprise'}
+              isCurrent={onEnterprisePlan}
+              onPress={() => setSelectedPlan('enterprise')}
+              footer={
+                !onEnterprisePlan ? (
+                  <Button
+                    label="Let's Talk"
+                    variant="outline"
+                    onPress={handleEnterpriseContact}
+                    className="w-full"
+                  />
+                ) : null
+              }
+            />
+          </>
+        )}
       </ScreenScrollBody>
 
       <RazorpayWebCheckout

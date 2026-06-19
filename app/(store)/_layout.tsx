@@ -31,6 +31,7 @@ export default function StoreLayout() {
   return (
     <StoreUnreadProvider>
       <Tabs
+        backBehavior="none"
         tabBar={(props) => <StoreTabBar {...props} />}
         screenOptions={{
           headerShown: false,

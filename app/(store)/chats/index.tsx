@@ -11,6 +11,7 @@ import { fetchAllChats } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
@@ -98,6 +99,8 @@ type LoadChatsOptions = {
 };
 
 export default function MessagesListScreen() {
+  useStoreTabRootBack("chats");
+
   const { store } = useStore();
   const premium = hasPremiumAccess(store);
   const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();

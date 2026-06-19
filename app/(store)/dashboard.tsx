@@ -8,6 +8,7 @@ import { fetchChats } from "@src/api/chats";
 import { fetchOrders } from "@src/api/orders";
 import { fetchProducts } from "@src/api/products";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { shadows } from "@src/lib/shadows";
 import Colors from "@src/theme/colors";
 import { router, useFocusEffect, type Href } from "expo-router";
@@ -22,6 +23,8 @@ type Stats = {
 };
 
 export default function DashboardScreen() {
+  useStoreTabRootBack("dashboard");
+
   const { store } = useStore();
   const [stats, setStats] = useState<Stats>({
     products: 0,

@@ -33,6 +33,8 @@ import { fetchProducts } from "@src/api/products";
 
 import { fetchCategories } from "@src/api/categories";
 
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
+
 import { useStore } from "@src/contexts/store-context";
 
 import { showError } from "@src/lib/toast";
@@ -51,6 +53,8 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 ];
 
 export default function ProductsScreen() {
+  useStoreTabRootBack("products");
+
   const router = useRouter();
 
   const { store } = useStore();

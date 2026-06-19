@@ -20,6 +20,7 @@ import {
   type OrderFilters,
   type OrderStatusField,
 } from "@src/lib/order-status";
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { Order } from "@src/types/order";
@@ -28,6 +29,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 
 export default function OrdersScreen() {
+  useStoreTabRootBack("orders");
+
   const { store } = useStore();
   const { syncOrdersUnread, onOrderViewed } = useStoreUnread();
   const [orders, setOrders] = useState<Order[]>([]);

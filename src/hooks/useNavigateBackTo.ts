@@ -1,16 +1,23 @@
-import { useEffect } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
+import { useCallback } from 'react'
 import { BackHandler, Platform } from 'react-native'
 import { router, type Href } from 'expo-router'
 
 export function useNavigateBackTo(href: Href) {
-  useEffect(() => {
-    if (Platform.OS !== 'android') return
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') return
 
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      router.navigate(href)
-      return true
-    })
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        if (router.canGoBack()) {
+          router.back()
+        } else {
+          router.navigate(href)
+        }
+        return true
+      })
 
-    return () => subscription.remove()
-  }, [href])
+      return () => subscription.remove()
+    }, [href])
+  )
 }

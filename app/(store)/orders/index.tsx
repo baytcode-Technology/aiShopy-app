@@ -154,7 +154,7 @@ export default function OrdersScreen() {
           <FlatList
             className="flex-1 bg-surface mx-4 rounded-2xl border border-gray-200 overflow-hidden"
             data={filteredOrders}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             contentContainerClassName="pb-32"
             showsVerticalScrollIndicator={false}
             renderItem={({ item, index }) => (

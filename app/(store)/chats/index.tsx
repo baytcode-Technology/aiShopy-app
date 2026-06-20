@@ -39,7 +39,7 @@ function formatTime(iso: string | null) {
 }
 
 function mapWhatsAppConversation(c: {
-  id: string;
+  id: number;
   customer_wa_number: string;
   last_message_at: string | null;
   last_message_preview: string | null;
@@ -61,7 +61,7 @@ function mapWhatsAppConversation(c: {
 }
 
 function mapInstagramConversation(c: {
-  id: string;
+  id: number;
   customer_ig_id: string;
   customer_ig_username: string | null;
   last_message_at: string | null;

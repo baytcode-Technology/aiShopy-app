@@ -9,7 +9,7 @@ import type { Customer } from '@src/types/customer'
 
 type Props = {
   visible: boolean
-  storeId: string
+  storeId: number
   onClose: () => void
   onCreated: (customer: Customer) => void
 }

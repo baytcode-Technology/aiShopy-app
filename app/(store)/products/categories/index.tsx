@@ -39,7 +39,7 @@ export default function CategoriesScreen() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [modalOpen, setModalOpen] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const loadData = useCallback(async () => {
     if (!store?.id) return;
@@ -50,7 +50,7 @@ export default function CategoriesScreen() {
         fetchProducts(store.id),
       ]);
       const products = productsRes.data.products;
-      const counts = new Map<string, number>();
+      const counts = new Map<number, number>();
       for (const p of products) {
         if (p.category_id) {
           counts.set(p.category_id, (counts.get(p.category_id) ?? 0) + 1);
@@ -115,7 +115,7 @@ export default function CategoriesScreen() {
     [categories],
   );
 
-  const toggleExpand = (id: string) => {
+  const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -202,7 +202,7 @@ export default function CategoriesScreen() {
         ) : (
           <FlatList
             data={flatItems}
-            keyExtractor={(item) => item.category.id}
+            keyExtractor={(item) => String(item.category.id)}
             ListHeaderComponent={listHeader}
             contentContainerClassName="px-5 pb-32 pt-1"
             showsVerticalScrollIndicator={false}

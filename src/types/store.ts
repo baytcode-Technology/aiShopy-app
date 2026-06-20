@@ -1,5 +1,5 @@
 export type Store = {
-  id: string;
+  id: number;
   owner_id: string;
   name: string;
   slug: string;
@@ -79,7 +79,7 @@ export type CreateStoreResponse = {
 };
 
 export type StoreSession = {
-  storeId: string;
+  storeId: number;
   slug: string;
   name: string;
   subdomainUrl: string;

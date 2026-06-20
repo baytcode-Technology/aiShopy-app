@@ -1,10 +1,10 @@
 export type Category = {
 
-  id: string
+  id: number
 
-  store_id: string
+  store_id: number
 
-  parent_id: string | null
+  parent_id: number | null
 
   name: string
 
@@ -46,7 +46,7 @@ export type ListCategoriesResponse = {
 
   data: {
 
-    store_id: string
+    store_id: number
 
     categories: Category[]
 
@@ -60,13 +60,13 @@ export type ListCategoriesResponse = {
 
 export type CreateCategoryPayload = {
 
-  store_id: string
+  store_id: number
 
   name: string
 
   image_url?: string | null
 
-  parent_id?: string
+  parent_id?: number
 
   sort_order?: number
 
@@ -85,4 +85,3 @@ export type CreateCategoryResponse = {
   data: Category
 
 }
-

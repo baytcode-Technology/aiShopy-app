@@ -31,7 +31,7 @@ const TILE = 88
 
 type Props = {
   product: Product
-  storeId: string
+  storeId: number
   onProductUpdated: (product: Product) => void
 }
 

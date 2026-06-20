@@ -16,13 +16,13 @@ type Props = {
   isOpen: boolean
   onClose: () => void
   categories: Category[]
-  selectedId: string | null
-  onSelect: (id: string | null) => void
+  selectedId: number | null
+  onSelect: (id: number | null) => void
   title?: string
   subtitle?: string
   showNoneOption?: boolean
   noneLabel?: string
-  excludeCategoryId?: string
+  excludeCategoryId?: number
 }
 
 export function CategoryTreeModal({
@@ -37,7 +37,7 @@ export function CategoryTreeModal({
   noneLabel = 'None',
   excludeCategoryId,
 }: Props) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
 
   const eligible = useMemo(() => {
     if (!excludeCategoryId) return categories
@@ -57,7 +57,7 @@ export function CategoryTreeModal({
     [tree, expandedIds]
   )
 
-  const toggleExpand = (id: string) => {
+  const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -95,7 +95,7 @@ export function CategoryTreeModal({
 
       <FlatList
         data={flatItems}
-        keyExtractor={(item) => item.category.id}
+        keyExtractor={(item) => String(item.category.id)}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (

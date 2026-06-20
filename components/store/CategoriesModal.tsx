@@ -10,8 +10,8 @@ import type { Category } from '@src/types/category'
 type Props = {
   visible: boolean
   categories: Category[]
-  selectedCategoryId: string | null
-  onSelect: (categoryId: string | null) => void
+  selectedCategoryId: number | null
+  onSelect: (categoryId: number | null) => void
   onClose: () => void
   onAddCategory: () => void
 }
@@ -71,7 +71,7 @@ export function CategoriesModal({
       ) : (
         <FlatList
           data={categories}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           numColumns={2}
           scrollEnabled={false}
           columnWrapperClassName="justify-between"

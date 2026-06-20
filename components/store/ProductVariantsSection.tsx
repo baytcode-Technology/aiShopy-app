@@ -12,7 +12,7 @@ type Props = {
   variants: ProductVariant[];
   currencySymbol: string;
   onVariantUpdated: (variant: ProductVariant) => void;
-  onVariantDeleted: (variantId: string) => void;
+  onVariantDeleted: (variantId: number) => void;
 };
 
 export function ProductVariantsSection({

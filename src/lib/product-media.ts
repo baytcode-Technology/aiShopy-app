@@ -65,11 +65,11 @@ export async function cropImageToSquare(uri: string): Promise<string> {
 
 /** Uploads pending items and returns ordered image URLs + thumbnail for product PATCH. */
 export async function resolveProductMediaForSave(
-  storeId: string,
+  storeId: number,
   items: ProductMediaItem[],
   thumbnailId: string | null,
   upload: (
-    storeId: string,
+    storeId: number,
     files: { uri: string; name: string; type: string }[]
   ) => Promise<string[]>
 ): Promise<{ images: string[]; thumbnail_url: string }> {

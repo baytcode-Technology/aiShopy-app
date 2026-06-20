@@ -18,12 +18,12 @@ export type UploadImagesResponse = {
 }
 
 async function uploadWithToken(
-  storeId: string,
+  storeId: number,
   prepared: Awaited<ReturnType<typeof prepareUploadFile>>[],
   token: string
 ): Promise<string[]> {
   const formData = new FormData()
-  formData.append('store_id', storeId)
+  formData.append('store_id', String(storeId))
 
   for (const file of prepared) {
     if (Platform.OS === 'web' && (file.uri.startsWith('blob:') || file.uri.startsWith('data:'))) {
@@ -76,7 +76,7 @@ async function uploadWithToken(
 }
 
 export async function uploadProductImages(
-  storeId: string,
+  storeId: number,
   files: LocalImageFile[]
 ): Promise<string[]> {
   const prepared = await Promise.all(

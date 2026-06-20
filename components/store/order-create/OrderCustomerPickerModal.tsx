@@ -13,8 +13,8 @@ import { OrderNewCustomerModal } from './OrderNewCustomerModal'
 
 type Props = {
   visible: boolean
-  storeId: string
-  selectedCustomerId: string | null
+  storeId: number
+  selectedCustomerId: number | null
   onClose: () => void
   onSelectCustomer: (customer: Customer) => void
 }

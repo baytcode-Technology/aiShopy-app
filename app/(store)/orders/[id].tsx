@@ -20,7 +20,8 @@ import Colors from '@src/theme/colors'
 
 export default function OrderDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>()
-  const id = Array.isArray(idParam) ? idParam[0] : idParam
+  const idRaw = Array.isArray(idParam) ? idParam[0] : idParam
+  const id = idRaw != null ? Number(idRaw) : NaN
   const router = useRouter()
   const { store } = useStore()
   const { markOrderViewed } = useStoreUnread()
@@ -34,7 +35,7 @@ export default function OrderDetailScreen() {
   const [pickerField, setPickerField] = useState<OrderStatusField | null>(null)
 
   const load = useCallback(async () => {
-    if (!id || !store?.id) return
+    if (!Number.isFinite(id) || !store?.id) return
     setLoading(true)
     try {
       const res = await fetchOrder(store.id, id)
@@ -54,7 +55,7 @@ export default function OrderDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!id) return
+      if (!Number.isFinite(id)) return
       void markOrderViewed(id)
     }, [id, markOrderViewed])
   )

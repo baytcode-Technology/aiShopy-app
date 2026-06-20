@@ -4,7 +4,7 @@ import type { Category } from '@src/types/category'
 
 type Props = {
   categories: Category[]
-  selectedCategoryId?: string | null
+  selectedCategoryId?: number | null
   onPressCategory: (category: Category) => void
   /** Larger tiles for the category index screen. */
   variant?: 'default' | 'hero'

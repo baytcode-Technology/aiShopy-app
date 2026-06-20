@@ -2,7 +2,7 @@ import { authenticatedFetch } from './client'
 import { endpoints } from './endpoints'
 
 export type SubscriptionCheckoutData = {
-  checkout_id: string
+  checkout_id: number
   key_id: string
   order_id: string
   amount: number
@@ -32,7 +32,7 @@ export type CreateSubscriptionCheckoutResponse = {
 }
 
 export type VerifySubscriptionPaymentPayload = {
-  checkout_id: string
+  checkout_id: number
   razorpay_order_id: string
   razorpay_payment_id: string
   razorpay_signature: string

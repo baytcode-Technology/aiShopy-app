@@ -70,7 +70,8 @@ export default function ChatDetailScreen() {
   const [isSending, setIsSending] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
-  const conversationId = typeof id === "string" ? id : "";
+  const idRaw = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
+  const conversationId = idRaw ? Number(idRaw) : NaN;
   const customerPhone = typeof phone === "string" ? phone : "";
   const chatsListHref = "/(store)/chats" as Href;
 
@@ -95,7 +96,7 @@ export default function ChatDetailScreen() {
 
   const loadMessages = useCallback(
     async (options?: { silent?: boolean }) => {
-      if (!store?.id || !conversationId) return;
+      if (!store?.id || !Number.isFinite(conversationId)) return;
       const silent = options?.silent ?? false;
       if (!silent) setIsLoading(true);
       try {
@@ -151,7 +152,7 @@ export default function ChatDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!conversationId) return;
+      if (!Number.isFinite(conversationId)) return;
       setActiveChat({ conversationId, channel });
       void markChatRead(conversationId, channel);
       return () => {
@@ -180,12 +181,12 @@ export default function ChatDetailScreen() {
   }, [messages.length]);
 
   useEffect(() => {
-    if (!conversationId) return;
+    if (!Number.isFinite(conversationId)) return;
 
     const handleNew = (payload: {
-      conversationId: string;
+      conversationId: number;
       message: {
-        id: string;
+        id: number;
         meta_message_id?: string;
         direction: string;
         type: string;
@@ -221,8 +222,7 @@ export default function ChatDetailScreen() {
       if (payload.conversationId !== conversationId) return;
       setMessages((prev) =>
         prev.map((m) =>
-          m.metaMessageId === payload.metaMessageId ||
-          m.id === payload.metaMessageId
+          m.metaMessageId === payload.metaMessageId
             ? {
                 ...m,
                 status: payload.status as ChatMessage["status"],
@@ -240,7 +240,7 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId, onMessageNew, onInstagramMessageNew, onMessageStatus]);
 
-  if (!conversationId) {
+  if (!Number.isFinite(conversationId)) {
     return (
       <SafeAreaView className="flex-1 bg-gray-100 items-center">
         <Text className="text-center mt-10 text-ink font-semibold">
@@ -257,7 +257,7 @@ export default function ChatDetailScreen() {
     const text = draft.trim();
     if (!text || !store?.id || isSending) return;
 
-    const tempId = `local-${Date.now()}`;
+    const tempId = -Date.now();
     const now = new Date();
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
@@ -358,7 +358,7 @@ export default function ChatDetailScreen() {
         <FlatList
           ref={listRef}
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => <MessageBubble message={item} />}
           contentContainerClassName="p-4 pb-2 flex-grow"
           onContentSizeChange={() => {

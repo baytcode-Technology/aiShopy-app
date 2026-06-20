@@ -12,14 +12,28 @@ import type {
   UpdateProductVariantPayload,
 } from '@src/types/product'
 
-export async function fetchProducts(storeId: string): Promise<ListProductsResponse> {
-  const qs = new URLSearchParams({ store_id: storeId })
+export async function fetchProducts(storeId: number): Promise<ListProductsResponse> {
+  // #region agent log
+  fetch('http://127.0.0.1:7642/ingest/403551e5-c17d-483b-8ef5-ce6768f0a7b2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f8490e' },
+    body: JSON.stringify({
+      sessionId: 'f8490e',
+      location: 'products.ts:fetchProducts',
+      message: 'fetchProducts called',
+      data: { storeId, storeIdType: typeof storeId, isFinite: Number.isFinite(storeId) },
+      timestamp: Date.now(),
+      hypothesisId: 'H4-app-store-id',
+    }),
+  }).catch(() => {})
+  // #endregion
+  const qs = new URLSearchParams({ store_id: String(storeId) })
   return authenticatedFetch<ListProductsResponse>(`${endpoints.products}?${qs.toString()}`)
 }
 
 export async function fetchProduct(
-  productId: string,
-  storeId?: string
+  productId: number,
+  storeId?: number
 ): Promise<GetProductResponse> {
   try {
     return await authenticatedFetch<GetProductResponse>(`${endpoints.products}/${productId}`)
@@ -30,7 +44,7 @@ export async function fetchProduct(
       message.includes('Cannot GET') ||
       message.toLowerCase().includes('not found')
 
-    if (storeId && routeMissing) {
+    if (storeId != null && routeMissing) {
       const list = await fetchProducts(storeId)
       const product = list.data.products.find((p) => p.id === productId)
       if (!product) {
@@ -57,8 +71,8 @@ export type UpdateProductPayload = Partial<{
   mark_as_sold?: boolean
   mark_as_non_inventory?: boolean
   status: ProductStatus
-  is_active?: boolean
-  category_id: string | null
+  is_active: boolean
+  category_id: number | null
   images: string[]
   thumbnail_url: string
 }>
@@ -70,7 +84,7 @@ export type UpdateProductResponse = {
 }
 
 export async function updateProduct(
-  productId: string,
+  productId: number,
   payload: UpdateProductPayload
 ): Promise<UpdateProductResponse> {
   return authenticatedFetch<UpdateProductResponse>(`${endpoints.products}/${productId}`, {
@@ -86,7 +100,7 @@ type VariantResponse = {
 }
 
 export async function createProductVariant(
-  productId: string,
+  productId: number,
   payload: CreateProductVariantPayload
 ): Promise<VariantResponse> {
   return authenticatedFetch<VariantResponse>(`${endpoints.products}/${productId}/variants`, {
@@ -103,8 +117,8 @@ export async function createProductVariant(
 }
 
 export async function updateProductVariant(
-  productId: string,
-  variantId: string,
+  productId: number,
+  variantId: number,
   payload: UpdateProductVariantPayload
 ): Promise<VariantResponse> {
   return authenticatedFetch<VariantResponse>(
@@ -117,8 +131,8 @@ export async function updateProductVariant(
 }
 
 export async function deleteProductVariant(
-  productId: string,
-  variantId: string
+  productId: number,
+  variantId: number
 ): Promise<{ success: boolean; message: string }> {
   return authenticatedFetch(`${endpoints.products}/${productId}/variants/${variantId}`, {
     method: 'DELETE',

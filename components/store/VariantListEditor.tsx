@@ -13,7 +13,7 @@ import Colors from '@src/theme/colors'
 import type { ProductVariant } from '@src/types/product'
 
 export type EditableVariantRow = {
-  id: string
+  id: number
   name: string
   priceDelta: string
   compareAtPrice: string
@@ -45,16 +45,16 @@ export function variantsToEditable(rows: ProductVariant[]): EditableVariantRow[]
 const fieldInputClass = 'border border-gray-200 rounded-lg px-2.5 py-2 text-sm text-ink bg-gray-100'
 
 type Props = {
-  productId: string
+  productId: number
   variants: EditableVariantRow[]
   onChange: (variants: EditableVariantRow[]) => void
 }
 
 export function VariantListEditor({ productId, variants, onChange }: Props) {
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
-  const update = (id: string, patch: Partial<EditableVariantRow>) => {
+  const update = (id: number, patch: Partial<EditableVariantRow>) => {
     onChange(variants.map((v) => (v.id === id ? { ...v, ...patch } : v)))
   }
 

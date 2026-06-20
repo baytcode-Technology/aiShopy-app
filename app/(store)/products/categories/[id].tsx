@@ -30,7 +30,8 @@ import type { Product } from '@src/types/product'
 export default function CategoryDetailScreen() {
   const router = useRouter()
   const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>()
-  const categoryId = Array.isArray(idParam) ? idParam[0] : idParam ?? ''
+  const categoryIdRaw = Array.isArray(idParam) ? idParam[0] : idParam ?? ''
+  const categoryId = Number(categoryIdRaw)
   const { store } = useStore()
 
   const [category, setCategory] = useState<Category | null>(null)
@@ -46,7 +47,7 @@ export default function CategoryDetailScreen() {
   const [subcategoryModalOpen, setSubcategoryModalOpen] = useState(false)
 
   const loadData = useCallback(async () => {
-    if (!store?.id || !categoryId) return
+    if (!store?.id || !Number.isFinite(categoryId)) return
     setLoading(true)
     try {
       const [categoriesRes, productsRes] = await Promise.all([

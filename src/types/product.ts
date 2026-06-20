@@ -1,9 +1,9 @@
 export type ProductStatus = 'active' | 'draft' | 'unlisted'
 
 export type Product = {
-  id: string
-  store_id: string
-  category_id: string | null
+  id: number
+  store_id: number
+  category_id: number | null
   name: string
   description: string | null
   sku: string | null
@@ -24,8 +24,8 @@ export type Product = {
 }
 
 export type ProductVariant = {
-  id: string
-  product_id: string
+  id: number
+  product_id: number
   name: string
   options: Record<string, unknown>
   price_delta: number
@@ -71,14 +71,14 @@ export type ListProductsResponse = {
   success: boolean
   message: string
   data: {
-    store_id: string
+    store_id: number
     products: Product[]
     count: number
   }
 }
 
 export type CreateProductPayload = {
-  store_id: string
+  store_id: number
   name: string
   base_price: number
   compare_at_price?: number | null
@@ -94,7 +94,7 @@ export type CreateProductPayload = {
   is_active?: boolean
   sort_order?: number
   metadata?: Record<string, unknown>
-  category_id?: string
+  category_id?: number
   variants?: CreateProductVariantPayload[]
 }
 

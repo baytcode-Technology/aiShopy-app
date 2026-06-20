@@ -86,20 +86,20 @@ export function toCreateVariantPayload(
 }
 
 type VariantLocalImage = {
-  id: string
+  id: string | number
   imageUri?: string | null
   imageName?: string
   imageType?: string
 }
 
 export async function uploadLocalVariantImages(
-  storeId: string,
+  storeId: number,
   variants: VariantLocalImage[],
   upload: (
-    storeId: string,
+    storeId: number,
     files: { uri: string; name: string; type: string }[]
   ) => Promise<string[]>
-): Promise<Map<string, string>> {
+): Promise<Map<string | number, string>> {
   const withImage = variants.filter((v) => v.imageUri)
   if (withImage.length === 0) return new Map()
 
@@ -112,7 +112,7 @@ export async function uploadLocalVariantImages(
     }))
   )
 
-  const map = new Map<string, string>()
+  const map = new Map<string | number, string>()
   withImage.forEach((v, i) => {
     const url = urls[i]
     if (url) map.set(v.id, url)
@@ -121,12 +121,12 @@ export async function uploadLocalVariantImages(
 }
 
 export async function uploadVariantImagesForCreate(
-  storeId: string,
+  storeId: number,
   variants: GeneratedVariant[],
   upload: (
-    storeId: string,
+    storeId: number,
     files: { uri: string; name: string; type: string }[]
   ) => Promise<string[]>
-): Promise<Map<string, string>> {
+): Promise<Map<string | number, string>> {
   return uploadLocalVariantImages(storeId, variants, upload)
 }

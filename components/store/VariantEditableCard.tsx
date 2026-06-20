@@ -30,7 +30,7 @@ type Props = {
   product: Product;
   currencySymbol: string;
   onUpdated: (variant: ProductVariant) => void;
-  onDeleted?: (variantId: string) => void;
+  onDeleted?: (variantId: number) => void;
 };
 
 export function VariantEditableCard({

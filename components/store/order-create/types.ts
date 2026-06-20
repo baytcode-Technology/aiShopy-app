@@ -7,14 +7,14 @@ import type { Product, ProductVariant } from '@src/types/product'
 
 export type CartLine = {
   key: string
-  productId: string
-  variantId: string | null
+  productId: number
+  variantId: number | null
   quantity: number
   product: Product
   variant: ProductVariant | null
 }
 
-export function cartLineKey(productId: string, variantId: string | null): string {
+export function cartLineKey(productId: number, variantId: number | null): string {
   return `${productId}:${variantId ?? 'base'}`
 }
 

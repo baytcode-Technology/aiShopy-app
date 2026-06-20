@@ -72,7 +72,7 @@ export default function ProductsScreen() {
   const [productModalOpen, setProductModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
-    if (!store?.id) return;
+    if (!store?.id || !Number.isFinite(store.id)) return;
 
     setLoading(true);
 
@@ -85,7 +85,7 @@ export default function ProductsScreen() {
 
       setProducts(productsRes.data.products);
 
-      const counts = new Map<string, number>();
+      const counts = new Map<number, number>();
 
       for (const p of productsRes.data.products) {
         if (p.category_id) {
@@ -223,7 +223,7 @@ export default function ProductsScreen() {
         ) : (
           <FlatList
             data={filtered}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             ListHeaderComponent={listHeader}
             contentContainerClassName="px-5 pb-32 pt-1"
             showsVerticalScrollIndicator={false}

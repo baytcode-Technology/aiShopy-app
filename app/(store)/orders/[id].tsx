@@ -12,8 +12,9 @@ import { Muted } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
 import { useStore } from '@src/contexts/store-context'
 import { useStoreUnread } from '@src/contexts/store-unread-context'
-import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
+import { formatOrderId } from '@src/lib/order-status'
 import type { OrderStatusField } from '@src/lib/order-status'
+import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Order } from '@src/types/order'
 import Colors from '@src/theme/colors'
@@ -124,7 +125,7 @@ export default function OrderDetailScreen() {
   return (
     <Screen variant="shell" edges={['top']}>
       <DetailScreenHeader
-        title={order ? `Order ${order.order_number}` : 'Order'}
+        title={order ? `Order ${formatOrderId(order.id)}` : 'Order'}
         onBack={() => router.navigate(ordersListHref)}
       />
 

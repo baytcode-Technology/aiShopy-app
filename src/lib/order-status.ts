@@ -199,17 +199,17 @@ export function orderListCustomerLabel(order: {
   return 'Customer'
 }
 
-export function formatOrderListNumber(orderNumber: string): string {
-  return orderNumber.startsWith('#') ? orderNumber : `#${orderNumber}`
+export function formatOrderId(id: number): string {
+  return `#${id}`
 }
 
-/** Card title: POS → "#FEB26-1 John (POS)" or "#FEB26-1 Customer (POS)"; others → "#FEB26-1 Customer name". */
+/** Card title: POS → "#1 John (POS)"; others → "#1 Customer name". */
 export function orderListTitle(order: {
-  order_number: string
+  id: number
   source: string
   customers: { name: string | null; whatsapp_number: string } | null
 }): string {
-  const displayNumber = formatOrderListNumber(order.order_number)
+  const displayNumber = formatOrderId(order.id)
   if (order.source === 'offline') {
     const label = order.customers?.name?.trim() || 'Customer'
     return `${displayNumber} ${label} (POS)`

@@ -102,6 +102,14 @@
       "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       "./plugins/with-android-app-name.js",
       "expo-router",
       "expo-secure-store",

@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { fetchMyStore } from '@src/api/stores'
 import { buildSubdomainUrl } from '@src/lib/storefront'
-import { isLegacyUuidId, normalizeEntityId } from '@src/lib/normalize-entity-id'
+import { normalizeEntityId } from '@src/lib/normalize-entity-id'
 import {
   clearStoreSession,
   getStoreSession,
@@ -78,27 +78,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const res = await fetchMyStore()
       const rawStore = res.data.store
       const normalized = normalizeStoreFromApi(rawStore)
-
-      // #region agent log
-      fetch('http://127.0.0.1:7642/ingest/403551e5-c17d-483b-8ef5-ce6768f0a7b2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f8490e' },
-        body: JSON.stringify({
-          sessionId: 'f8490e',
-          location: 'store-context.tsx:refreshStore',
-          message: 'store id from API',
-          data: {
-            hasStore: res.data.hasStore,
-            rawId: rawStore?.id,
-            rawIdType: typeof rawStore?.id,
-            isLegacyUuid: rawStore ? isLegacyUuidId(rawStore.id) : false,
-            normalizedId: normalized?.id ?? null,
-          },
-          timestamp: Date.now(),
-          hypothesisId: 'H1-migration-not-applied',
-        }),
-      }).catch(() => {})
-      // #endregion
 
       if (rawStore && !normalized) {
         await clearStoreSession()

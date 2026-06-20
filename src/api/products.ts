@@ -13,20 +13,6 @@ import type {
 } from '@src/types/product'
 
 export async function fetchProducts(storeId: number): Promise<ListProductsResponse> {
-  // #region agent log
-  fetch('http://127.0.0.1:7642/ingest/403551e5-c17d-483b-8ef5-ce6768f0a7b2', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'f8490e' },
-    body: JSON.stringify({
-      sessionId: 'f8490e',
-      location: 'products.ts:fetchProducts',
-      message: 'fetchProducts called',
-      data: { storeId, storeIdType: typeof storeId, isFinite: Number.isFinite(storeId) },
-      timestamp: Date.now(),
-      hypothesisId: 'H4-app-store-id',
-    }),
-  }).catch(() => {})
-  // #endregion
   const qs = new URLSearchParams({ store_id: String(storeId) })
   return authenticatedFetch<ListProductsResponse>(`${endpoints.products}?${qs.toString()}`)
 }

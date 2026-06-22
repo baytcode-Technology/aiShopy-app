@@ -3,7 +3,7 @@ import { printAsync, printToFileAsync } from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { Share } from 'react-native'
 import { buildInvoiceHtml, buildInvoicePlainText } from '@src/lib/order-invoice'
-import { formatOrderId } from '@src/lib/order-status'
+import { formatOrderNumber } from '@src/lib/order-status'
 import type { Order } from '@src/types/order'
 import type { Store } from '@src/types/store'
 
@@ -15,7 +15,7 @@ type InvoiceContext = {
 function invoiceContext(ctx: InvoiceContext) {
   const html = buildInvoiceHtml(ctx)
   const text = buildInvoicePlainText(ctx)
-  const title = `Invoice ${formatOrderId(ctx.order.id)}`
+  const title = `Invoice ${formatOrderNumber(ctx.order.order_number)}`
   return { html, text, title }
 }
 

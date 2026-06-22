@@ -190,10 +190,12 @@ export default function ProductDetailScreen() {
                 onUpdated={setProduct}
               />
 
-              <ProductInventoryFlagsBlock
-                product={product}
-                onUpdated={setProduct}
-              />
+              {variants.length === 0 ? (
+                <ProductInventoryFlagsBlock
+                  product={product}
+                  onUpdated={setProduct}
+                />
+              ) : null}
 
               <ProductVariantsSection
                 product={product}

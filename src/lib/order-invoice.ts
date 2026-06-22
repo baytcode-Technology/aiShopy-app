@@ -1,6 +1,6 @@
 import { env } from '@src/config/env'
 import { formatMoney } from '@src/lib/format-money'
-import { formatOrderId } from '@src/lib/order-status'
+import { formatOrderNumber } from '@src/lib/order-status'
 import type { CreateOrderShippingAddress } from '@src/types/order'
 import type { Order, OrderItem } from '@src/types/order'
 import type { Store } from '@src/types/store'
@@ -236,7 +236,7 @@ export function buildInvoiceHtml({ order, store }: InvoiceContext): string {
   <p class="muted">${escapeHtml(whatsapp)}</p>
 
   <div class="meta">
-    <div><strong>Invoice No:</strong> ${escapeHtml(formatOrderId(order.id))}</div>
+    <div><strong>Invoice No:</strong> ${escapeHtml(formatOrderNumber(order.order_number))}</div>
     <div><strong>Order date:</strong> ${escapeHtml(formatOrderInvoiceDate(order.created_at))}</div>
   </div>
 
@@ -260,7 +260,7 @@ export function buildInvoicePlainText({ order, store }: InvoiceContext): string 
     formatStorefrontHost(store.slug),
     formatStoreWhatsApp(store),
     '',
-    `Invoice No: ${formatOrderId(order.id)}`,
+    `Invoice No: ${formatOrderNumber(order.order_number)}`,
     `Order date: ${formatOrderInvoiceDate(order.created_at)}`,
     '',
     'Items',

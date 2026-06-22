@@ -12,7 +12,7 @@ export function filterOrdersList(
     if (q) {
       const name = order.customers?.name?.toLowerCase() ?? ''
       const phone = order.customers?.whatsapp_number?.toLowerCase() ?? ''
-      const orderNo = String(order.id)
+      const orderNo = order.order_number.toLowerCase()
       const matchesQuery =
         name.includes(q) || phone.includes(q) || orderNo.includes(q)
       if (!matchesQuery) return false

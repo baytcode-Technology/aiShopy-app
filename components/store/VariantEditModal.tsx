@@ -7,7 +7,6 @@ import {
 } from '@/components/store/VariantImageTile'
 import { VariantInventoryFlagsEditor } from '@/components/store/VariantInventoryFlagsEditor'
 import { SleekModal } from '@/components/ui/Modal'
-import { productInventoryFlagsLocked } from '@src/lib/product-inventory'
 import { updateProductVariant } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
 import { parseOptionalPrice } from '@src/lib/parse-optional-price'
@@ -42,8 +41,6 @@ export function VariantEditModal({
   const [displayImageUri, setDisplayImageUri] = useState<string | null>(null)
   const [pickedImage, setPickedImage] = useState<PickedVariantImage | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
-
-  const productLocked = productInventoryFlagsLocked(product)
 
   const unitPrice = variant
     ? Number(product.base_price) + Number(variant.price_delta)
@@ -115,12 +112,8 @@ export function VariantEditModal({
         stock_qty: stock,
         sku: skuDraft.trim() || null,
         ...(image_url !== undefined ? { image_url } : {}),
-        ...(!productLocked
-          ? {
-              mark_as_sold: markAsSold,
-              mark_as_non_inventory: markAsNonInventory,
-            }
-          : {}),
+        mark_as_sold: markAsSold,
+        mark_as_non_inventory: markAsNonInventory,
       })
       onUpdated(res.data.variant)
       showSuccess('Variant updated')
@@ -230,7 +223,6 @@ export function VariantEditModal({
           onMarkAsSoldChange={setMarkAsSold}
           onMarkAsNonInventoryChange={setMarkAsNonInventory}
           disabled={saving}
-          lockedByProduct={productLocked}
         />
       </Field>
     </SleekModal>

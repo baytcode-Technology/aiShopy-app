@@ -208,8 +208,8 @@ export function EditProductModal({
         status,
         images,
         thumbnail_url,
-        mark_as_sold: markAsSold,
-        mark_as_non_inventory: markAsNonInventory,
+        mark_as_sold: hasExisting ? false : markAsSold,
+        mark_as_non_inventory: hasExisting ? false : markAsNonInventory,
       })
 
       const existingVariantImageUrls = await uploadLocalVariantImages(
@@ -345,13 +345,15 @@ export function EditProductModal({
         style={{ textAlignVertical: 'top' }}
       />
       <ProductStatusPicker value={status} onChange={setStatus} />
-      <ProductInventoryFlagsEditor
-        markAsSold={markAsSold}
-        markAsNonInventory={markAsNonInventory}
-        onMarkAsSoldChange={setMarkAsSold}
-        onMarkAsNonInventoryChange={setMarkAsNonInventory}
-        disabled={loading}
-      />
+      {showProductStock ? (
+        <ProductInventoryFlagsEditor
+          markAsSold={markAsSold}
+          markAsNonInventory={markAsNonInventory}
+          onMarkAsSoldChange={setMarkAsSold}
+          onMarkAsNonInventoryChange={setMarkAsNonInventory}
+          disabled={loading}
+        />
+      ) : null}
 
       {product ? (
         <VariantListEditor

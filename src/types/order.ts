@@ -89,6 +89,7 @@ export type Order = {
     status: string
     amount: number
     currency: string
+    payment_proof_url?: string | null
   } | null
 
 }

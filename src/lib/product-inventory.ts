@@ -1,25 +1,33 @@
 import type { Product, ProductVariant } from '@src/types/product'
 
-export function isNonInventoryProduct(product: Product): boolean {
+/** Product-level flags apply only to simple (no-variant) products. */
+export function isNonInventoryProduct(product: Product, hasVariants = false): boolean {
+  if (hasVariants) return false
   return product.mark_as_non_inventory === true
 }
 
-export function isMarkedSoldProduct(product: Product): boolean {
+/** Product-level flags apply only to simple (no-variant) products. */
+export function isMarkedSoldProduct(product: Product, hasVariants = false): boolean {
+  if (hasVariants) return false
   return product.mark_as_sold === true
 }
 
-export function isNonInventoryVariant(product: Product, variant: ProductVariant): boolean {
-  if (isNonInventoryProduct(product)) return true
+export function isNonInventoryVariant(
+  product: Product,
+  variant: ProductVariant,
+  hasVariants = true
+): boolean {
+  if (!hasVariants) return isNonInventoryProduct(product, false)
   return variant.mark_as_non_inventory === true
 }
 
-export function isMarkedSoldVariant(product: Product, variant: ProductVariant): boolean {
-  if (isMarkedSoldProduct(product)) return true
+export function isMarkedSoldVariant(
+  product: Product,
+  variant: ProductVariant,
+  hasVariants = true
+): boolean {
+  if (!hasVariants) return isMarkedSoldProduct(product, false)
   return variant.mark_as_sold === true
-}
-
-export function productInventoryFlagsLocked(product: Product): boolean {
-  return isMarkedSoldProduct(product) || isNonInventoryProduct(product)
 }
 
 function toneClass(tone: ProductStockLabel['tone']): string {
@@ -33,20 +41,20 @@ export function stockLabelToneClass(tone: ProductStockLabel['tone']): string {
 }
 
 export function tracksProductStock(product: Product): boolean {
-  return product.track_inventory && !isNonInventoryProduct(product)
+  return product.track_inventory && !isNonInventoryProduct(product, false)
 }
 
 export function tracksVariantStock(product: Product, variant: ProductVariant): boolean {
-  return product.track_inventory && !isNonInventoryVariant(product, variant)
+  return product.track_inventory && !isNonInventoryVariant(product, variant, true)
 }
 
 export function effectiveProductStockQty(product: Product): number {
-  if (isMarkedSoldProduct(product)) return 0
+  if (isMarkedSoldProduct(product, false)) return 0
   return product.stock_qty
 }
 
 export function effectiveVariantStockQty(product: Product, variant: ProductVariant): number {
-  if (isMarkedSoldVariant(product, variant)) return 0
+  if (isMarkedSoldVariant(product, variant, true)) return 0
   return variant.stock_qty
 }
 
@@ -56,11 +64,11 @@ export type ProductStockLabel = {
 }
 
 export function getProductStockLabel(product: Product): ProductStockLabel | null {
-  if (isNonInventoryProduct(product)) {
+  if (isNonInventoryProduct(product, false)) {
     return { text: 'No inventory tracking', tone: 'muted' }
   }
   if (!product.track_inventory) return null
-  if (isMarkedSoldProduct(product)) {
+  if (isMarkedSoldProduct(product, false)) {
     return { text: 'Sold · 0 available', tone: 'danger' }
   }
   const qty = product.stock_qty
@@ -72,13 +80,11 @@ export function getVariantStockLabel(
   product: Product,
   variant: ProductVariant
 ): ProductStockLabel | null {
-  if (isNonInventoryVariant(product, variant)) {
-    return isNonInventoryProduct(product)
-      ? null
-      : { text: 'No inventory tracking', tone: 'muted' }
+  if (isNonInventoryVariant(product, variant, true)) {
+    return { text: 'No inventory tracking', tone: 'muted' }
   }
   if (!product.track_inventory) return null
-  if (isMarkedSoldVariant(product, variant)) {
+  if (isMarkedSoldVariant(product, variant, true)) {
     return { text: 'Sold · 0 available', tone: 'danger' }
   }
   const qty = variant.stock_qty
@@ -86,20 +92,10 @@ export function getVariantStockLabel(
   return { text, tone: qty <= 0 ? 'danger' : 'default' }
 }
 
-/**
- * Variant card labels: parent flags always win. When parent has sold or
- * non-inventory on, only that parent flag is shown (variant flags hidden).
- */
 export function getVariantCardInventoryFlags(
-  product: Product,
+  _product: Product,
   variant: ProductVariant
 ): { showSoldOut: boolean; showNonInventory: boolean } {
-  if (isMarkedSoldProduct(product)) {
-    return { showSoldOut: true, showNonInventory: false }
-  }
-  if (isNonInventoryProduct(product)) {
-    return { showSoldOut: false, showNonInventory: true }
-  }
   return {
     showSoldOut: variant.mark_as_sold === true,
     showNonInventory: variant.mark_as_non_inventory === true,
@@ -111,7 +107,7 @@ export function getVariantAvailabilityLabel(
   product: Product,
   variant: ProductVariant
 ): ProductStockLabel | null {
-  if (isNonInventoryVariant(product, variant)) return null
+  if (isNonInventoryVariant(product, variant, true)) return null
   if (!product.track_inventory) return null
   const qty = effectiveVariantStockQty(product, variant)
   const text = qty === 1 ? '1 available' : `${qty} available`
@@ -119,9 +115,9 @@ export function getVariantAvailabilityLabel(
 }
 
 export function getProductStockDisplayValue(product: Product): string {
-  if (isNonInventoryProduct(product)) return '—'
+  if (isNonInventoryProduct(product, false)) return '—'
   if (!product.track_inventory) return '—'
-  if (isMarkedSoldProduct(product)) return 'Sold (0)'
+  if (isMarkedSoldProduct(product, false)) return 'Sold (0)'
   return String(product.stock_qty)
 }
 
@@ -129,8 +125,8 @@ export function getVariantStockDisplayValue(
   product: Product,
   variant: ProductVariant
 ): string {
-  if (isNonInventoryVariant(product, variant)) return '—'
+  if (isNonInventoryVariant(product, variant, true)) return '—'
   if (!product.track_inventory) return '—'
-  if (isMarkedSoldVariant(product, variant)) return 'Sold (0)'
+  if (isMarkedSoldVariant(product, variant, true)) return 'Sold (0)'
   return String(variant.stock_qty)
 }

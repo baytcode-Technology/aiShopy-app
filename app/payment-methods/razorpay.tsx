@@ -1,14 +1,20 @@
 import { useCallback, useState } from 'react'
-import { Pressable, Switch, Text, View } from 'react-native'
+import { Linking, Pressable, Switch, Text, View } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useFocusEffect } from 'expo-router'
+import * as Clipboard from 'expo-clipboard'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label, Muted } from '@/components/ui/Typography'
 import { fetchPaymentConfig, updatePaymentConfig } from '@src/api/payment-config'
+import { getRazorpayWebhookUrl, razorpayKeyMatchesMode } from '@src/lib/razorpay-config'
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess } from '@src/lib/toast'
+import Colors from '@src/theme/colors'
 import type { RazorpayMode } from '@src/types/payment-config'
+
+const RAZORPAY_DASHBOARD = 'https://dashboard.razorpay.com'
 
 export default function RazorpayPaymentScreen() {
   const [enabled, setEnabled] = useState(false)
@@ -20,6 +26,8 @@ export default function RazorpayPaymentScreen() {
   const [maskedWebhook, setMaskedWebhook] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  const { url: webhookUrl, isProductionFallback } = getRazorpayWebhookUrl()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -44,7 +52,36 @@ export default function RazorpayPaymentScreen() {
     }, [load])
   )
 
+  const copyWebhookUrl = async () => {
+    await Clipboard.setStringAsync(webhookUrl)
+    showSuccess('Webhook URL copied')
+  }
+
+  const openDashboard = (path: string) => {
+    void Linking.openURL(`${RAZORPAY_DASHBOARD}${path}`)
+  }
+
   const save = async () => {
+    if (enabled) {
+      if (!keyId.trim()) {
+        showError('Key ID is required when Razorpay is enabled')
+        return
+      }
+      const keyModeError = razorpayKeyMatchesMode(keyId, mode)
+      if (keyModeError) {
+        showError(keyModeError)
+        return
+      }
+      if (!keySecret.trim() && !maskedKey) {
+        showError('Key secret is required when Razorpay is enabled')
+        return
+      }
+      if (!webhookSecret.trim() && !maskedWebhook) {
+        showError('Webhook secret is required when Razorpay is enabled')
+        return
+      }
+    }
+
     setSaving(true)
     try {
       await updatePaymentConfig({
@@ -116,11 +153,19 @@ export default function RazorpayPaymentScreen() {
             })}
           </View>
           <Muted className="text-xs mt-1.5">
-            {mode === 'test' ? 'Use Razorpay test API keys' : 'Use live keys after KYC'}
+            {mode === 'test'
+              ? 'Use Razorpay test keys (rzp_test_...) while setting up.'
+              : 'Use live keys (rzp_live_...) only after Razorpay verifies your business in their dashboard.'}
           </Muted>
         </View>
 
-        <Input label="Key ID" value={keyId} onChangeText={setKeyId} placeholder="rzp_test_..." autoCapitalize="none" />
+        <Input
+          label="Key ID"
+          value={keyId}
+          onChangeText={setKeyId}
+          placeholder={mode === 'test' ? 'rzp_test_...' : 'rzp_live_...'}
+          autoCapitalize="none"
+        />
         <Input
           label="Key Secret"
           value={keySecret}
@@ -137,16 +182,57 @@ export default function RazorpayPaymentScreen() {
           secureTextEntry
           autoCapitalize="none"
         />
+        <Muted className="text-xs -mt-2">
+          Key secret and webhook secret stay on our server. Your storefront only uses the public Key ID.
+        </Muted>
       </View>
 
-      <View className="rounded-[28px] border border-gray-200 bg-gray-50 px-5 py-4 gap-2">
-        <Text className="text-[13px] font-bold text-ink">Setup steps</Text>
+      <View className="rounded-[28px] border border-gray-200 bg-gray-50 px-5 py-4 gap-3">
+        <Text className="text-[13px] font-bold text-ink">Setup in Razorpay Dashboard</Text>
         <Text className="text-[14px] text-gray-600 leading-6">
-          1. Create a Razorpay account and complete KYC{'\n'}
-          2. Dashboard → API Keys → copy Key ID and Key Secret{'\n'}
-          3. Dashboard → Webhooks → add your API URL /api/webhooks/razorpay{'\n'}
-          4. Enable payment.captured event and copy the webhook secret here
+          1. Sign up at Razorpay and complete business verification there (not in this app).{'\n'}
+          2. Switch Razorpay Dashboard to {mode === 'test' ? 'Test' : 'Live'} mode (top bar).{'\n'}
+          3. Copy API keys from Dashboard → Developers → API Keys.{'\n'}
+          4. Add the webhook URL below under Developers → Webhooks.{'\n'}
+          5. Enable payment.captured (required). Optionally enable payment.failed.{'\n'}
+          6. Paste the webhook secret here and save.
         </Text>
+
+        <View className="flex-row flex-wrap gap-2">
+          <Pressable
+            onPress={() => openDashboard('/app/keys')}
+            className="px-3 py-2 rounded-full border border-gray-200 bg-white"
+          >
+            <Text className="text-[13px] font-semibold text-blue-600">Open API Keys</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => openDashboard('/app/webhooks')}
+            className="px-3 py-2 rounded-full border border-gray-200 bg-white"
+          >
+            <Text className="text-[13px] font-semibold text-blue-600">Open Webhooks</Text>
+          </Pressable>
+        </View>
+
+        <View className="gap-1.5">
+          <Text className="text-[13px] font-semibold text-ink">Webhook URL</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1 text-[12px] text-ink font-mono leading-5" selectable>
+              {webhookUrl}
+            </Text>
+            <Pressable
+              onPress={() => void copyWebhookUrl()}
+              className="w-9 h-9 rounded-full border border-gray-200 bg-white items-center justify-center"
+              accessibilityLabel="Copy webhook URL"
+            >
+              <FontAwesome name="copy" size={14} color={Colors.brand.primary} />
+            </Pressable>
+          </View>
+          {isProductionFallback ? (
+            <Muted className="text-xs">
+              Using production API URL. Set EXPO_PUBLIC_API_URL if you need a different host.
+            </Muted>
+          ) : null}
+        </View>
       </View>
     </PaymentMethodConfigLayout>
   )

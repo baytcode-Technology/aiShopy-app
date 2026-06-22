@@ -6,6 +6,8 @@ import { OrderStatusRow } from '@/components/store/OrderStatusRow'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
 import { OrderPaymentActions } from '@/components/store/OrderPaymentActions'
 import { OrderPaymentProofCard } from '@/components/store/OrderPaymentProofCard'
+import { OrderRazorpayPaymentCard } from '@/components/store/OrderRazorpayPaymentCard'
+import { OrderRazorpayPendingCard } from '@/components/store/OrderRazorpayPendingCard'
 import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
@@ -66,24 +68,13 @@ export default function OrderDetailScreen() {
     if (!order || !store?.id || saving) return
     setSaving(true)
     try {
-      const res = await updateOrder(order.id, {
+      await updateOrder(order.id, {
         store_id: store.id,
         payment_status: 'paid',
         order_status: order.order_status === 'pending' ? 'confirmed' : order.order_status,
       })
-      setOrder((prev) =>
-        prev
-          ? {
-              ...prev,
-              ...res.data.order,
-              customers: prev.customers,
-              items: prev.items,
-              payment: prev.payment
-                ? { ...prev.payment, status: 'paid' }
-                : prev.payment,
-            }
-          : prev
-      )
+      const refreshed = await fetchOrder(store.id, order.id)
+      setOrder(refreshed.data)
       showSuccess('Payment marked as received')
     } catch (e) {
       showError(e, 'Could not confirm payment')
@@ -153,8 +144,18 @@ export default function OrderDetailScreen() {
             showsVerticalScrollIndicator={false}
           >
             <AnimatedFadeIn className="gap-2">
-              {order?.payment?.provider === 'upi_manual' && order.payment.payment_proof_url ? (
+              {order.payment?.payment_proof_url ? (
                 <OrderPaymentProofCard url={order.payment.payment_proof_url} />
+              ) : null}
+              {order.payment?.provider === 'razorpay' &&
+              order.payment_status === 'paid' &&
+              order.payment.provider_payment_id ? (
+                <OrderRazorpayPaymentCard paymentId={order.payment.provider_payment_id} />
+              ) : null}
+              {order.payment?.provider === 'razorpay' &&
+              order.order_status !== 'cancelled' &&
+              order.payment_status !== 'paid' ? (
+                <OrderRazorpayPendingCard failed={order.payment?.status === 'failed'} />
               ) : null}
               <OrderPaymentActions
                 order={order}

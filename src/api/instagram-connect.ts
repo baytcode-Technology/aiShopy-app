@@ -19,25 +19,25 @@ export type InstagramConnectionStatusResponse = {
   data: InstagramConnectionStatus
 }
 
-function qs(storeId: string) {
-  return new URLSearchParams({ store_id: storeId }).toString()
+function qs(storeId: number) {
+  return new URLSearchParams({ store_id: String(storeId) }).toString()
 }
 
-export async function getInstagramConnectUrl(storeId: string): Promise<InstagramConnectResponse> {
+export async function getInstagramConnectUrl(storeId: number): Promise<InstagramConnectResponse> {
   return authenticatedFetch<InstagramConnectResponse>(
     `${endpoints.instagramConnect}?${qs(storeId)}`
   )
 }
 
 export async function fetchInstagramConnectionStatus(
-  storeId: string
+  storeId: number
 ): Promise<InstagramConnectionStatusResponse> {
   return authenticatedFetch<InstagramConnectionStatusResponse>(
     `${endpoints.instagramConnectionStatus}?${qs(storeId)}`
   )
 }
 
-export async function subscribeInstagramWebhooks(storeId: string): Promise<{
+export async function subscribeInstagramWebhooks(storeId: number): Promise<{
   success: boolean
   message: string
 }> {

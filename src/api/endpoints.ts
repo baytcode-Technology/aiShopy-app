@@ -25,4 +25,8 @@ export const endpoints = {
   instagramSubscribeWebhooks: "/api/instagram/subscribe-webhooks",
   instagramChats: "/api/instagram/chats",
   instagramSend: "/api/instagram/send",
+  subscriptionsPricing: "/api/subscriptions/pricing",
+  subscriptionsCheckout: "/api/subscriptions/checkout",
+  subscriptionsVerify: "/api/subscriptions/verify",
+  subscriptionsStatus: "/api/subscriptions/status",
 } as const;

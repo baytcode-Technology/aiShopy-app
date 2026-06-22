@@ -1,4 +1,5 @@
 import { ConversationRow } from "@/components/chat/ConversationRow";
+import { ChatsSubscriptionGate } from "@/components/subscription/ChatsSubscriptionGate";
 import { AppPressable } from "@/components/ui/AppPressable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Screen, ScreenBody } from "@/components/ui/Screen";
@@ -10,7 +11,9 @@ import { fetchAllChats } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { showError } from "@src/lib/toast";
+import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
 import type { ChatListItem } from "@src/types/chat";
 import { router, useFocusEffect, type Href } from "expo-router";
@@ -36,7 +39,7 @@ function formatTime(iso: string | null) {
 }
 
 function mapWhatsAppConversation(c: {
-  id: string;
+  id: number;
   customer_wa_number: string;
   last_message_at: string | null;
   last_message_preview: string | null;
@@ -58,7 +61,7 @@ function mapWhatsAppConversation(c: {
 }
 
 function mapInstagramConversation(c: {
-  id: string;
+  id: number;
   customer_ig_id: string;
   customer_ig_username: string | null;
   last_message_at: string | null;
@@ -96,7 +99,10 @@ type LoadChatsOptions = {
 };
 
 export default function MessagesListScreen() {
+  useStoreTabRootBack("chats");
+
   const { store } = useStore();
+  const premium = hasPremiumAccess(store);
   const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();
   const {
     onConversationUpdated,
@@ -311,6 +317,12 @@ export default function MessagesListScreen() {
       />
 
       <ScreenBody className="flex-1">
+        {!premium && store?.id ? (
+          <ChatsSubscriptionGate
+            onViewPlans={() => router.push("/subscription" as Href)}
+          />
+        ) : (
+          <>
         <SearchBar
           placeholder="Search conversations…"
           value={search}
@@ -359,6 +371,8 @@ export default function MessagesListScreen() {
           contentContainerClassName="pb-6"
           showsVerticalScrollIndicator={false}
         />
+          </>
+        )}
       </ScreenBody>
     </Screen>
   );

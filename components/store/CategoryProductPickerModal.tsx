@@ -15,8 +15,8 @@ type Mode = 'assign' | 'edit'
 type Props = {
   visible: boolean
   mode: Mode
-  storeId: string
-  categoryId: string
+  storeId: number
+  categoryId: number
   categoryName: string
   allProducts: Product[]
   onClose: () => void
@@ -33,7 +33,7 @@ export function CategoryProductPickerModal({
   onClose,
   onSaved,
 }: Props) {
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -52,7 +52,7 @@ export function CategoryProductPickerModal({
     p.name.toLowerCase().includes(search.trim().toLowerCase())
   )
 
-  const toggle = (id: string) => {
+  const toggle = (id: number) => {
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)

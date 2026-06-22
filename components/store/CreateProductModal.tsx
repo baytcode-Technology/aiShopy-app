@@ -25,9 +25,9 @@ import { View } from "react-native";
 
 type Props = {
   visible: boolean;
-  storeId: string;
+  storeId: number;
   categories: Category[];
-  initialCategoryId?: string;
+  initialCategoryId?: number;
   onClose: () => void;
   onCreated: () => void;
 };
@@ -46,7 +46,7 @@ export function CreateProductModal({
   const [stockQty, setStockQty] = useState("0");
   const [description, setDescription] = useState("");
   const [sku, setSku] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<number | null>(null);
   const [status, setStatus] = useState<ProductStatus>("active");
   const [variantOptions, setVariantOptions] = useState<VariantOption[]>([]);
   const [variants, setVariants] = useState<GeneratedVariant[]>([]);

@@ -9,11 +9,11 @@ import type { Category } from '@src/types/category'
 
 type Props = {
   categories: Category[]
-  selectedId: string | null
-  onSelect: (id: string | null) => void
+  selectedId: number | null
+  onSelect: (id: number | null) => void
   label?: string
   emptyHint?: string
-  excludeCategoryId?: string
+  excludeCategoryId?: number
 }
 
 export function CategoryParentPicker({

@@ -12,6 +12,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { env } from "@src/config/env";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
+import { getPlanLabel, getStorePlan } from "@src/lib/subscription";
 import { shadows } from "@src/lib/shadows";
 import { buildSubdomainUrl } from "@src/lib/storefront";
 import Colors from "@src/theme/colors";
@@ -161,15 +162,10 @@ export default function SettingsScreen() {
             />
             <MenuRow
               label="Subscription"
-              value="Plan & billing"
+              value={store ? getPlanLabel(getStorePlan(store)) : "Choose a plan"}
               icon="calendar"
               showChevron
-              onPress={() =>
-                router.push({
-                  pathname: "/account-coming-soon",
-                  params: { id: "subscription" },
-                })
-              }
+              onPress={() => router.push("/subscription" as Href)}
             />
             <MenuRow
               label="Admin Dashboard"

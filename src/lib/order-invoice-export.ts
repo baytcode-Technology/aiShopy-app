@@ -1,8 +1,9 @@
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 import { printAsync, printToFileAsync } from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import { Share } from 'react-native'
 import { buildInvoiceHtml, buildInvoicePlainText } from '@src/lib/order-invoice'
+import { formatOrderNumber } from '@src/lib/order-status'
 import type { Order } from '@src/types/order'
 import type { Store } from '@src/types/store'
 
@@ -14,7 +15,7 @@ type InvoiceContext = {
 function invoiceContext(ctx: InvoiceContext) {
   const html = buildInvoiceHtml(ctx)
   const text = buildInvoicePlainText(ctx)
-  const title = `Invoice ${ctx.order.order_number}`
+  const title = `Invoice ${formatOrderNumber(ctx.order.order_number)}`
   return { html, text, title }
 }
 
@@ -48,7 +49,7 @@ export async function downloadOrderInvoice(ctx: InvoiceContext): Promise<void> {
     // PDF export unavailable — fall back to a text file share.
   }
 
-  const safeName = ctx.order.order_number.replace(/[^a-zA-Z0-9-]/g, '')
+  const safeName = String(ctx.order.id)
   const path = `${FileSystem.cacheDirectory}invoice-${safeName}.txt`
   await FileSystem.writeAsStringAsync(path, text)
 

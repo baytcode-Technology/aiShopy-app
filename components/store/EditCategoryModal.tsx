@@ -28,7 +28,7 @@ function toPickedImage(imageUrl: string): PickedImage {
 type Props = {
   visible: boolean
   category: Category
-  storeId: string
+  storeId: number
   productCount: number
   onClose: () => void
   onUpdated: (category: Category) => void

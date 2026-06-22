@@ -15,7 +15,26 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aishopy.app"
+      "bundleIdentifier": "com.aishopy.app",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "upi",
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "gpay",
+          "credpay",
+          "bhim",
+          "upi",
+          "tez",
+          "phonepe",
+          "paytmmp",
+          "gpay",
+          "credpay",
+          "bhim"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "label": "AiShopy",
@@ -31,7 +50,51 @@
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
-      ]
+      ],
+      "manifest": {
+        "queries": [
+          {
+            "intent": {
+              "action": "VIEW",
+              "data": [
+                {
+                  "scheme": "upi"
+                }
+              ]
+            }
+          },
+          {
+            "intent": {
+              "action": "VIEW",
+              "data": [
+                {
+                  "scheme": "tez"
+                }
+              ]
+            }
+          },
+          {
+            "intent": {
+              "action": "VIEW",
+              "data": [
+                {
+                  "scheme": "phonepe"
+                }
+              ]
+            }
+          },
+          {
+            "intent": {
+              "action": "VIEW",
+              "data": [
+                {
+                  "scheme": "paytmmp"
+                }
+              ]
+            }
+          }
+        ]
+      }
     },
     "web": {
       "bundler": "metro",
@@ -39,6 +102,14 @@
       "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
       "./plugins/with-android-app-name.js",
       "expo-router",
       "expo-secure-store",
@@ -71,6 +142,6 @@
         "projectId": "005f6373-309d-4dfa-bf83-aac91cb2205b"
       }
     },
-    "owner": "BaytCode"
+    "owner": "muhammed_nuaim"
   }
 }

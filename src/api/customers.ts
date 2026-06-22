@@ -6,8 +6,8 @@ import type {
   ListCustomersResponse,
 } from '@src/types/customer'
 
-export async function fetchCustomers(storeId: string): Promise<ListCustomersResponse> {
-  const qs = new URLSearchParams({ store_id: storeId })
+export async function fetchCustomers(storeId: number): Promise<ListCustomersResponse> {
+  const qs = new URLSearchParams({ store_id: String(storeId) })
   return authenticatedFetch<ListCustomersResponse>(`${endpoints.customers}?${qs.toString()}`)
 }
 

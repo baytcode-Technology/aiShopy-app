@@ -39,10 +39,6 @@ import type { Category } from '@src/types/category'
 import { getProductStatus } from '@src/lib/product-status'
 import type { Product, ProductStatus, ProductVariant } from '@src/types/product'
 
-function isNewVariantId(id: string): boolean {
-  return id.startsWith('gen-')
-}
-
 type Props = {
   visible: boolean
   product: Product | null
@@ -67,7 +63,7 @@ export function EditProductModal({
   const [stockQty, setStockQty] = useState('0')
   const [description, setDescription] = useState('')
   const [sku, setSku] = useState('')
-  const [categoryId, setCategoryId] = useState<string | null>(null)
+  const [categoryId, setCategoryId] = useState<number | null>(null)
   const [status, setStatus] = useState<ProductStatus>('active')
   const [mediaItems, setMediaItems] = useState<ProductMediaItem[]>([])
   const [thumbnailId, setThumbnailId] = useState<string | null>(null)
@@ -212,8 +208,8 @@ export function EditProductModal({
         status,
         images,
         thumbnail_url,
-        mark_as_sold: markAsSold,
-        mark_as_non_inventory: markAsNonInventory,
+        mark_as_sold: hasExisting ? false : markAsSold,
+        mark_as_non_inventory: hasExisting ? false : markAsNonInventory,
       })
 
       const existingVariantImageUrls = await uploadLocalVariantImages(
@@ -349,13 +345,15 @@ export function EditProductModal({
         style={{ textAlignVertical: 'top' }}
       />
       <ProductStatusPicker value={status} onChange={setStatus} />
-      <ProductInventoryFlagsEditor
-        markAsSold={markAsSold}
-        markAsNonInventory={markAsNonInventory}
-        onMarkAsSoldChange={setMarkAsSold}
-        onMarkAsNonInventoryChange={setMarkAsNonInventory}
-        disabled={loading}
-      />
+      {showProductStock ? (
+        <ProductInventoryFlagsEditor
+          markAsSold={markAsSold}
+          markAsNonInventory={markAsNonInventory}
+          onMarkAsSoldChange={setMarkAsSold}
+          onMarkAsNonInventoryChange={setMarkAsNonInventory}
+          disabled={loading}
+        />
+      ) : null}
 
       {product ? (
         <VariantListEditor
@@ -368,7 +366,7 @@ export function EditProductModal({
       <SectionTitle className="mt-1">Add new variants</SectionTitle>
       <ShopifyVariantEditor
         options={variantOptions}
-        variants={newVariants.filter((v) => isNewVariantId(v.id))}
+        variants={newVariants.filter((v) => v.id.startsWith('gen-'))}
         onChange={(options, generated) => {
           setVariantOptions(options)
           setNewVariants(generated)

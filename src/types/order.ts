@@ -17,13 +17,13 @@ export type OrderFulfillmentStatus =
 
 export type OrderItem = {
 
-  id: string
+  id: number
 
-  order_id: string
+  order_id: number
 
-  product_id: string
+  product_id: number
 
-  variant_id: string | null
+  variant_id: number | null
 
   quantity: number
 
@@ -39,13 +39,13 @@ export type OrderItem = {
 
 export type Order = {
 
-  id: string
+  id: number
 
-  store_id: string
+  store_id: number
 
-  customer_id: string | null
+  customer_id: number | null
 
-  conversation_id: string | null
+  conversation_id: number | null
 
   order_number: string
 
@@ -84,11 +84,12 @@ export type Order = {
   items: OrderItem[]
 
   payment?: {
-    id: string
+    id: number
     provider: string
     status: string
     amount: number
     currency: string
+    payment_proof_url?: string | null
   } | null
 
 }
@@ -97,13 +98,9 @@ export type Order = {
 
 export type ListOrdersResponse = {
 
-  success: boolean
-
-  message: string
-
   data: {
 
-    store_id: string
+    store_id: number
 
     orders: Order[]
 
@@ -129,7 +126,7 @@ export type GetOrderResponse = {
 
 export type UpdateOrderPayload = {
 
-  store_id: string
+  store_id: number
 
   order_status?: OrderLifecycleStatus
 
@@ -159,11 +156,11 @@ export type UpdateOrderResponse = {
 
 export type CreateOrderLineItem = {
 
-  product_id: string
+  product_id: number
 
   quantity: number
 
-  variant_id?: string
+  variant_id?: number
 
 }
 
@@ -193,11 +190,11 @@ export type CreateOrderShippingAddress = {
 
 export type CreateOrderPayload = {
 
-  store_id: string
+  store_id: number
 
   items: CreateOrderLineItem[]
 
-  customer_id?: string
+  customer_id?: number
 
   whatsapp_number?: string
 
@@ -230,5 +227,4 @@ export type CreateOrderResponse = {
   }
 
 }
-
 

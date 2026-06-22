@@ -1,5 +1,5 @@
 export type Store = {
-  id: string;
+  id: number;
   owner_id: string;
   name: string;
   slug: string;
@@ -18,6 +18,10 @@ export type Store = {
   ai_language: string | null;
   industry: string | null;
   is_active: boolean;
+  subscription_plan?: "starter" | "business" | "enterprise";
+  subscription_expires_at?: string | null;
+  product_count?: number;
+  order_count?: number;
   created_at: string;
   updated_at: string;
 };
@@ -75,7 +79,7 @@ export type CreateStoreResponse = {
 };
 
 export type StoreSession = {
-  storeId: string;
+  storeId: number;
   slug: string;
   name: string;
   subdomainUrl: string;

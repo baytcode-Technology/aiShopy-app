@@ -5,6 +5,7 @@ import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerShee
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
 import { OrderPaymentActions } from '@/components/store/OrderPaymentActions'
+import { OrderPaymentProofCard } from '@/components/store/OrderPaymentProofCard'
 import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
@@ -12,15 +13,17 @@ import { Muted } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
 import { useStore } from '@src/contexts/store-context'
 import { useStoreUnread } from '@src/contexts/store-unread-context'
-import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
+import { formatOrderNumber } from '@src/lib/order-status'
 import type { OrderStatusField } from '@src/lib/order-status'
+import { useNavigateBackTo } from '@src/hooks/useNavigateBackTo'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Order } from '@src/types/order'
 import Colors from '@src/theme/colors'
 
 export default function OrderDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>()
-  const id = Array.isArray(idParam) ? idParam[0] : idParam
+  const idRaw = Array.isArray(idParam) ? idParam[0] : idParam
+  const id = idRaw != null ? Number(idRaw) : NaN
   const router = useRouter()
   const { store } = useStore()
   const { markOrderViewed } = useStoreUnread()
@@ -34,7 +37,7 @@ export default function OrderDetailScreen() {
   const [pickerField, setPickerField] = useState<OrderStatusField | null>(null)
 
   const load = useCallback(async () => {
-    if (!id || !store?.id) return
+    if (!Number.isFinite(id) || !store?.id) return
     setLoading(true)
     try {
       const res = await fetchOrder(store.id, id)
@@ -54,7 +57,7 @@ export default function OrderDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!id) return
+      if (!Number.isFinite(id)) return
       void markOrderViewed(id)
     }, [id, markOrderViewed])
   )
@@ -123,7 +126,7 @@ export default function OrderDetailScreen() {
   return (
     <Screen variant="shell" edges={['top']}>
       <DetailScreenHeader
-        title={order ? `Order ${order.order_number}` : 'Order'}
+        title={order ? `Order ${formatOrderNumber(order.order_number)}` : 'Order'}
         onBack={() => router.navigate(ordersListHref)}
       />
 
@@ -150,6 +153,9 @@ export default function OrderDetailScreen() {
             showsVerticalScrollIndicator={false}
           >
             <AnimatedFadeIn className="gap-2">
+              {order?.payment?.provider === 'upi_manual' && order.payment.payment_proof_url ? (
+                <OrderPaymentProofCard url={order.payment.payment_proof_url} />
+              ) : null}
               <OrderPaymentActions
                 order={order}
                 payment={order.payment ?? null}

@@ -20,7 +20,7 @@ import type { Order } from '@src/types/order'
 const CHAT_REFRESH_DEBOUNCE_MS = 300
 const MARK_CHAT_READ_DEBOUNCE_MS = 500
 
-type ActiveChat = { conversationId: string; channel: ChatChannel }
+type ActiveChat = { conversationId: number; channel: ChatChannel }
 
 type StoreUnreadContextValue = {
   ordersUnreadCount: number
@@ -30,18 +30,18 @@ type StoreUnreadContextValue = {
   refreshOrdersUnread: () => Promise<void>
   refreshChatsUnread: () => Promise<void>
   isOrderUnviewed: (order: Order) => boolean
-  onOrderViewed: (handler: (orderId: string) => void) => () => void
+  onOrderViewed: (handler: (orderId: number) => void) => () => void
   onChatsInvalidate: (handler: () => void) => () => void
-  onActiveChatMessage: (handler: (conversationId: string) => void) => () => void
+  onActiveChatMessage: (handler: (conversationId: number) => void) => () => void
   setActiveChat: (chat: ActiveChat | null) => void
-  isActiveChat: (conversationId: string) => boolean
-  markOrderViewed: (orderId: string) => Promise<void>
-  markChatRead: (conversationId: string, channel: ChatChannel) => Promise<void>
+  isActiveChat: (conversationId: number) => boolean
+  markOrderViewed: (orderId: number) => Promise<void>
+  markChatRead: (conversationId: number, channel: ChatChannel) => Promise<void>
 }
 
 const StoreUnreadContext = createContext<StoreUnreadContextValue | null>(null)
 
-function countUnviewedOrders(orders: Order[], viewedOrderIds: Set<string>): number {
+function countUnviewedOrders(orders: Order[], viewedOrderIds: Set<number>): number {
   return orders.filter((o) => !o.merchant_viewed_at && !viewedOrderIds.has(o.id)).length
 }
 
@@ -56,11 +56,11 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   } = useChatSocket()
   const [ordersUnreadCount, setOrdersUnreadCount] = useState(0)
   const [chatsUnreadCount, setChatsUnreadCount] = useState(0)
-  const [viewedOrderIds, setViewedOrderIds] = useState<Set<string>>(() => new Set())
-  const orderViewedListeners = useRef(new Set<(orderId: string) => void>())
+  const [viewedOrderIds, setViewedOrderIds] = useState<Set<number>>(() => new Set())
+  const orderViewedListeners = useRef(new Set<(orderId: number) => void>())
   const chatsInvalidateListeners = useRef(new Set<() => void>())
-  const activeChatMessageListeners = useRef(new Set<(conversationId: string) => void>())
-  const markingOrderIds = useRef(new Set<string>())
+  const activeChatMessageListeners = useRef(new Set<(conversationId: number) => void>())
+  const markingOrderIds = useRef(new Set<number>())
   const chatRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const markChatReadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeChatRef = useRef<ActiveChat | null>(null)
@@ -112,7 +112,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     activeChatRef.current = chat
   }, [])
 
-  const isActiveChat = useCallback((conversationId: string) => {
+  const isActiveChat = useCallback((conversationId: number) => {
     return activeChatRef.current?.conversationId === conversationId
   }, [])
 
@@ -120,12 +120,12 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     chatsInvalidateListeners.current.forEach((handler) => handler())
   }, [])
 
-  const notifyActiveChatMessage = useCallback((conversationId: string) => {
+  const notifyActiveChatMessage = useCallback((conversationId: number) => {
     activeChatMessageListeners.current.forEach((handler) => handler(conversationId))
   }, [])
 
   const markChatRead = useCallback(
-    async (conversationId: string, channel: ChatChannel) => {
+    async (conversationId: number, channel: ChatChannel) => {
       if (!store?.id) return
       try {
         await markChatReadApi({ storeId: store.id, conversationId, channel })
@@ -138,7 +138,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   )
 
   const scheduleMarkChatRead = useCallback(
-    (conversationId: string, channel: ChatChannel) => {
+    (conversationId: number, channel: ChatChannel) => {
       if (markChatReadTimer.current) {
         clearTimeout(markChatReadTimer.current)
       }
@@ -151,7 +151,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   )
 
   const scheduleChatsRefresh = useCallback(
-    (conversationId?: string) => {
+    (conversationId?: number) => {
       const active = activeChatRef.current
       if (conversationId && active?.conversationId === conversationId) {
         notifyActiveChatMessage(conversationId)
@@ -171,7 +171,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     [invalidateChats, refreshChatsUnread, scheduleMarkChatRead, notifyActiveChatMessage]
   )
 
-  const onOrderViewed = useCallback((handler: (orderId: string) => void) => {
+  const onOrderViewed = useCallback((handler: (orderId: number) => void) => {
     orderViewedListeners.current.add(handler)
     return () => {
       orderViewedListeners.current.delete(handler)
@@ -185,7 +185,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const onActiveChatMessage = useCallback((handler: (conversationId: string) => void) => {
+  const onActiveChatMessage = useCallback((handler: (conversationId: number) => void) => {
     activeChatMessageListeners.current.add(handler)
     return () => {
       activeChatMessageListeners.current.delete(handler)
@@ -245,8 +245,16 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     return addNotificationReceivedListener((data) => {
       if (data.type === 'chat') {
         const conversationId =
-          typeof data.conversationId === 'string' ? data.conversationId : undefined
-        scheduleChatsRefresh(conversationId)
+          typeof data.conversationId === 'number'
+            ? data.conversationId
+            : typeof data.conversationId === 'string'
+              ? Number(data.conversationId)
+              : undefined
+        scheduleChatsRefresh(
+          conversationId != null && Number.isFinite(conversationId)
+            ? conversationId
+            : undefined
+        )
       }
     })
   }, [store?.id, scheduleChatsRefresh])
@@ -263,7 +271,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const markOrderViewed = useCallback(
-    async (orderId: string) => {
+    async (orderId: number) => {
       if (!store?.id) return
       if (viewedOrderIds.has(orderId) || markingOrderIds.current.has(orderId)) return
 

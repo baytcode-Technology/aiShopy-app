@@ -9,7 +9,7 @@ export type WhatsAppConnectResponse = {
 
 export type WhatsAppSyncJob = {
   id: string
-  store_id: string
+  store_id: number
   sync_type: 'smb_app_state_sync' | 'history'
   request_id: string | null
   status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'declined'
@@ -41,25 +41,25 @@ export type WhatsAppTriggerSyncResponse = {
   data: unknown
 }
 
-function qs(storeId: string) {
-  return new URLSearchParams({ store_id: storeId }).toString()
+function qs(storeId: number) {
+  return new URLSearchParams({ store_id: String(storeId) }).toString()
 }
 
-export async function getWhatsAppConnectUrl(storeId: string): Promise<WhatsAppConnectResponse> {
+export async function getWhatsAppConnectUrl(storeId: number): Promise<WhatsAppConnectResponse> {
   return authenticatedFetch<WhatsAppConnectResponse>(
     `${endpoints.whatsappConnect}?${qs(storeId)}`
   )
 }
 
 export async function fetchWhatsAppConnectionStatus(
-  storeId: string
+  storeId: number
 ): Promise<WhatsAppConnectionStatusResponse> {
   return authenticatedFetch<WhatsAppConnectionStatusResponse>(
     `${endpoints.whatsappConnectionStatus}?${qs(storeId)}`
   )
 }
 
-export async function triggerWhatsAppSync(storeId: string): Promise<WhatsAppTriggerSyncResponse> {
+export async function triggerWhatsAppSync(storeId: number): Promise<WhatsAppTriggerSyncResponse> {
   return authenticatedFetch<WhatsAppTriggerSyncResponse>(endpoints.whatsappSync, {
     method: 'POST',
     body: JSON.stringify({ storeId }),

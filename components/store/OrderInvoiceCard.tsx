@@ -16,7 +16,7 @@ import {
 } from '@src/lib/order-invoice'
 import { downloadOrderInvoice, printOrderInvoice } from '@src/lib/order-invoice-export'
 import { formatMoney } from '@src/lib/format-money'
-import { formatOrderListNumber } from '@src/lib/order-status'
+import { formatOrderNumber } from '@src/lib/order-status'
 import { showError } from '@src/lib/toast'
 import type { Order } from '@src/types/order'
 import type { Store } from '@src/types/store'
@@ -143,7 +143,7 @@ export function OrderInvoiceCard({ order, store }: Props) {
       <View className="h-px bg-gray-200" />
 
       <View className="gap-2">
-        <InvoiceMetaRow label="Invoice No" value={formatOrderListNumber(order.order_number)} />
+        <InvoiceMetaRow label="Invoice No" value={formatOrderNumber(order.order_number)} />
         <InvoiceMetaRow label="Order date" value={formatOrderInvoiceDate(order.created_at)} />
       </View>
 

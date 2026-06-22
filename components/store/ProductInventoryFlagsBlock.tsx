@@ -3,7 +3,6 @@ import { ActivityIndicator, Text, View } from 'react-native'
 import { ProductInventoryFlagsEditor } from '@/components/store/ProductInventoryFlagsEditor'
 import { DetailSection } from '@/components/store/detail/DetailSection'
 import { updateProduct } from '@src/api/products'
-import { productInventoryFlagsLocked } from '@src/lib/product-inventory'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
@@ -78,9 +77,6 @@ export function ProductInventoryFlagsBlock({ product, onUpdated }: Props) {
             <ActivityIndicator size="small" color={Colors.brand.green} />
           ) : null}
         </View>
-        <Text className="text-[11px] text-gray-500 mb-2 leading-4">
-          Product settings override variant settings and apply to every variant.
-        </Text>
         <ProductInventoryFlagsEditor
           markAsSold={markAsSold}
           markAsNonInventory={markAsNonInventory}
@@ -88,15 +84,6 @@ export function ProductInventoryFlagsBlock({ product, onUpdated }: Props) {
           onMarkAsNonInventoryChange={onMarkAsNonInventoryChange}
           disabled={saving}
         />
-        {productInventoryFlagsLocked({
-          ...product,
-          mark_as_sold: markAsSold,
-          mark_as_non_inventory: markAsNonInventory,
-        }) ? (
-          <Text className="text-[11px] text-amber-800 mt-2 leading-4">
-            All variants will follow these product flags.
-          </Text>
-        ) : null}
       </View>
     </DetailSection>
   )

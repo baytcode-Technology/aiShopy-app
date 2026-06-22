@@ -53,7 +53,8 @@ import Colors from "@src/theme/colors";
 export default function ProductDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string | string[] }>();
 
-  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+  const idRaw = Array.isArray(idParam) ? idParam[0] : idParam;
+  const id = idRaw != null ? Number(idRaw) : NaN;
 
   const router = useRouter();
 
@@ -72,7 +73,7 @@ export default function ProductDetailScreen() {
   const [savingStatus, setSavingStatus] = useState(false);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!Number.isFinite(id)) return;
 
     setLoading(true);
 
@@ -189,10 +190,12 @@ export default function ProductDetailScreen() {
                 onUpdated={setProduct}
               />
 
-              <ProductInventoryFlagsBlock
-                product={product}
-                onUpdated={setProduct}
-              />
+              {variants.length === 0 ? (
+                <ProductInventoryFlagsBlock
+                  product={product}
+                  onUpdated={setProduct}
+                />
+              ) : null}
 
               <ProductVariantsSection
                 product={product}

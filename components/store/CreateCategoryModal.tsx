@@ -14,9 +14,9 @@ import type { Category } from '@src/types/category'
 
 type Props = {
   visible: boolean
-  storeId: string
+  storeId: number
   categories?: Category[]
-  defaultParentId?: string | null
+  defaultParentId?: number | null
   onClose: () => void
   onCreated: (category: Category) => void
 }
@@ -30,7 +30,7 @@ export function CreateCategoryModal({
   onCreated,
 }: Props) {
   const [name, setName] = useState('')
-  const [parentId, setParentId] = useState<string | null>(null)
+  const [parentId, setParentId] = useState<number | null>(null)
   const [isActive, setIsActive] = useState(true)
   const [image, setImage] = useState<PickedImage | null>(null)
   const [nameError, setNameError] = useState('')

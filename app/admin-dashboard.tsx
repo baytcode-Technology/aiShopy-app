@@ -1,23 +1,45 @@
-import { MenuRow } from "@/components/ui/MenuRow";
+import { LockedMenuRow } from "@/components/subscription/LockedMenuRow";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { env } from "@src/config/env";
 import { useStore } from "@src/contexts/store-context";
+import { hasPremiumAccess } from "@src/lib/subscription";
 import { shadows } from "@src/lib/shadows";
 import Colors from "@src/theme/colors";
 import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
+
 export default function AdminDashboardScreen() {
   const { store } = useStore();
+  const premium = hasPremiumAccess(store);
   const [domainOpen, setDomainOpen] = useState(false);
   const [customDomainComingSoon, setCustomDomainComingSoon] = useState(false);
 
   const currentDomain = store?.slug
     ? `${store.slug}.${env.storefrontBaseDomain}`
     : "—";
+
+  const goToSubscription = () => router.push("/subscription" as Href);
+
+  const handleDomainPress = () => {
+    if (!premium) {
+      goToSubscription();
+      return;
+    }
+    setDomainOpen((open) => !open);
+    if (domainOpen) setCustomDomainComingSoon(false);
+  };
+
+  const handleCustomDomainPress = () => {
+    if (!premium) {
+      goToSubscription();
+      return;
+    }
+    setCustomDomainComingSoon(true);
+  };
 
   return (
     <Screen>
@@ -33,7 +55,9 @@ export default function AdminDashboardScreen() {
           below.
         </Muted>
 
-        <MenuRow
+        <LockedMenuRow
+          locked={!premium}
+          onLockedPress={goToSubscription}
           label="WhatsApp"
           value="Connect phone + inbox"
           icon="whatsapp"
@@ -41,7 +65,9 @@ export default function AdminDashboardScreen() {
           onPress={() => router.push("/connect-whatsapp" as Href)}
         />
 
-        <MenuRow
+        <LockedMenuRow
+          locked={!premium}
+          onLockedPress={goToSubscription}
           label="Instagram"
           value="Connect business account"
           icon="instagram"
@@ -49,42 +75,45 @@ export default function AdminDashboardScreen() {
           onPress={() => router.push("/instagram-connect" as Href)}
         />
 
-        <MenuRow
+        <LockedMenuRow
+          locked={!premium}
+          onLockedPress={goToSubscription}
           label="Chat Boat"
           value="Smart assistant for your store"
           icon="magic"
           showChevron
-          onPress={() => router.push('/chat-boat' as Href)}
+          onPress={() => router.push("/chat-boat" as Href)}
         />
 
-        <MenuRow
+        <LockedMenuRow
+          locked={!premium}
+          onLockedPress={goToSubscription}
           label="Staff management"
           value="Invite team & assign roles"
           icon="users"
           showChevron
           onPress={() =>
             router.push({
-              pathname: '/account-coming-soon',
-              params: { id: 'staff-management' },
+              pathname: "/account-coming-soon",
+              params: { id: "staff-management" },
             })
           }
         />
 
         <View>
-          <MenuRow
+          <LockedMenuRow
+            locked={!premium}
+            onLockedPress={goToSubscription}
             label="Domain"
             value={
               domainOpen ? "Hide domain settings" : "Current & custom domain"
             }
             icon="globe"
-            showChevron
-            onPress={() => {
-              setDomainOpen((open) => !open);
-              if (domainOpen) setCustomDomainComingSoon(false);
-            }}
+            showChevron={premium}
+            onPress={handleDomainPress}
           />
 
-          {domainOpen ? (
+          {domainOpen && premium ? (
             <View
               className="mt-3 rounded-2xl border border-gray-200 bg-surface overflow-hidden"
               style={shadows.sm}
@@ -102,7 +131,7 @@ export default function AdminDashboardScreen() {
               </View>
 
               <Pressable
-                onPress={() => setCustomDomainComingSoon(true)}
+                onPress={handleCustomDomainPress}
                 className="px-5 py-4 flex-row items-center justify-between"
               >
                 <View className="flex-1 pr-3">

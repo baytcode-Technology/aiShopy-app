@@ -25,7 +25,7 @@ import type { Product, ProductVariant } from '@src/types/product'
 
 type Props = {
   visible: boolean
-  storeId: string
+  storeId: number
   currency?: string
   onClose: () => void
   onCreated: () => void

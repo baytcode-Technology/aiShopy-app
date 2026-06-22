@@ -8,8 +8,8 @@ import type {
   UpdateCategoryPayload,
 } from '@src/types/category'
 
-export async function fetchCategories(storeId: string): Promise<ListCategoriesResponse> {
-  const qs = new URLSearchParams({ store_id: storeId })
+export async function fetchCategories(storeId: number): Promise<ListCategoriesResponse> {
+  const qs = new URLSearchParams({ store_id: String(storeId) })
   return authenticatedFetch<ListCategoriesResponse>(`${endpoints.categories}?${qs.toString()}`)
 }
 
@@ -39,7 +39,7 @@ export type UpdateCategoryResponse = {
 }
 
 export async function updateCategory(
-  categoryId: string,
+  categoryId: number,
   payload: UpdateCategoryPayload
 ): Promise<UpdateCategoryResponse> {
   return authenticatedFetch<UpdateCategoryResponse>(`${endpoints.categories}/${categoryId}`, {
@@ -49,7 +49,7 @@ export async function updateCategory(
 }
 
 export async function deleteCategory(
-  categoryId: string
+  categoryId: number
 ): Promise<{ success: boolean; message: string }> {
   return authenticatedFetch(`${endpoints.categories}/${categoryId}`, {
     method: 'DELETE',
@@ -57,9 +57,9 @@ export async function deleteCategory(
 }
 
 export async function syncCategoryProducts(
-  storeId: string,
-  categoryId: string,
-  productIds: string[]
+  storeId: number,
+  categoryId: number,
+  productIds: number[]
 ): Promise<SyncCategoryProductsResponse> {
   return authenticatedFetch<SyncCategoryProductsResponse>(
     `${endpoints.categories}/${categoryId}/products`,

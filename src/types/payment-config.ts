@@ -22,7 +22,7 @@ export type PaymentConfigResponse = {
   success: boolean
   message: string
   data: {
-    store_id: string
+    store_id: number
     payment_config: MerchantPaymentConfig
   }
 }

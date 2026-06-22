@@ -140,6 +140,40 @@ function NotificationToggleRowSkeleton() {
   )
 }
 
+function SubscriptionPlanCardSkeleton() {
+  return (
+    <View
+      className="rounded-[28px] border border-gray-200 bg-surface overflow-hidden"
+      style={shadows.card}
+    >
+      <View className="px-6 pt-6 pb-4 gap-3">
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-6 w-[40%] rounded-md" />
+        <Skeleton className="h-8 w-[55%] rounded-md" />
+        <Skeleton className="h-4 w-[35%] rounded-md" />
+      </View>
+      <View className="px-6 pb-4 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-3.5 w-full rounded-md" />
+        ))}
+      </View>
+      <View className="px-6 pb-6">
+        <Skeleton className="h-12 w-full rounded-full" />
+      </View>
+    </View>
+  )
+}
+
+export function SubscriptionPlanCardsSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <View className="gap-5">
+      {Array.from({ length: count }, (_, i) => (
+        <SubscriptionPlanCardSkeleton key={i} />
+      ))}
+    </View>
+  )
+}
+
 export function NotificationSettingsSkeleton() {
   return (
     <View className="gap-4">

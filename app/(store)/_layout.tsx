@@ -5,11 +5,18 @@ import { StoreUnreadProvider } from "@src/contexts/store-unread-context";
 import { useStore } from "@src/contexts/store-context";
 import Colors from "@src/theme/colors";
 import { Redirect, Tabs } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 export default function StoreLayout() {
   const { isLoading, isAuthenticated } = useAuth();
-  const { store, isLoading: storeLoading } = useStore();
+  const { store, isLoading: storeLoading, refreshStore } = useStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void refreshStore();
+    }
+  }, [isAuthenticated, refreshStore]);
 
   if (isLoading || storeLoading) {
     return (
@@ -31,6 +38,7 @@ export default function StoreLayout() {
   return (
     <StoreUnreadProvider>
       <Tabs
+        backBehavior="none"
         tabBar={(props) => <StoreTabBar {...props} />}
         screenOptions={{
           headerShown: false,

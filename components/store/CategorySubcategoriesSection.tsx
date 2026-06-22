@@ -7,7 +7,7 @@ import type { Category } from '@src/types/category'
 
 type Props = {
   children: Category[]
-  onPressChild: (categoryId: string) => void
+  onPressChild: (categoryId: number) => void
   onAddSubcategory: () => void
 }
 

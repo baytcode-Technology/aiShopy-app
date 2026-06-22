@@ -8,7 +8,7 @@ import type { Product } from '@src/types/product'
 
 type Props = {
   products: Product[]
-  onPressProduct: (productId: string) => void
+  onPressProduct: (productId: number) => void
   onAddRemove: () => void
 }
 

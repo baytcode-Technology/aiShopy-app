@@ -12,7 +12,7 @@ export type FlatCategoryItem = {
 }
 
 export function buildCategoryTree(categories: Category[]): CategoryTreeNode[] {
-  const map = new Map<string, CategoryTreeNode>()
+  const map = new Map<number, CategoryTreeNode>()
   const roots: CategoryTreeNode[] = []
 
   for (const category of categories) {
@@ -22,7 +22,7 @@ export function buildCategoryTree(categories: Category[]): CategoryTreeNode[] {
   for (const category of categories) {
     const node = map.get(category.id)
     if (!node) continue
-    if (category.parent_id && map.has(category.parent_id)) {
+    if (category.parent_id != null && map.has(category.parent_id)) {
       map.get(category.parent_id)!.children.push(node)
     } else {
       roots.push(node)
@@ -41,7 +41,7 @@ export function buildCategoryTree(categories: Category[]): CategoryTreeNode[] {
 
 export function flattenCategoryTree(
   roots: CategoryTreeNode[],
-  expandedIds: Set<string>,
+  expandedIds: Set<number>,
   depth = 0
 ): FlatCategoryItem[] {
   const result: FlatCategoryItem[] = []
@@ -59,34 +59,34 @@ export function flattenCategoryTree(
   return result
 }
 
-export function getCategoryBreadcrumb(categoryId: string, categories: Category[]): string {
+export function getCategoryBreadcrumb(categoryId: number, categories: Category[]): string {
   const byId = new Map(categories.map((c) => [c.id, c]))
   const parts: string[] = []
   let current: Category | undefined = byId.get(categoryId)
-  const seen = new Set<string>()
+  const seen = new Set<number>()
   while (current && !seen.has(current.id)) {
     seen.add(current.id)
     parts.unshift(current.name)
-    current = current.parent_id ? byId.get(current.parent_id) : undefined
+    current = current.parent_id != null ? byId.get(current.parent_id) : undefined
   }
   return parts.join(' › ')
 }
 
-export function getDirectChildren(parentId: string | null, categories: Category[]): Category[] {
+export function getDirectChildren(parentId: number | null, categories: Category[]): Category[] {
   return categories
     .filter((c) => (c.parent_id ?? null) === parentId)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
 }
 
-export function getDescendantIds(categoryId: string, categories: Category[]): Set<string> {
-  const byParent = new Map<string, string[]>()
+export function getDescendantIds(categoryId: number, categories: Category[]): Set<number> {
+  const byParent = new Map<number, number[]>()
   for (const c of categories) {
-    if (!c.parent_id) continue
+    if (c.parent_id == null) continue
     const list = byParent.get(c.parent_id) ?? []
     list.push(c.id)
     byParent.set(c.parent_id, list)
   }
-  const result = new Set<string>()
+  const result = new Set<number>()
   const stack = [...(byParent.get(categoryId) ?? [])]
   while (stack.length > 0) {
     const id = stack.pop()!
@@ -117,13 +117,13 @@ export function filterCategoriesForTree(
   if (!q && status === 'all') return categories
 
   const byId = new Map(categories.map((c) => [c.id, c]))
-  const included = new Set<string>()
+  const included = new Set<number>()
 
   for (const c of categories) {
     if (!matches(c)) continue
     included.add(c.id)
     let parentId = c.parent_id
-    while (parentId) {
+    while (parentId != null) {
       included.add(parentId)
       parentId = byId.get(parentId)?.parent_id ?? null
     }
@@ -132,6 +132,6 @@ export function filterCategoriesForTree(
   return categories.filter((c) => included.has(c.id))
 }
 
-export function defaultExpandedIds(roots: CategoryTreeNode[]): Set<string> {
+export function defaultExpandedIds(roots: CategoryTreeNode[]): Set<number> {
   return new Set(roots.map((r) => r.id))
 }

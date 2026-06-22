@@ -20,7 +20,7 @@ function mimeFromUri(uri: string): string {
 
 type Props = {
   category: Category
-  storeId: string
+  storeId: number
   onUpdated: (category: Category) => void
 }
 

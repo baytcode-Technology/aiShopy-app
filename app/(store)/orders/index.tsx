@@ -20,6 +20,7 @@ import {
   type OrderFilters,
   type OrderStatusField,
 } from "@src/lib/order-status";
+import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { Order } from "@src/types/order";
@@ -28,6 +29,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 
 export default function OrdersScreen() {
+  useStoreTabRootBack("orders");
+
   const { store } = useStore();
   const { syncOrdersUnread, onOrderViewed } = useStoreUnread();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -151,7 +154,7 @@ export default function OrdersScreen() {
           <FlatList
             className="flex-1 bg-surface mx-4 rounded-2xl border border-gray-200 overflow-hidden"
             data={filteredOrders}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             contentContainerClassName="pb-32"
             showsVerticalScrollIndicator={false}
             renderItem={({ item, index }) => (

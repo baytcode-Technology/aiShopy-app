@@ -15,7 +15,7 @@ import type { Product } from '@src/types/product'
 
 type Props = {
   product: Product
-  storeId: string
+  storeId: number
   categories: Category[]
   onUpdated: (product: Product) => void
   onCategoriesChange?: (categories: Category[]) => void
@@ -30,7 +30,7 @@ export function ProductCategoryRow({
 }: Props) {
   const [open, setOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(product.category_id)
+  const [selectedId, setSelectedId] = useState<number | null>(product.category_id)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {

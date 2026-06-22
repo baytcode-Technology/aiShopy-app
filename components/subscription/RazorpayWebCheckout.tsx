@@ -24,6 +24,7 @@ type Props = {
   customerEmail?: string | null
   customerPhone?: string | null
   customerName?: string | null
+  description?: string
   onSuccess: (payment: RazorpayPaymentResult) => void
   onDismiss: () => void
 }
@@ -114,26 +115,28 @@ export function RazorpayWebCheckout({
   customerEmail,
   customerPhone,
   customerName,
+  description,
   onSuccess,
   onDismiss,
 }: Props) {
   const html = useMemo(() => {
     if (!checkout) return null
+    const checkoutDescription =
+      description ??
+      (checkout.is_trial ? 'Business plan — 1st month trial' : 'Business plan — 1 month')
     return buildCheckoutHtml({
       key: checkout.key_id,
       amount: checkout.amount,
       currency: checkout.currency,
       order_id: checkout.order_id,
       name: checkout.store_name,
-      description: checkout.is_trial
-        ? 'Business plan — 1st month trial'
-        : 'Business plan — 1 month',
+      description: checkoutDescription,
       email: customerEmail ?? undefined,
       contact: customerPhone ?? undefined,
       customerName: customerName ?? undefined,
       themeColor: Colors.brand.primary,
     })
-  }, [checkout, customerEmail, customerPhone, customerName])
+  }, [checkout, customerEmail, customerPhone, customerName, description])
 
   const handleMessage = (event: WebViewMessageEvent) => {
     try {

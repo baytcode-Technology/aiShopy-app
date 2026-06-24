@@ -6,6 +6,7 @@ import * as Clipboard from 'expo-clipboard'
 import { RazorpayWebCheckout } from '@/components/subscription/RazorpayWebCheckout'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
 import { Button } from '@/components/ui/Button'
+import { PaymentMethodConfigSkeleton } from '@/components/ui/Skeleton'
 import { Input } from '@/components/ui/Input'
 import { Label, Muted } from '@/components/ui/Typography'
 import type { SubscriptionCheckoutData } from '@src/api/subscriptions'
@@ -17,6 +18,7 @@ import {
   type RazorpaySetupTestCheckout,
 } from '@src/api/payment-config'
 import { getRazorpayWebhookUrl, razorpayKeyMatchesMode } from '@src/lib/razorpay-config'
+import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
@@ -52,6 +54,7 @@ export default function RazorpayPaymentScreen() {
   const [testRequired, setTestRequired] = useState(true)
   const [savedKeyId, setSavedKeyId] = useState('')
   const [savedMode, setSavedMode] = useState<RazorpayMode>('test')
+  const [savedEnabled, setSavedEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -66,17 +69,40 @@ export default function RazorpayPaymentScreen() {
     mode !== savedMode ||
     Boolean(keySecret.trim()) ||
     Boolean(webhookSecret.trim())
-  const testOk = !testRequired || testPassed
+  const testPassedForCurrentEnv =
+    testPassed && (testPassedMode === null || testPassedMode === mode)
+  const testOk = !testRequired || testPassedForCurrentEnv
   const canEnable = testOk && credentialsSavedOnServer && !credentialsDirty
   const canRunTest = credentialsSavedOnServer && !credentialsDirty && !testing && !saving
 
   const enableHint = (() => {
     if (!credentialsSavedOnServer) return 'Save your Razorpay keys and webhook secret first.'
-    if (credentialsDirty) return 'Save your latest settings before enabling.'
-    if (!testOk) return 'Run the ₹1 test payment for this environment first.'
+    if (credentialsDirty) return 'Save your latest settings before enabling or testing.'
+    if (!testPassedForCurrentEnv) return 'Run the ₹1 test payment for this environment first.'
     if (!enabled) return 'Turn on, then tap Save to show Razorpay on your storefront.'
     return 'Razorpay is enabled on your storefront checkout.'
   })()
+
+  const isDirty = useMemo(() => {
+    if (loading) return false
+    return (
+      enabled !== savedEnabled ||
+      keyId.trim() !== savedKeyId ||
+      mode !== savedMode ||
+      Boolean(keySecret.trim()) ||
+      Boolean(webhookSecret.trim())
+    )
+  }, [
+    loading,
+    enabled,
+    savedEnabled,
+    keyId,
+    savedKeyId,
+    mode,
+    savedMode,
+    keySecret,
+    webhookSecret,
+  ])
 
   const checkoutForWebView = useMemo<SubscriptionCheckoutData | null>(() => {
     if (!checkoutSession) return null
@@ -103,6 +129,7 @@ export default function RazorpayPaymentScreen() {
       setKeyId(rz.key_id ?? '')
       setSavedKeyId(rz.key_id ?? '')
       setSavedMode(rz.mode)
+      setSavedEnabled(rz.enabled)
       setMaskedKey(rz.key_secret_masked)
       setMaskedWebhook(rz.webhook_secret_masked)
       setTestPassed(rz.test_passed)
@@ -130,28 +157,38 @@ export default function RazorpayPaymentScreen() {
     void Linking.openURL(`${RAZORPAY_DASHBOARD}${path}`)
   }
 
-  const save = async () => {
-    if (enabled) {
+  const save = useCallback(async (): Promise<boolean> => {
+    const wantsEnableOnStorefront = enabled
+    const canEnableNow = wantsEnableOnStorefront && canEnable
+    const savingCredentialsOnly =
+      wantsEnableOnStorefront && !canEnable && (credentialsDirty || !testPassedForCurrentEnv)
+
+    if (wantsEnableOnStorefront && !canEnable && !savingCredentialsOnly) {
+      showError('Run the ₹1 test payment for this environment before enabling Razorpay')
+      return false
+    }
+
+    const persistEnabled = canEnableNow
+    const mustValidateKeys =
+      persistEnabled || savingCredentialsOnly || credentialsDirty || Boolean(keyId.trim())
+
+    if (mustValidateKeys) {
       if (!keyId.trim()) {
-        showError('Key ID is required when Razorpay is enabled')
-        return
+        showError('Key ID is required')
+        return false
       }
       const keyModeError = razorpayKeyMatchesMode(keyId, mode)
       if (keyModeError) {
         showError(keyModeError)
-        return
+        return false
       }
-      if (!keySecret.trim() && !maskedKey) {
+      if ((persistEnabled || savingCredentialsOnly) && !keySecret.trim() && !maskedKey) {
         showError('Key secret is required when Razorpay is enabled')
-        return
+        return false
       }
-      if (!webhookSecret.trim() && !maskedWebhook) {
+      if ((persistEnabled || savingCredentialsOnly) && !webhookSecret.trim() && !maskedWebhook) {
         showError('Webhook secret is required when Razorpay is enabled')
-        return
-      }
-      if (!canEnable) {
-        showError('Run the ₹1 test payment for this environment before enabling Razorpay')
-        return
+        return false
       }
     }
 
@@ -159,7 +196,7 @@ export default function RazorpayPaymentScreen() {
     try {
       await updatePaymentConfig({
         razorpay: {
-          enabled,
+          enabled: persistEnabled,
           key_id: keyId.trim() || undefined,
           key_secret: keySecret.trim() || undefined,
           webhook_secret: webhookSecret.trim() || undefined,
@@ -168,14 +205,43 @@ export default function RazorpayPaymentScreen() {
       })
       setKeySecret('')
       setWebhookSecret('')
-      showSuccess('Razorpay settings saved')
+      if (savingCredentialsOnly) {
+        setEnabled(false)
+        showSuccess(
+          mode === 'live'
+            ? 'Live settings saved. Run the ₹1 test, then turn on Enable.'
+            : 'Settings saved. Run the ₹1 test, then turn on Enable.'
+        )
+      } else {
+        showSuccess('Razorpay settings saved')
+      }
       await load()
+      return true
     } catch (e) {
       showError(e, 'Could not save Razorpay settings')
+      return false
     } finally {
       setSaving(false)
     }
-  }
+  }, [
+    enabled,
+    keyId,
+    mode,
+    keySecret,
+    maskedKey,
+    webhookSecret,
+    maskedWebhook,
+    canEnable,
+    credentialsDirty,
+    testPassedForCurrentEnv,
+    load,
+  ])
+
+  const { requestBack, dialog } = useUnsavedChangesExit({
+    isDirty,
+    isLoading: loading,
+    onSave: save,
+  })
 
   const runSetupTest = async () => {
     if (Platform.OS === 'web') {
@@ -217,9 +283,14 @@ export default function RazorpayPaymentScreen() {
       })
       setCheckoutVisible(false)
       setCheckoutSession(null)
+      if (!res.data.test_passed) {
+        showError('Payment received but Razorpay test was not confirmed. Try again or contact support.')
+        await load()
+        return
+      }
       setTestPassed(res.data.test_passed)
       setTestPassedMode(res.data.test_passed_mode)
-      showSuccess('Razorpay test passed. You can now enable it on your storefront.')
+      showSuccess('Razorpay test passed. Turn on Enable, then tap Save.')
       await load()
     } catch (e) {
       showError(e, 'Payment received but verification failed')
@@ -245,8 +316,14 @@ export default function RazorpayPaymentScreen() {
     <PaymentMethodConfigLayout
       title="Razorpay"
       subtitle="Cards, wallets & netbanking"
+      onBack={requestBack}
       footer={
         <View className="gap-2">
+          {credentialsDirty ? (
+            <Muted className="text-xs text-center px-1">
+              Save your {mode} settings first — then the ₹1 test button unlocks.
+            </Muted>
+          ) : null}
           <Button
             label={mode === 'test' ? 'Test Razorpay (₹1, fake money)' : 'Test Razorpay (₹1, real money)'}
             variant="outline"
@@ -254,21 +331,43 @@ export default function RazorpayPaymentScreen() {
             disabled={!canRunTest || loading}
             onPress={runSetupTest}
           />
-          <Button label="Save" loading={saving || loading} onPress={save} />
+          <Button label="Save" loading={saving} disabled={loading} onPress={() => void save()} />
         </View>
       }
     >
+      {loading ? (
+        <PaymentMethodConfigSkeleton inputCount={3} showStatusBanner showSecondCard />
+      ) : (
+        <>
       <View
         className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-4"
         style={shadows.card}
       >
-        <View className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
-          <Text className="text-[13px] font-semibold text-ink">{testStatusLabel(testPassed, testPassedMode, mode)}</Text>
-          <Muted className="text-xs mt-1">
-            {mode === 'test'
-              ? 'Use test card 4111 1111 1111 1111 after saving settings.'
-              : 'You pay yourself ₹1 to verify your live Razorpay account.'}
-          </Muted>
+        <View
+          className={`rounded-xl border px-3 py-2.5 ${
+            testPassedForCurrentEnv
+              ? 'border-brand-green bg-[#E8F8EC]'
+              : 'border-gray-200 bg-gray-50'
+          }`}
+        >
+          <Text
+            className={`text-[13px] font-semibold ${
+              testPassedForCurrentEnv ? 'text-brand-green' : 'text-ink'
+            }`}
+          >
+            {testStatusLabel(testPassed, testPassedMode, mode)}
+          </Text>
+          <Text
+            className={`text-xs mt-1 leading-5 ${
+              testPassedForCurrentEnv ? 'text-brand-green' : 'text-gray-500'
+            }`}
+          >
+            {testPassedForCurrentEnv
+              ? 'Razorpay is verified for this environment. Turn on Enable, then tap Save.'
+              : mode === 'test'
+                ? 'Use test card 4111 1111 1111 1111 after saving settings.'
+                : 'You pay yourself ₹1 to verify your live Razorpay account.'}
+          </Text>
         </View>
 
         <View className="flex-row items-center justify-between gap-3">
@@ -292,7 +391,12 @@ export default function RazorpayPaymentScreen() {
               return (
                 <Pressable
                   key={item}
-                  onPress={() => setMode(item)}
+                  onPress={() => {
+                    setMode(item)
+                    if (testPassedMode && testPassedMode !== item) {
+                      setEnabled(false)
+                    }
+                  }}
                   className={`flex-1 min-w-0 py-3 items-center justify-center ${
                     active ? 'bg-brand-primary' : 'bg-surface'
                   } ${index > 0 ? 'border-l border-gray-200' : ''}`}
@@ -399,6 +503,9 @@ export default function RazorpayPaymentScreen() {
         onSuccess={(payment) => void handleTestSuccess(payment)}
         onDismiss={handleTestDismiss}
       />
+        </>
+      )}
+      {dialog}
     </PaymentMethodConfigLayout>
   )
 }

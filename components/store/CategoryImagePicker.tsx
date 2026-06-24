@@ -58,7 +58,7 @@ export function CategoryImagePicker({
 
   return (
     <View className="gap-2">
-      <Label>{label}</Label>
+      {label ? <Label>{label}</Label> : null}
       <Pressable onPress={pickImage}>
         <View
           className={`h-44 rounded-2xl border-2 border-dashed items-center justify-center overflow-hidden ${

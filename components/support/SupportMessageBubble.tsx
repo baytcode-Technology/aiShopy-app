@@ -17,7 +17,7 @@ export function SupportMessageBubble({ message }: Props) {
     >
       {isAdmin ? (
         <Caption className="text-[10px] uppercase tracking-wider text-brand-green mb-1 ml-1">
-          Katlogue team
+          AiShopy team
         </Caption>
       ) : null}
       <View

@@ -161,7 +161,7 @@ export default function PlatformSupportDetailScreen() {
         <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">
           <TextInput
             className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
-            placeholder="Reply as Katlogue team…"
+            placeholder="Reply as AiShopy team…"
             placeholderTextColor={Colors.text.muted}
             value={draft}
             onChangeText={setDraft}

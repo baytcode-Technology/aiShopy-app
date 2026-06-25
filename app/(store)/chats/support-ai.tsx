@@ -182,7 +182,7 @@ export default function SupportAiScreen() {
             Chat with AI
           </Text>
           <Muted className="text-white/80 text-xs mt-0.5" numberOfLines={1}>
-            Ask us anything about Katlogue
+            Ask us anything about AiShopy
           </Muted>
         </View>
       </View>

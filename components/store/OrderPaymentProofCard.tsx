@@ -11,11 +11,12 @@ export function OrderPaymentProofCard({ url }: Props) {
 
   return (
     <DetailSection className="p-3.5">
-      <View className="flex-row items-center justify-between mb-2.5">
+      <View className="mb-2.5 gap-0.5">
         <Text className="text-[13px] font-bold text-ink">Payment proof</Text>
+        <Text className="text-[12px] text-gray-500">Customer UPI screenshot · tap to enlarge</Text>
       </View>
 
-      <Pressable onPress={() => setOpen(true)} className="rounded-xl overflow-hidden">
+      <Pressable onPress={() => setOpen(true)} className="rounded-xl overflow-hidden border border-gray-200">
         <Image
           source={{ uri: url }}
           style={{ width: '100%', height: 140 }}

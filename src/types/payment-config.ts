@@ -9,6 +9,9 @@ export type MerchantPaymentConfig = {
     webhook_secret_masked: string | null
     mode: RazorpayMode
     configured: boolean
+    test_passed: boolean
+    test_passed_mode: RazorpayMode | null
+    test_required: boolean
   }
   upi: {
     enabled: boolean

@@ -10,14 +10,15 @@ type Props = {
   subtitle: string
   children: ReactNode
   footer?: ReactNode
+  onBack?: () => void
 }
 
-export function PaymentMethodConfigLayout({ title, subtitle, children, footer }: Props) {
+export function PaymentMethodConfigLayout({ title, subtitle, children, footer, onBack }: Props) {
   const insets = useSafeAreaInsets()
 
   return (
     <Screen>
-      <ScreenHeader title={title} subtitle={subtitle} onBack={() => router.back()} />
+      <ScreenHeader title={title} subtitle={subtitle} onBack={onBack ?? (() => router.back())} />
       <ScreenBody className="flex-1">
         <ScrollView
           className="flex-1"

@@ -198,3 +198,67 @@ export function NotificationSettingsSkeleton() {
     </View>
   )
 }
+
+function PaymentMethodMenuRowSkeleton() {
+  return (
+    <View className="flex-row items-center gap-4 px-5 py-4 bg-surface border border-gray-200 rounded-2xl">
+      <Skeleton className="w-10 h-10 rounded-xl" />
+      <View className="flex-1 gap-2">
+        <Skeleton className="h-3 w-20 rounded-md" />
+        <Skeleton className="h-4 w-[72%] rounded-md" />
+      </View>
+      <Skeleton className="w-4 h-4 rounded-sm" />
+    </View>
+  )
+}
+
+export function PaymentMethodsListSkeleton() {
+  return (
+    <View className="gap-3">
+      {[0, 1, 2].map((i) => (
+        <PaymentMethodMenuRowSkeleton key={i} />
+      ))}
+    </View>
+  )
+}
+
+type PaymentMethodConfigSkeletonProps = {
+  inputCount?: number
+  showImageField?: boolean
+  showStatusBanner?: boolean
+  showSecondCard?: boolean
+}
+
+export function PaymentMethodConfigSkeleton({
+  inputCount = 2,
+  showImageField = false,
+  showStatusBanner = false,
+  showSecondCard = true,
+}: PaymentMethodConfigSkeletonProps) {
+  return (
+    <View className="gap-4">
+      <View
+        className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-4"
+        style={shadows.card}
+      >
+        {showStatusBanner ? <Skeleton className="h-16 w-full rounded-xl" /> : null}
+        <NotificationToggleRowSkeleton />
+        <Skeleton className="h-10 w-full rounded-xl" />
+        {Array.from({ length: inputCount }, (_, i) => (
+          <View key={i} className="gap-2">
+            <Skeleton className="h-3.5 w-24 rounded-md" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </View>
+        ))}
+        {showImageField ? <Skeleton className="h-44 w-full rounded-2xl" /> : null}
+      </View>
+      {showSecondCard ? (
+        <View className="w-full rounded-[28px] border border-gray-200 bg-gray-50 px-5 py-4 gap-2">
+          <Skeleton className="h-3.5 w-full rounded-md" />
+          <Skeleton className="h-3.5 w-[92%] rounded-md" />
+          <Skeleton className="h-3.5 w-[85%] rounded-md" />
+        </View>
+      ) : null}
+    </View>
+  )
+}

@@ -17,7 +17,8 @@ type Props = {
 export function OrderPaymentActions({ order, payment, saving, onConfirmPayment }: Props) {
   const awaitingUpi =
     payment?.provider === 'upi_manual' &&
-    (order.payment_status === 'confirming' || payment.status === 'confirming')
+    order.payment_status === 'confirming' &&
+    order.order_status !== 'cancelled'
 
   const awaitingCod =
     payment?.provider === 'manual' &&

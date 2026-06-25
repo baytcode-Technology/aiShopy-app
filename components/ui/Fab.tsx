@@ -5,14 +5,25 @@ import Colors from "@src/theme/colors";
 import type { ReactNode } from "react";
 import { Pressable, View, type PressableProps } from "react-native";
 
+type FabVariant = "default" | "brand";
+
 type Props = Omit<PressableProps, "style"> & {
   className?: string;
   children?: ReactNode;
   iconSize?: number;
+  variant?: FabVariant;
 };
 
-/** Floating action — white circle, logo-green plus icon. */
-export function Fab({ className, children, iconSize = 22, ...props }: Props) {
+/** Floating action — default: ink circle; brand: logo-green circle. */
+export function Fab({
+  className,
+  children,
+  iconSize = 22,
+  variant = "default",
+  ...props
+}: Props) {
+  const isBrand = variant === "brand";
+
   return (
     <View
       className={cn("absolute right-5 bottom-6 z-10", className)}
@@ -21,7 +32,12 @@ export function Fab({ className, children, iconSize = 22, ...props }: Props) {
       <Pressable accessibilityRole="button" {...props}>
         {({ pressed }) => (
           <View
-            className="w-[60px] h-[60px] rounded-full bg-brand-primary items-center justify-center border border-brand-primary"
+            className={cn(
+              "w-[60px] h-[60px] rounded-full items-center justify-center border",
+              isBrand
+                ? "bg-brand-green border-brand-green"
+                : "bg-brand-primary border-brand-primary",
+            )}
             style={[
               shadows.lg,
               pressed

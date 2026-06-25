@@ -1,7 +1,7 @@
-import { Stack } from 'expo-router'
-import Colors from '@src/theme/colors'
+import { Stack } from "expo-router";
+import Colors from "@src/theme/colors";
 
-export default function ChatsLayout() {
+export default function PlatformSupportLayout() {
   return (
     <Stack
       screenOptions={{
@@ -9,9 +9,7 @@ export default function ChatsLayout() {
         contentStyle: { backgroundColor: Colors.bg.secondary },
       }}
     >
-      <Stack.Screen name="index" />
       <Stack.Screen name="[id]" />
-      <Stack.Screen name="support-ai" />
     </Stack>
-  )
+  );
 }

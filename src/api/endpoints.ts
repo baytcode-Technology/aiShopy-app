@@ -31,4 +31,13 @@ export const endpoints = {
   subscriptionsCheckout: "/api/subscriptions/checkout",
   subscriptionsVerify: "/api/subscriptions/verify",
   subscriptionsStatus: "/api/subscriptions/status",
+  supportConversation: "/api/support/conversation",
+  supportMessages: (conversationId: number) =>
+    `/api/support/conversations/${conversationId}/messages`,
+  supportEscalate: (conversationId: number) =>
+    `/api/support/conversations/${conversationId}/escalate`,
+  supportAdminMe: "/api/support/admin/me",
+  supportAdminConversations: "/api/support/admin/conversations",
+  supportAdminMessages: (conversationId: number) =>
+    `/api/support/admin/conversations/${conversationId}/messages`,
 } as const;

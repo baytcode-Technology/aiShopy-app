@@ -18,8 +18,9 @@ import { buildSubdomainUrl } from "@src/lib/storefront";
 import Colors from "@src/theme/colors";
 import type { Store } from "@src/types/store";
 import { router, type Href } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { fetchSupportAdminStatus } from "@src/api/support";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -32,6 +33,13 @@ export default function SettingsScreen() {
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [logoOpen, setLogoOpen] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+
+  useEffect(() => {
+    void fetchSupportAdminStatus()
+      .then((res) => setIsPlatformAdmin(res.data.isAdmin))
+      .catch(() => setIsPlatformAdmin(false));
+  }, []);
 
   const handleStoreUpdated = async (updated: Store) => {
     const url = subdomainUrl ?? buildSubdomainUrl(updated.slug);
@@ -179,6 +187,18 @@ export default function SettingsScreen() {
               <Caption className="text-[11px] text-gray-400 uppercase tracking-[0.2em]">
                 Support
               </Caption>
+
+              {isPlatformAdmin ? (
+                <MenuRow
+                  label="Support inbox"
+                  value="Merchant Chat with AI"
+                  icon="inbox"
+                  showChevron
+                  onPress={() =>
+                    router.push("/platform-support-inbox" as Href)
+                  }
+                />
+              ) : null}
 
               <MenuRow
                 label="Send feedback"

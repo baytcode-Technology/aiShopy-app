@@ -1,6 +1,7 @@
 import { ConversationRow } from "@/components/chat/ConversationRow";
 import { ChatsSubscriptionGate } from "@/components/subscription/ChatsSubscriptionGate";
 import { AppPressable } from "@/components/ui/AppPressable";
+import { Fab } from "@/components/ui/Fab";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -368,11 +369,23 @@ export default function MessagesListScreen() {
             )
           }
           className="flex-1 bg-surface"
-          contentContainerClassName="pb-6"
+          contentContainerClassName="pb-32"
           showsVerticalScrollIndicator={false}
         />
           </>
         )}
+
+        <Fab
+          variant="brand"
+          accessibilityLabel="Chat with AI"
+          onPress={() => router.push("/(store)/chats/support-ai" as Href)}
+        >
+          <FontAwesome
+            name="comments"
+            size={22}
+            color={Colors.brand.onPrimary}
+          />
+        </Fab>
       </ScreenBody>
     </Screen>
   );

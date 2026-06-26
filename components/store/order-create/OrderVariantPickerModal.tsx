@@ -34,6 +34,7 @@ export function OrderVariantPickerModal({
       subtitle="Select a variant to add"
       minHeightRatio={0.5}
       maxHeightRatio={0.8}
+      bodyScroll={false}
     >
       {loading ? (
         <View className="py-10 items-center">

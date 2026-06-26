@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/app_logo.jpg",
+      "image": "./assets/images/aishopy_logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -102,6 +102,18 @@
       "favicon": "./assets/images/app_logo.jpg"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/aishopy_logo.png",
+          "backgroundColor": "#ffffff",
+          "resizeMode": "contain",
+          "imageWidth": 200,
+          "ios": {
+            "enableFullScreenImage_legacy": false
+          }
+        }
+      ],
       [
         "expo-build-properties",
         {

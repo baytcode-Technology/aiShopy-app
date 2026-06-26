@@ -7,6 +7,9 @@ const REFRESH_TOKEN_KEY = 'aishopy_refresh_token'
 const USER_KEY = 'aishopy_auth_user'
 const SESSION_META_KEY = 'aishopy_session_meta'
 
+/** iOS SecureStore rejects values larger than this. */
+const IOS_SECURE_STORE_MAX_BYTES = 2048
+
 export type StoredSessionMeta = {
   expiresAt: number
   expiresIn: number
@@ -14,6 +17,10 @@ export type StoredSessionMeta = {
 
 /** SecureStore is native-only; use localStorage on web. */
 const isWeb = Platform.OS === 'web'
+
+const secureStoreOptions: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+}
 
 async function getItem(key: string): Promise<string | null> {
   if (isWeb) {
@@ -40,7 +47,22 @@ async function setItem(key: string, value: string): Promise<void> {
     return
   }
 
-  await SecureStore.setItemAsync(key, value)
+  if (Platform.OS === 'ios' && value.length > IOS_SECURE_STORE_MAX_BYTES) {
+    const message = `[auth-storage] ${key} exceeds iOS SecureStore limit (${value.length} bytes)`
+    if (__DEV__) {
+      console.warn(message)
+    }
+    throw new Error('Session data is too large to store on this device')
+  }
+
+  try {
+    await SecureStore.setItemAsync(key, value, secureStoreOptions)
+  } catch (error) {
+    if (__DEV__) {
+      console.error('[auth-storage] setItem failed', key, error)
+    }
+    throw error
+  }
 }
 
 async function removeItem(key: string): Promise<void> {

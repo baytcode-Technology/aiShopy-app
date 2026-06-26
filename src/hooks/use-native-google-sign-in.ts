@@ -7,7 +7,7 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin'
 import { useAuth } from '@src/contexts/auth-context'
-import { env, isGoogleSignInConfigured } from '@src/config/env'
+import { env, getGoogleSignInSetupHint, isGoogleSignInConfigured } from '@src/config/env'
 import {
   clearNativeGoogleSignInSession,
   ensureNativeGoogleConfigured,
@@ -40,7 +40,7 @@ export function useNativeGoogleSignIn() {
     if (!isGoogleSignInConfigured()) {
       Alert.alert(
         'Google sign-in not configured',
-        'Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to your .env file.'
+        getGoogleSignInSetupHint() || 'Google client IDs are missing from the build.'
       )
       return
     }
@@ -101,15 +101,23 @@ export function useNativeGoogleSignIn() {
         e instanceof Error
           ? e.message || 'Google sign-in failed'
           : 'Google sign-in failed'
+      if (__DEV__ && isErrorWithCode(e)) {
+        console.warn('[google-sign-in]', e.code, message)
+      }
       if (
         isErrorWithCode(e) &&
         (e.code === '10' || message.includes('DEVELOPER_ERROR'))
       ) {
         message =
-          'Google DEVELOPER_ERROR: SHA-1 in Google Cloud does not match this build.\n\n' +
-          'Add your debug keystore SHA-1 to Google Cloud → Credentials → Android OAuth client (com.aishopy.app).\n' +
-          'Get it: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android\n' +
-          'Wait ~10 minutes, then try again.'
+          Platform.OS === 'ios'
+            ? 'Google sign-in config error on iOS.\n\n' +
+              'Check Google Cloud → iOS OAuth client for bundle com.aishopy.app matches EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID.\n' +
+              'Ensure app.json iosUrlScheme matches the reversed iOS client ID.\n' +
+              'Supabase Auth → Google must use the same Web client ID + secret.'
+            : 'Google DEVELOPER_ERROR: SHA-1 in Google Cloud does not match this build.\n\n' +
+              'Add your debug keystore SHA-1 to Google Cloud → Credentials → Android OAuth client (com.aishopy.app).\n' +
+              'Get it: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android\n' +
+              'Wait ~10 minutes, then try again.'
       }
       await afterNativeUiSettled()
       Alert.alert('Google sign-in', message)

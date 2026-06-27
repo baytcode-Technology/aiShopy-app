@@ -103,6 +103,16 @@ export function escalateSupportConversation(
   );
 }
 
+export function closeMerchantSupportTicket(
+  storeId: number,
+  conversationId: number,
+) {
+  return authenticatedFetch<CloseTicketResponse>(
+    `${endpoints.supportClose(conversationId)}${storeQuery(storeId)}`,
+    { method: "POST" },
+  );
+}
+
 export function fetchSupportAdminStatus() {
   return authenticatedFetch<AdminStatusResponse>(endpoints.supportAdminMe);
 }

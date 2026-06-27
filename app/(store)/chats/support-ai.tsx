@@ -2,10 +2,12 @@ import { SupportStatusStrip } from "@/components/support/SupportStatusStrip";
 import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
 import { SupportMessageBubble } from "@/components/support/SupportMessageBubble";
 import { StarterQuestionChips } from "@/components/support/StarterQuestionChips";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { LinkText, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
+  closeMerchantSupportTicket,
   escalateSupportConversation,
   fetchSupportMessages,
   getOrCreateSupportConversation,
@@ -60,6 +62,8 @@ export default function SupportAiScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isEscalating, setIsEscalating] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [waitingForTeam, setWaitingForTeam] = useState(false);
   const lastAdminMessageIdRef = useRef<number | null>(null);
   const listRef = useRef<FlatList<SupportMessage>>(null);
@@ -203,12 +207,30 @@ export default function SupportAiScreen() {
     }
   };
 
+  const handleConfirmClose = async () => {
+    if (!store?.id || !conversation?.id || isClosing) return;
+    setIsClosing(true);
+    try {
+      const res = await closeMerchantSupportTicket(store.id, conversation.id);
+      setConversation(res.data.conversation);
+      const msgRes = await fetchSupportMessages(store.id, conversation.id);
+      applyMessages(msgRes.data.messages.map(mapApiMessage));
+      setWaitingForTeam(false);
+      setShowCloseDialog(false);
+    } catch (e: unknown) {
+      showError(e, "Failed to close ticket");
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
   const canChat = Boolean(conversation?.id) && !isLoading;
   const isEscalated = conversation?.status === "escalated";
   const isManualMode = conversation?.reply_mode === "manual";
   const showAiTyping = isSending && !isManualMode;
   const showTeamTyping = isManualMode && (isSending || waitingForTeam);
   const showTalkWithUs = conversation?.status === "active";
+  const showCloseTicket = isEscalated;
   const showStarters = canChat && messages.length === 0 && !isSending;
 
   return (
@@ -276,6 +298,17 @@ export default function SupportAiScreen() {
                 </LinkText>
               </Pressable>
             ) : null}
+            {showCloseTicket ? (
+              <Pressable
+                className="mx-3 mb-1 py-2"
+                onPress={() => setShowCloseDialog(true)}
+                disabled={isClosing || isLoading}
+              >
+                <LinkText className="text-[13px] text-brand-green">
+                  Close ticket
+                </LinkText>
+              </Pressable>
+            ) : null}
           </>
         }
         composer={
@@ -335,6 +368,20 @@ export default function SupportAiScreen() {
           />
         )}
       </SupportKeyboardChatLayout>
+
+      <ConfirmDialog
+        visible={showCloseDialog}
+        title="Close this ticket?"
+        message="Mark this issue as resolved? You can keep chatting with AI in the same thread."
+        cancelLabel="No"
+        confirmLabel="Yes"
+        confirmVariant="primary"
+        loading={isClosing}
+        onCancel={() => {
+          if (!isClosing) setShowCloseDialog(false);
+        }}
+        onConfirm={() => void handleConfirmClose()}
+      />
     </SafeAreaView>
   );
 }

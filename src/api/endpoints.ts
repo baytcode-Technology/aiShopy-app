@@ -36,6 +36,8 @@ export const endpoints = {
     `/api/support/conversations/${conversationId}/messages`,
   supportEscalate: (conversationId: number) =>
     `/api/support/conversations/${conversationId}/escalate`,
+  supportClose: (conversationId: number) =>
+    `/api/support/conversations/${conversationId}/close`,
   supportAdminMe: "/api/support/admin/me",
   supportAdminConversations: "/api/support/admin/conversations",
   supportAdminMessages: (conversationId: number) =>

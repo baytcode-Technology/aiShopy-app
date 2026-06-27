@@ -1,17 +1,30 @@
 import { Button } from "@/components/ui/Button";
 import { MenuRow } from "@/components/ui/MenuRow";
+import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
+import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 import { shadows } from "@src/lib/shadows";
-import { router, type Href } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { useCallback } from "react";
 import { View } from "react-native";
 
 export default function PlatformAdminScreen() {
   const { user, signOut } = useAuth();
   const { clearStore } = useStore();
+  const { summary, refresh } = useSupportAdminSummary(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  const openTickets = summary.escalated_count;
+  const unreadOnTickets = summary.unread_messages;
 
   const handleSignOut = async () => {
     await clearStore();
@@ -42,13 +55,26 @@ export default function PlatformAdminScreen() {
           </Muted>
         </View>
 
-        <MenuRow
-          label="Support inbox"
-          value="AiShopy merchant Chat with AI"
-          icon="inbox"
-          showChevron
-          onPress={() => router.push("/platform-support-inbox" as Href)}
-        />
+        <View className="relative">
+          <MenuRow
+            label="Support inbox"
+            value={
+              openTickets > 0
+                ? `${openTickets} open ticket${openTickets === 1 ? "" : "s"}`
+                : unreadOnTickets > 0
+                  ? `${unreadOnTickets} unread message${unreadOnTickets === 1 ? "" : "s"} on tickets`
+                  : "AiShopy merchant Chat with AI"
+            }
+            icon="inbox"
+            showChevron
+            onPress={() => router.push("/platform-support-inbox" as Href)}
+          />
+          {unreadOnTickets > 0 ? (
+            <View className="absolute top-3 right-5">
+              <UnreadCountBadge count={unreadOnTickets} />
+            </View>
+          ) : null}
+        </View>
 
         <MenuRow
           label="Create a store"

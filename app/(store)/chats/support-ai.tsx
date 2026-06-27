@@ -1,3 +1,5 @@
+import { SupportStatusStrip } from "@/components/support/SupportStatusStrip";
+import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
 import { SupportMessageBubble } from "@/components/support/SupportMessageBubble";
 import { StarterQuestionChips } from "@/components/support/StarterQuestionChips";
 import { IconButton } from "@/components/ui/IconButton";
@@ -10,6 +12,7 @@ import {
   sendSupportMessage,
 } from "@src/api/support";
 import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
@@ -19,8 +22,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   Text,
   TextInput,
@@ -48,23 +49,9 @@ function mapApiMessage(m: {
   };
 }
 
-function merchantStatusBanner(conversation: SupportConversation | null): string | null {
-  if (!conversation?.ticket_code) return null;
-  const code = conversation.ticket_code;
-  if (conversation.status === "closed") {
-    return `${code} — Issue resolved. Ask AI anything below.`;
-  }
-  if (conversation.status === "escalated" && conversation.reply_mode === "manual") {
-    return `${code} — Support team is responding.`;
-  }
-  if (conversation.status === "escalated") {
-    return `${code} — Our team is reviewing. AI can still help.`;
-  }
-  return null;
-}
-
 export default function SupportAiScreen() {
   const { store } = useStore();
+  const { markSupportRead, setActiveSupportChat } = useStoreUnread();
   const [conversation, setConversation] = useState<SupportConversation | null>(
     null,
   );
@@ -73,40 +60,59 @@ export default function SupportAiScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isEscalating, setIsEscalating] = useState(false);
+  const [waitingForTeam, setWaitingForTeam] = useState(false);
+  const lastAdminMessageIdRef = useRef<number | null>(null);
   const listRef = useRef<FlatList<SupportMessage>>(null);
 
   const chatsListHref = "/(store)/chats" as Href;
   useNavigateBackTo(chatsListHref);
+
+  const applyMessages = useCallback((nextMessages: SupportMessage[]) => {
+    setMessages(nextMessages);
+    const lastAdmin = [...nextMessages].reverse().find((m) => m.role === "admin");
+    if (lastAdmin && lastAdmin.id !== lastAdminMessageIdRef.current) {
+      lastAdminMessageIdRef.current = lastAdmin.id;
+      setWaitingForTeam(false);
+    }
+  }, []);
 
   const loadConversation = useCallback(async () => {
     if (!store?.id) return;
     setIsLoading(true);
     try {
       const res = await getOrCreateSupportConversation(store.id);
-      setConversation(res.data.conversation);
-      const msgRes = await fetchSupportMessages(store.id, res.data.conversation.id);
-      setMessages(msgRes.data.messages.map(mapApiMessage));
+      const conv = res.data.conversation;
+      setConversation(conv);
+      setActiveSupportChat(conv.id);
+      const msgRes = await fetchSupportMessages(store.id, conv.id);
+      applyMessages(msgRes.data.messages.map(mapApiMessage));
+      await markSupportRead(conv.id);
     } catch (e: unknown) {
       showError(e, "Failed to load chat");
     } finally {
       setIsLoading(false);
     }
-  }, [store?.id]);
+  }, [store?.id, setActiveSupportChat, markSupportRead, applyMessages]);
 
   useEffect(() => {
     void loadConversation();
-  }, [loadConversation]);
+    return () => setActiveSupportChat(null);
+  }, [loadConversation, setActiveSupportChat]);
 
   useFocusEffect(
     useCallback(() => {
       if (!store?.id || !conversation?.id) return;
+      setActiveSupportChat(conversation.id);
       void fetchSupportMessages(store.id, conversation.id)
         .then((res) => {
-          setMessages(res.data.messages.map(mapApiMessage));
+          applyMessages(res.data.messages.map(mapApiMessage));
           setConversation(res.data.conversation);
+          void markSupportRead(conversation.id);
         })
         .catch(() => undefined);
-    }, [store?.id, conversation?.id]),
+
+      return () => setActiveSupportChat(null);
+    }, [store?.id, conversation?.id, setActiveSupportChat, markSupportRead, applyMessages]),
   );
 
   useEffect(() => {
@@ -118,21 +124,21 @@ export default function SupportAiScreen() {
     const interval = setInterval(() => {
       void fetchSupportMessages(store.id, conversation.id)
         .then((res) => {
-          setMessages(res.data.messages.map(mapApiMessage));
+          applyMessages(res.data.messages.map(mapApiMessage));
           setConversation(res.data.conversation);
         })
         .catch(() => undefined);
-    }, 12000);
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [store?.id, conversation?.id, conversation?.status, conversation?.reply_mode]);
+  }, [store?.id, conversation?.id, conversation?.status, conversation?.reply_mode, applyMessages]);
 
   useEffect(() => {
     if (messages.length === 0) return;
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated: true });
     });
-  }, [messages.length, isSending]);
+  }, [messages.length, isSending, waitingForTeam]);
 
   const sendMessage = async (textOverride?: string) => {
     const text = (textOverride ?? draft).trim();
@@ -140,6 +146,9 @@ export default function SupportAiScreen() {
 
     const tempId = -Date.now();
     const now = new Date().toISOString();
+    const manualMode =
+      conversation.status === "escalated" && conversation.reply_mode === "manual";
+
     setMessages((prev) => [
       ...prev,
       {
@@ -167,6 +176,9 @@ export default function SupportAiScreen() {
       if (res.data.conversation) {
         setConversation(res.data.conversation);
       }
+      if (manualMode && !res.data.assistant_message) {
+        setWaitingForTeam(true);
+      }
     } catch (e: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       if (!textOverride) setDraft(text);
@@ -182,6 +194,8 @@ export default function SupportAiScreen() {
     try {
       const res = await escalateSupportConversation(store.id, conversation.id);
       setConversation(res.data.conversation);
+      const msgRes = await fetchSupportMessages(store.id, conversation.id);
+      applyMessages(msgRes.data.messages.map(mapApiMessage));
     } catch (e: unknown) {
       showError(e, "Failed to request human support");
     } finally {
@@ -191,11 +205,10 @@ export default function SupportAiScreen() {
 
   const canChat = Boolean(conversation?.id) && !isLoading;
   const isEscalated = conversation?.status === "escalated";
-  const isClosed = conversation?.status === "closed";
   const isManualMode = conversation?.reply_mode === "manual";
   const showAiTyping = isSending && !isManualMode;
-  const showTalkWithUs = !isEscalated && (conversation?.status === "active" || isClosed);
-  const statusBanner = merchantStatusBanner(conversation);
+  const showTeamTyping = isManualMode && (isSending || waitingForTeam);
+  const showTalkWithUs = conversation?.status === "active";
   const showStarters = canChat && messages.length === 0 && !isSending;
 
   return (
@@ -228,16 +241,64 @@ export default function SupportAiScreen() {
         </View>
       </View>
 
-      {statusBanner ? (
-        <View className="bg-[#E8F8EC] border-b border-brand-green/20 px-4 py-2.5">
-          <Text className="text-[13px] text-ink font-medium">{statusBanner}</Text>
-        </View>
-      ) : null}
+      <SupportStatusStrip conversation={conversation} />
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+      <SupportKeyboardChatLayout
+        listRef={listRef}
+        footer={
+          <>
+            {showAiTyping ? (
+              <View className="flex-row items-center gap-2 px-4 py-2">
+                <ActivityIndicator size="small" color={Colors.brand.green} />
+                <Muted className="text-[13px]">AI is typing…</Muted>
+              </View>
+            ) : null}
+            {showTeamTyping ? (
+              <View className="flex-row items-center gap-2 px-4 py-2">
+                <ActivityIndicator size="small" color={Colors.brand.green} />
+                <Muted className="text-[13px]">AiShopy team is typing…</Muted>
+              </View>
+            ) : null}
+            {showStarters ? (
+              <StarterQuestionChips
+                disabled={isSending}
+                onSelect={(q) => void sendMessage(q)}
+              />
+            ) : null}
+            {showTalkWithUs ? (
+              <Pressable
+                className="mx-3 mb-1 py-2"
+                onPress={() => void handleEscalate()}
+                disabled={isEscalating || isLoading}
+              >
+                <LinkText className="text-[13px] text-brand-green">
+                  {isEscalating ? "Requesting…" : "Talk with us"}
+                </LinkText>
+              </Pressable>
+            ) : null}
+          </>
+        }
+        composer={
+          <View className="flex-row items-end gap-2.5 px-3 py-2.5">
+            <TextInput
+              className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
+              placeholder="Type your question…"
+              placeholderTextColor={Colors.text.muted}
+              value={draft}
+              onChangeText={setDraft}
+              multiline
+              maxLength={2000}
+              editable={canChat && !isSending}
+            />
+            <IconButton
+              className="bg-brand-green border-0 w-11 h-11"
+              onPress={() => void sendMessage()}
+              disabled={!canChat || isSending}
+            >
+              <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
+            </IconButton>
+          </View>
+        }
       >
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
@@ -250,6 +311,8 @@ export default function SupportAiScreen() {
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => <SupportMessageBubble message={item} />}
             contentContainerClassName="p-4 pb-2 flex-grow"
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() => {
               listRef.current?.scrollToEnd({ animated: true });
             }}
@@ -271,53 +334,7 @@ export default function SupportAiScreen() {
             }
           />
         )}
-
-        {showAiTyping ? (
-          <View className="flex-row items-center gap-2 px-4 py-2">
-            <ActivityIndicator size="small" color={Colors.brand.green} />
-            <Muted className="text-[13px]">AI is typing…</Muted>
-          </View>
-        ) : null}
-
-        {showStarters ? (
-          <StarterQuestionChips
-            disabled={isSending}
-            onSelect={(q) => void sendMessage(q)}
-          />
-        ) : null}
-
-        {showTalkWithUs ? (
-          <Pressable
-            className="mx-3 mb-1 py-2"
-            onPress={() => void handleEscalate()}
-            disabled={isEscalating || isLoading}
-          >
-            <LinkText className="text-[13px] text-brand-green">
-              {isEscalating ? "Requesting…" : "Talk with us"}
-            </LinkText>
-          </Pressable>
-        ) : null}
-
-        <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">
-          <TextInput
-            className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
-            placeholder="Type your question…"
-            placeholderTextColor={Colors.text.muted}
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-            maxLength={2000}
-            editable={canChat && !isSending}
-          />
-          <IconButton
-            className="bg-brand-green border-0 w-11 h-11"
-            onPress={() => void sendMessage()}
-            disabled={!canChat || isSending}
-          >
-            <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
-          </IconButton>
-        </View>
-      </KeyboardAvoidingView>
+      </SupportKeyboardChatLayout>
     </SafeAreaView>
   );
 }

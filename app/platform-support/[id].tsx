@@ -1,31 +1,27 @@
+import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
 import { SupportMessageBubble } from "@/components/support/SupportMessageBubble";
+import { SupportStatusStrip } from "@/components/support/SupportStatusStrip";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { IconButton } from "@/components/ui/IconButton";
 import { Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   closeSupportTicket,
   fetchSupportAdminMessages,
+  markSupportAdminRead,
   sendSupportAdminReply,
   setSupportReplyMode,
 } from "@src/api/support";
 import { showError } from "@src/lib/toast";
 import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import Colors from "@src/theme/colors";
-import type {
-  SupportConversation,
-  SupportMessage,
-  SupportReplyMode,
-} from "@src/types/support";
+import type { SupportConversation, SupportMessage } from "@src/types/support";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  Switch,
   Text,
   TextInput,
   View,
@@ -37,20 +33,6 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function statusBannerText(conversation: SupportConversation | null): string | null {
-  if (!conversation) return null;
-  if (conversation.status === "active") {
-    return "AI-only chat — view only";
-  }
-  if (conversation.status === "closed") {
-    return "Issue resolved";
-  }
-  if (conversation.reply_mode === "manual") {
-    return "Manual support — you are responding";
-  }
-  return "Ticket open — AI still replying";
 }
 
 export default function PlatformSupportDetailScreen() {
@@ -66,8 +48,9 @@ export default function PlatformSupportDetailScreen() {
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isUpdatingMode, setIsUpdatingMode] = useState(false);
+  const [isTakingManual, setIsTakingManual] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
   const listRef = useRef<FlatList<SupportMessage>>(null);
 
   const load = useCallback(async () => {
@@ -87,6 +70,7 @@ export default function PlatformSupportDetailScreen() {
           time: formatTime(m.created_at),
         })),
       );
+      await markSupportAdminRead(conversationId);
     } catch (e: unknown) {
       showError(e, "Failed to load thread");
     } finally {
@@ -105,7 +89,7 @@ export default function PlatformSupportDetailScreen() {
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated: true });
     });
-  }, [messages.length]);
+  }, [messages.length, isSending]);
 
   const sendReply = async () => {
     const text = draft.trim();
@@ -127,53 +111,38 @@ export default function PlatformSupportDetailScreen() {
     }
   };
 
-  const handleReplyModeChange = async (enabled: boolean) => {
-    if (!Number.isFinite(conversationId) || isUpdatingMode) return;
-    const nextMode: SupportReplyMode = enabled ? "manual" : "ai";
-    setIsUpdatingMode(true);
+  const handleTakeManual = async () => {
+    if (!Number.isFinite(conversationId) || isTakingManual) return;
+    setIsTakingManual(true);
     try {
-      const res = await setSupportReplyMode(conversationId, nextMode);
-      setConversation(res.data.conversation);
+      await setSupportReplyMode(conversationId, "manual");
+      await load();
     } catch (e: unknown) {
-      showError(e, "Failed to update reply mode");
+      showError(e, "Failed to take over ticket");
     } finally {
-      setIsUpdatingMode(false);
+      setIsTakingManual(false);
     }
   };
 
-  const handleCloseTicket = () => {
+  const handleConfirmClose = async () => {
     if (!Number.isFinite(conversationId) || isClosing) return;
-    Alert.alert(
-      "Close ticket",
-      "Mark this issue as resolved? The merchant can continue chatting with AI in the same thread.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Yes, close",
-          style: "destructive",
-          onPress: () => {
-            void (async () => {
-              setIsClosing(true);
-              try {
-                const res = await closeSupportTicket(conversationId);
-                setConversation(res.data.conversation);
-                router.back();
-              } catch (e: unknown) {
-                showError(e, "Failed to close ticket");
-              } finally {
-                setIsClosing(false);
-              }
-            })();
-          },
-        },
-      ],
-    );
+    setIsClosing(true);
+    try {
+      await closeSupportTicket(conversationId);
+      setShowCloseDialog(false);
+      router.back();
+    } catch (e: unknown) {
+      showError(e, "Failed to close ticket");
+    } finally {
+      setIsClosing(false);
+    }
   };
 
   const isEscalated = conversation?.status === "escalated";
   const isManual = conversation?.reply_mode === "manual";
+  const canTakeManual = isEscalated && !isManual;
   const canReply = isEscalated && isManual;
-  const bannerText = statusBannerText(conversation);
+  const canClose = isEscalated;
 
   if (!Number.isFinite(conversationId)) {
     return (
@@ -205,44 +174,85 @@ export default function PlatformSupportDetailScreen() {
           </Text>
           <Muted className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
             {ownerEmail ?? "—"}
-            {conversation?.ticket_code ? ` · ${conversation.ticket_code}` : ""}
+            {isEscalated && conversation?.ticket_code
+              ? ` · ${conversation.ticket_code}`
+              : ""}
           </Muted>
         </View>
       </View>
 
-      {bannerText ? (
-        <View className="bg-[#E8F8EC] border-b border-brand-green/20 px-4 py-2.5">
-          <Text className="text-[13px] text-ink font-medium">{bannerText}</Text>
+      <SupportStatusStrip conversation={conversation} />
+
+      {canTakeManual || canClose ? (
+        <View className="flex-row items-center justify-end gap-2 px-4 py-2.5 bg-surface border-b border-gray-100">
+          {canTakeManual ? (
+            <Pressable
+              onPress={() => void handleTakeManual()}
+              disabled={isTakingManual}
+              className="rounded-full bg-brand-green px-4 py-2"
+            >
+              <Text className="text-[13px] font-bold text-brand-on-primary">
+                {isTakingManual ? "Taking over…" : "Take manually"}
+              </Text>
+            </Pressable>
+          ) : null}
+          {canClose ? (
+            <Pressable
+              onPress={() => setShowCloseDialog(true)}
+              disabled={isClosing}
+              className="rounded-full border border-gray-300 px-4 py-2"
+            >
+              <Text className="text-[13px] font-semibold text-ink">
+                Close ticket
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       ) : null}
 
-      {isEscalated ? (
-        <View className="flex-row items-center justify-between px-4 py-3 bg-surface border-b border-gray-100">
-          <View className="flex-row items-center gap-2 flex-1">
-            <Text className="text-[14px] text-ink font-medium">Manual reply</Text>
-            <Switch
-              value={isManual}
-              onValueChange={(v) => void handleReplyModeChange(v)}
-              disabled={isUpdatingMode || isClosing}
-              trackColor={{ false: Colors.gray200, true: Colors.brand.green }}
-              thumbColor="#fff"
-            />
-          </View>
-          <Pressable
-            onPress={handleCloseTicket}
-            disabled={isClosing}
-            className="rounded-full border border-gray-300 px-3 py-1.5"
-          >
-            <Text className="text-[13px] font-semibold text-ink">
-              {isClosing ? "Closing…" : "Close ticket"}
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <SupportKeyboardChatLayout
+        listRef={listRef}
+        footer={
+          isSending ? (
+            <View className="flex-row items-center gap-2 px-4 py-2">
+              <ActivityIndicator size="small" color={Colors.brand.green} />
+              <Muted className="text-[13px]">Sending reply…</Muted>
+            </View>
+          ) : null
+        }
+        composer={
+          canReply ? (
+            <View className="flex-row items-end gap-2.5 px-3 py-2.5">
+              <TextInput
+                className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
+                placeholder="Reply as AiShopy team…"
+                placeholderTextColor={Colors.text.muted}
+                value={draft}
+                onChangeText={setDraft}
+                multiline
+                maxLength={2000}
+                editable={!isSending && !isLoading}
+              />
+              <IconButton
+                className="bg-brand-green border-0 w-11 h-11"
+                onPress={() => void sendReply()}
+                disabled={!draft.trim() || isSending}
+              >
+                <FontAwesome
+                  name="send"
+                  size={16}
+                  color={Colors.brand.onPrimary}
+                />
+              </IconButton>
+            </View>
+          ) : canTakeManual ? (
+            <View className="px-4 py-3">
+              <Muted className="text-[13px] text-center">
+                Tap Take manually to reply to this ticket.
+              </Muted>
+            </View>
+          ) : null
+        }
       >
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
@@ -255,6 +265,8 @@ export default function PlatformSupportDetailScreen() {
             keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => <SupportMessageBubble message={item} />}
             contentContainerClassName="p-4 pb-2 flex-grow"
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() => {
               listRef.current?.scrollToEnd({ animated: true });
             }}
@@ -265,33 +277,21 @@ export default function PlatformSupportDetailScreen() {
             }
           />
         )}
+      </SupportKeyboardChatLayout>
 
-        {canReply ? (
-          <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">
-            <TextInput
-              className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
-              placeholder="Reply as AiShopy team…"
-              placeholderTextColor={Colors.text.muted}
-              value={draft}
-              onChangeText={setDraft}
-              multiline
-              maxLength={2000}
-              editable={!isSending && !isLoading}
-            />
-            <IconButton
-              className="bg-brand-green border-0 w-11 h-11"
-              onPress={() => void sendReply()}
-              disabled={!draft.trim() || isSending}
-            >
-              <FontAwesome
-                name="send"
-                size={16}
-                color={Colors.brand.onPrimary}
-              />
-            </IconButton>
-          </View>
-        ) : null}
-      </KeyboardAvoidingView>
+      <ConfirmDialog
+        visible={showCloseDialog}
+        title="Close this ticket?"
+        message="Mark this issue as resolved? The merchant can keep chatting with AI in the same thread."
+        cancelLabel="No"
+        confirmLabel="Yes"
+        confirmVariant="primary"
+        loading={isClosing}
+        onCancel={() => {
+          if (!isClosing) setShowCloseDialog(false);
+        }}
+        onConfirm={() => void handleConfirmClose()}
+      />
     </SafeAreaView>
   );
 }

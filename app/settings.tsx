@@ -5,6 +5,7 @@ import { StoreLogoEditLink } from "@/components/store/StoreLogoPicker";
 import { StorefrontUrlActions } from "@/components/store/StorefrontUrlActions";
 import { Button } from "@/components/ui/Button";
 import { MenuRow } from "@/components/ui/MenuRow";
+import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
 import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Heading, Muted } from "@/components/ui/Typography";
@@ -22,6 +23,7 @@ import { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
+import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -35,7 +37,10 @@ export default function SettingsScreen() {
   const [editOpen, setEditOpen] = useState(false);
   const [logoOpen, setLogoOpen] = useState(false);
   const { isPlatformAdmin } = usePlatformAdmin();
+  const { summary } = useSupportAdminSummary(isPlatformAdmin);
   const goBack = usePlatformAdminBack();
+  const openTickets = summary.escalated_count;
+  const unreadOnTickets = summary.unread_messages;
 
   const handleStoreUpdated = async (updated: Store) => {
     const url = subdomainUrl ?? buildSubdomainUrl(updated.slug);
@@ -240,15 +245,28 @@ export default function SettingsScreen() {
               </Caption>
 
               {isPlatformAdmin ? (
-                <MenuRow
-                  label="Support inbox"
-                  value="AiShopy merchant Chat with AI"
-                  icon="inbox"
-                  showChevron
-                  onPress={() =>
-                    router.push("/platform-support-inbox" as Href)
-                  }
-                />
+                <View className="relative">
+                  <MenuRow
+                    label="Support inbox"
+                    value={
+                      openTickets > 0
+                        ? `${openTickets} open ticket${openTickets === 1 ? "" : "s"}`
+                        : unreadOnTickets > 0
+                          ? `${unreadOnTickets} unread on tickets`
+                          : "AiShopy merchant Chat with AI"
+                    }
+                    icon="inbox"
+                    showChevron
+                    onPress={() =>
+                      router.push("/platform-support-inbox" as Href)
+                    }
+                  />
+                  {unreadOnTickets > 0 ? (
+                    <View className="absolute top-3 right-5">
+                      <UnreadCountBadge count={unreadOnTickets} />
+                    </View>
+                  ) : null}
+                </View>
               ) : null}
 
               <MenuRow

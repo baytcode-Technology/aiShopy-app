@@ -107,7 +107,12 @@ export default function MessagesListScreen() {
   const { store } = useStore();
   const premium = hasPremiumAccess(store);
   const { isPlatformAdmin } = usePlatformAdmin();
-  const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();
+  const {
+    syncChatsUnread,
+    onChatsInvalidate,
+    isActiveChat,
+    supportUnreadCount,
+  } = useStoreUnread();
   const {
     onConversationUpdated,
     onMessageNew,
@@ -385,6 +390,7 @@ export default function MessagesListScreen() {
 
         <Fab
           variant="brand"
+          badgeCount={supportUnreadCount}
           accessibilityLabel="Chat with AI"
           onPress={() => router.push("/(store)/chats/support-ai" as Href)}
         >

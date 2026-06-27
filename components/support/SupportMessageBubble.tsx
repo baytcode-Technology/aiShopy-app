@@ -10,6 +10,20 @@ type Props = {
 export function SupportMessageBubble({ message }: Props) {
   const isUser = message.role === "user";
   const isAdmin = message.role === "admin";
+  const isSystem = message.role === "system";
+
+  if (isSystem) {
+    return (
+      <View className="mb-3 w-full px-2">
+        <View className="rounded-full bg-gray-100 border border-gray-200 px-4 py-2 self-center max-w-[95%]">
+          <Text className="text-[12px] text-gray-600 text-center leading-4">
+            {message.content}
+          </Text>
+        </View>
+        <Caption className="text-center text-gray-400 mt-1">{message.time}</Caption>
+      </View>
+    );
+  }
 
   return (
     <View

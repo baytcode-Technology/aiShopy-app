@@ -2,7 +2,9 @@ import { authenticatedFetch } from "@src/api/client";
 import { endpoints } from "@src/api/endpoints";
 import type {
   SupportAdminConversation,
+  SupportAdminSummary,
   SupportConversation,
+  SupportMerchantUnreadSummary,
   SupportMessage,
   SupportReplyMode,
 } from "@src/types/support";
@@ -145,4 +147,34 @@ export function closeSupportTicket(conversationId: number) {
     endpoints.supportAdminClose(conversationId),
     { method: "POST" },
   );
+}
+
+export function fetchSupportUnread(storeId: number) {
+  return authenticatedFetch<{
+    success: boolean;
+    data: SupportMerchantUnreadSummary;
+  }>(`${endpoints.supportUnread}${storeQuery(storeId)}`);
+}
+
+export function markSupportRead(storeId: number, conversationId: number) {
+  return authenticatedFetch<{
+    success: boolean;
+    data: { summary: SupportMerchantUnreadSummary };
+  }>(`${endpoints.supportMarkRead(conversationId)}${storeQuery(storeId)}`, {
+    method: "POST",
+  });
+}
+
+export function fetchSupportAdminSummary() {
+  return authenticatedFetch<{
+    success: boolean;
+    data: SupportAdminSummary;
+  }>(endpoints.supportAdminSummary);
+}
+
+export function markSupportAdminRead(conversationId: number) {
+  return authenticatedFetch<{
+    success: boolean;
+    data: { summary: SupportAdminSummary };
+  }>(endpoints.supportAdminMarkRead(conversationId), { method: "POST" });
 }

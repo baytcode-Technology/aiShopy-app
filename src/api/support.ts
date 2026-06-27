@@ -4,6 +4,7 @@ import type {
   SupportAdminConversation,
   SupportConversation,
   SupportMessage,
+  SupportReplyMode,
 } from "@src/types/support";
 
 type ApiSupportMessage = Omit<SupportMessage, "time">;
@@ -26,7 +27,7 @@ type SendMessageResponse = {
   success: boolean;
   data: {
     user_message: ApiSupportMessage;
-    assistant_message: ApiSupportMessage;
+    assistant_message: ApiSupportMessage | null;
     conversation: SupportConversation | null;
   };
 };
@@ -52,6 +53,16 @@ type AdminMessagesResponse = {
 type AdminSendResponse = {
   success: boolean;
   data: { message: ApiSupportMessage };
+};
+
+type ReplyModeResponse = {
+  success: boolean;
+  data: { conversation: SupportAdminConversation };
+};
+
+type CloseTicketResponse = {
+  success: boolean;
+  data: { conversation: SupportAdminConversation };
 };
 
 export function getOrCreateSupportConversation(storeId: number) {
@@ -113,5 +124,25 @@ export function sendSupportAdminReply(conversationId: number, content: string) {
       method: "POST",
       body: JSON.stringify({ content }),
     },
+  );
+}
+
+export function setSupportReplyMode(
+  conversationId: number,
+  replyMode: SupportReplyMode,
+) {
+  return authenticatedFetch<ReplyModeResponse>(
+    endpoints.supportAdminReplyMode(conversationId),
+    {
+      method: "PATCH",
+      body: JSON.stringify({ reply_mode: replyMode }),
+    },
+  );
+}
+
+export function closeSupportTicket(conversationId: number) {
+  return authenticatedFetch<CloseTicketResponse>(
+    endpoints.supportAdminClose(conversationId),
+    { method: "POST" },
   );
 }

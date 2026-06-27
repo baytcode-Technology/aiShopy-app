@@ -1,4 +1,5 @@
 import { ConversationRow } from "@/components/chat/ConversationRow";
+import { PlatformAdminSupportBanner } from "@/components/support/PlatformAdminSupportBanner";
 import { ChatsSubscriptionGate } from "@/components/subscription/ChatsSubscriptionGate";
 import { AppPressable } from "@/components/ui/AppPressable";
 import { Fab } from "@/components/ui/Fab";
@@ -13,6 +14,7 @@ import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
+import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
@@ -104,6 +106,7 @@ export default function MessagesListScreen() {
 
   const { store } = useStore();
   const premium = hasPremiumAccess(store);
+  const { isPlatformAdmin } = usePlatformAdmin();
   const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();
   const {
     onConversationUpdated,
@@ -318,6 +321,11 @@ export default function MessagesListScreen() {
       />
 
       <ScreenBody className="flex-1">
+        {isPlatformAdmin ? (
+          <View className="px-4 pt-2">
+            <PlatformAdminSupportBanner />
+          </View>
+        ) : null}
         {!premium && store?.id ? (
           <ChatsSubscriptionGate
             onViewPlans={() => router.push("/subscription" as Href)}

@@ -1,14 +1,18 @@
 import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
+import { PillTab } from "@/components/ui/PillTab";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { fetchSupportAdminConversations } from "@src/api/support";
+import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { SupportAdminConversation } from "@src/types/support";
 import { router, useFocusEffect, type Href } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+
+type InboxFilter = "tickets" | "ai" | "all";
 
 function formatRelative(iso: string | null) {
   if (!iso) return "—";
@@ -30,7 +34,9 @@ function ConversationAdminRow({
   item: SupportAdminConversation;
   onPress: () => void;
 }) {
-  const escalated = item.status === "escalated";
+  const isEscalated = item.status === "escalated";
+  const isClosed = item.status === "closed";
+  const isManual = item.reply_mode === "manual";
 
   return (
     <Pressable
@@ -50,16 +56,27 @@ function ConversationAdminRow({
           </Muted>
         </View>
         <View className="items-end gap-1.5">
-          <Caption className="text-gray-400">{formatRelative(item.last_message_at)}</Caption>
-          {escalated ? (
+          <Caption className="text-gray-400">
+            {formatRelative(item.last_message_at)}
+          </Caption>
+          {isEscalated ? (
             <View className="rounded-full bg-[#E8F8EC] px-2 py-0.5">
               <Caption className="text-brand-green text-[10px] font-bold uppercase">
-                Escalated
+                {isManual ? "Manual" : "Escalated"}
+              </Caption>
+            </View>
+          ) : null}
+          {isClosed ? (
+            <View className="rounded-full bg-gray-100 px-2 py-0.5">
+              <Caption className="text-gray-500 text-[10px] font-bold uppercase">
+                Resolved
               </Caption>
             </View>
           ) : null}
           {item.ticket_code ? (
-            <Caption className="text-gray-400 text-[10px]">{item.ticket_code}</Caption>
+            <Caption className="text-gray-400 text-[10px]">
+              {item.ticket_code}
+            </Caption>
           ) : null}
         </View>
       </View>
@@ -68,7 +85,9 @@ function ConversationAdminRow({
 }
 
 export default function PlatformSupportInboxScreen() {
+  const goBack = usePlatformAdminBack();
   const [items, setItems] = useState<SupportAdminConversation[]>([]);
+  const [filter, setFilter] = useState<InboxFilter>("tickets");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -92,16 +111,76 @@ export default function PlatformSupportInboxScreen() {
     }, [load]),
   );
 
+  const filtered = useMemo(() => {
+    if (filter === "tickets") {
+      return items.filter((item) => item.status === "escalated");
+    }
+    if (filter === "ai") {
+      return items.filter((item) => item.status === "active");
+    }
+    return items;
+  }, [items, filter]);
+
+  const emptyMessage = isLoading
+    ? "Loading conversations…"
+    : filter === "tickets"
+      ? "No open tickets right now"
+      : filter === "ai"
+        ? "No AI-only chats right now"
+        : "No active merchant support chats";
+
   return (
     <Screen>
       <ScreenHeader
         title="Support inbox"
-        subtitle="Merchant Chat with AI threads"
-        onBack={() => router.back()}
+        subtitle="Tickets first · then AI chats"
+        onBack={goBack}
       />
       <ScreenBody className="flex-1">
+        <View className="flex-row gap-2 px-4 py-3">
+          <PillTab
+            selected={filter === "tickets"}
+            onPress={() => setFilter("tickets")}
+            accessibilityLabel="Open tickets"
+          >
+            <Text
+              className={`text-[14px] font-semibold ${
+                filter === "tickets" ? "text-ink" : "text-gray-500"
+              }`}
+            >
+              Tickets
+            </Text>
+          </PillTab>
+          <PillTab
+            selected={filter === "ai"}
+            onPress={() => setFilter("ai")}
+            accessibilityLabel="AI-only conversations"
+          >
+            <Text
+              className={`text-[14px] font-semibold ${
+                filter === "ai" ? "text-ink" : "text-gray-500"
+              }`}
+            >
+              AI
+            </Text>
+          </PillTab>
+          <PillTab
+            selected={filter === "all"}
+            onPress={() => setFilter("all")}
+            accessibilityLabel="All conversations"
+          >
+            <Text
+              className={`text-[14px] font-semibold ${
+                filter === "all" ? "text-ink" : "text-gray-500"
+              }`}
+            >
+              All
+            </Text>
+          </PillTab>
+        </View>
+
         <FlatList
-          data={items}
+          data={filtered}
           keyExtractor={(item) => String(item.id)}
           refreshControl={
             <RefreshControl
@@ -119,16 +198,8 @@ export default function PlatformSupportInboxScreen() {
           )}
           ListEmptyComponent={
             <View className="p-10 items-center">
-              <FontAwesome
-                name="inbox"
-                size={28}
-                color={Colors.text.muted}
-              />
-              <Muted className="mt-3 text-center">
-                {isLoading
-                  ? "Loading conversations…"
-                  : "No active support chats"}
-              </Muted>
+              <FontAwesome name="inbox" size={28} color={Colors.text.muted} />
+              <Muted className="mt-3 text-center">{emptyMessage}</Muted>
             </View>
           }
           className="flex-1 bg-surface"

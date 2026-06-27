@@ -48,6 +48,21 @@ function mapApiMessage(m: {
   };
 }
 
+function merchantStatusBanner(conversation: SupportConversation | null): string | null {
+  if (!conversation?.ticket_code) return null;
+  const code = conversation.ticket_code;
+  if (conversation.status === "closed") {
+    return `${code} — Issue resolved. Ask AI anything below.`;
+  }
+  if (conversation.status === "escalated" && conversation.reply_mode === "manual") {
+    return `${code} — Support team is responding.`;
+  }
+  if (conversation.status === "escalated") {
+    return `${code} — Our team is reviewing. AI can still help.`;
+  }
+  return null;
+}
+
 export default function SupportAiScreen() {
   const { store } = useStore();
   const [conversation, setConversation] = useState<SupportConversation | null>(
@@ -86,10 +101,31 @@ export default function SupportAiScreen() {
     useCallback(() => {
       if (!store?.id || !conversation?.id) return;
       void fetchSupportMessages(store.id, conversation.id)
-        .then((res) => setMessages(res.data.messages.map(mapApiMessage)))
+        .then((res) => {
+          setMessages(res.data.messages.map(mapApiMessage));
+          setConversation(res.data.conversation);
+        })
         .catch(() => undefined);
     }, [store?.id, conversation?.id]),
   );
+
+  useEffect(() => {
+    const isManualEscalated =
+      conversation?.status === "escalated" &&
+      conversation?.reply_mode === "manual";
+    if (!store?.id || !conversation?.id || !isManualEscalated) return;
+
+    const interval = setInterval(() => {
+      void fetchSupportMessages(store.id, conversation.id)
+        .then((res) => {
+          setMessages(res.data.messages.map(mapApiMessage));
+          setConversation(res.data.conversation);
+        })
+        .catch(() => undefined);
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [store?.id, conversation?.id, conversation?.status, conversation?.reply_mode]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -122,11 +158,11 @@ export default function SupportAiScreen() {
       const res = await sendSupportMessage(store.id, conversation.id, text);
       setMessages((prev) => {
         const withoutTemp = prev.filter((m) => m.id !== tempId);
-        return [
-          ...withoutTemp,
-          mapApiMessage(res.data.user_message),
-          mapApiMessage(res.data.assistant_message),
-        ];
+        const next = [...withoutTemp, mapApiMessage(res.data.user_message)];
+        if (res.data.assistant_message) {
+          next.push(mapApiMessage(res.data.assistant_message));
+        }
+        return next;
       });
       if (res.data.conversation) {
         setConversation(res.data.conversation);
@@ -155,6 +191,11 @@ export default function SupportAiScreen() {
 
   const canChat = Boolean(conversation?.id) && !isLoading;
   const isEscalated = conversation?.status === "escalated";
+  const isClosed = conversation?.status === "closed";
+  const isManualMode = conversation?.reply_mode === "manual";
+  const showAiTyping = isSending && !isManualMode;
+  const showTalkWithUs = !isEscalated && (conversation?.status === "active" || isClosed);
+  const statusBanner = merchantStatusBanner(conversation);
   const showStarters = canChat && messages.length === 0 && !isSending;
 
   return (
@@ -187,14 +228,9 @@ export default function SupportAiScreen() {
         </View>
       </View>
 
-      {isEscalated ? (
+      {statusBanner ? (
         <View className="bg-[#E8F8EC] border-b border-brand-green/20 px-4 py-2.5">
-          <Text className="text-[13px] text-ink font-medium">
-            {conversation?.ticket_code
-              ? `Ticket ${conversation.ticket_code} — `
-              : ""}
-            A team member will respond soon.
-          </Text>
+          <Text className="text-[13px] text-ink font-medium">{statusBanner}</Text>
         </View>
       ) : null}
 
@@ -236,7 +272,7 @@ export default function SupportAiScreen() {
           />
         )}
 
-        {isSending ? (
+        {showAiTyping ? (
           <View className="flex-row items-center gap-2 px-4 py-2">
             <ActivityIndicator size="small" color={Colors.brand.green} />
             <Muted className="text-[13px]">AI is typing…</Muted>
@@ -250,14 +286,14 @@ export default function SupportAiScreen() {
           />
         ) : null}
 
-        {!isEscalated ? (
+        {showTalkWithUs ? (
           <Pressable
             className="mx-3 mb-1 py-2"
             onPress={() => void handleEscalate()}
             disabled={isEscalating || isLoading}
           >
             <LinkText className="text-[13px] text-brand-green">
-              {isEscalating ? "Requesting…" : "Talk to our team"}
+              {isEscalating ? "Requesting…" : "Talk with us"}
             </LinkText>
           </Pressable>
         ) : null}

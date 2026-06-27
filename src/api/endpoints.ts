@@ -40,4 +40,8 @@ export const endpoints = {
   supportAdminConversations: "/api/support/admin/conversations",
   supportAdminMessages: (conversationId: number) =>
     `/api/support/admin/conversations/${conversationId}/messages`,
+  supportAdminReplyMode: (conversationId: number) =>
+    `/api/support/admin/conversations/${conversationId}/reply-mode`,
+  supportAdminClose: (conversationId: number) =>
+    `/api/support/admin/conversations/${conversationId}/close`,
 } as const;

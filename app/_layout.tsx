@@ -71,6 +71,7 @@ export default function RootLayout() {
             <Stack.Screen name="chat-boat" />
             <Stack.Screen name="platform-support-inbox" />
             <Stack.Screen name="platform-support" />
+            <Stack.Screen name="platform-admin" />
             <Stack.Screen name="settings" />
             <Stack.Screen name="storefront" />
             <Stack.Screen name="payment-methods" />

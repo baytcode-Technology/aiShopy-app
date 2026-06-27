@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Muted } from "@/components/ui/Typography";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
+import { fetchSupportAdminStatus } from "@src/api/support";
 import { getErrorMessage } from "@src/lib/api-error";
 import Colors from "@src/theme/colors";
 import { router, type Href } from "expo-router";
@@ -18,8 +19,19 @@ export default function StoreCheckScreen() {
 
   const runStoreCheck = useCallback(async () => {
     setLoadError(null);
-    const { hasStore } = await refreshStore();
-    if (hasStore) {
+    const [storeResult, adminRes] = await Promise.all([
+      refreshStore(),
+      fetchSupportAdminStatus().catch(() => ({
+        data: { isAdmin: false as boolean },
+      })),
+    ]);
+
+    const { hasStore } = storeResult;
+    const isAdmin = adminRes.data.isAdmin;
+
+    if (isAdmin && !hasStore) {
+      router.replace("/platform-admin" as Href);
+    } else if (hasStore) {
       router.replace("/(store)/chats" as Href);
     } else {
       router.replace("/create-store");

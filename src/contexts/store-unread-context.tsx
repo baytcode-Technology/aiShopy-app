@@ -10,6 +10,10 @@ import {
 } from 'react'
 import { fetchOrders, markOrderViewed as markOrderViewedApi } from '@src/api/orders'
 import { fetchAllChats, markChatRead as markChatReadApi } from '@src/api/chats'
+import {
+  fetchSupportUnread,
+  markSupportRead as markSupportReadApi,
+} from '@src/api/support'
 import { useChatSocket } from '@src/contexts/chat-socket-context'
 import { useStore } from '@src/contexts/store-context'
 import { addNotificationReceivedListener } from '@src/lib/push-notifications'
@@ -19,24 +23,30 @@ import type { Order } from '@src/types/order'
 
 const CHAT_REFRESH_DEBOUNCE_MS = 300
 const MARK_CHAT_READ_DEBOUNCE_MS = 500
+const SUPPORT_UNREAD_POLL_MS = 4000
 
 type ActiveChat = { conversationId: number; channel: ChatChannel }
 
 type StoreUnreadContextValue = {
   ordersUnreadCount: number
   chatsUnreadCount: number
+  supportUnreadCount: number
+  supportUnreadPreview: string | null
   syncOrdersUnread: (orders: Order[]) => void
   syncChatsUnread: (items: ChatListItem[]) => void
   refreshOrdersUnread: () => Promise<void>
   refreshChatsUnread: () => Promise<void>
+  refreshSupportUnread: () => Promise<void>
   isOrderUnviewed: (order: Order) => boolean
   onOrderViewed: (handler: (orderId: number) => void) => () => void
   onChatsInvalidate: (handler: () => void) => () => void
   onActiveChatMessage: (handler: (conversationId: number) => void) => () => void
   setActiveChat: (chat: ActiveChat | null) => void
+  setActiveSupportChat: (conversationId: number | null) => void
   isActiveChat: (conversationId: number) => boolean
   markOrderViewed: (orderId: number) => Promise<void>
   markChatRead: (conversationId: number, channel: ChatChannel) => Promise<void>
+  markSupportRead: (conversationId: number) => Promise<void>
 }
 
 const StoreUnreadContext = createContext<StoreUnreadContextValue | null>(null)
@@ -56,6 +66,8 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   } = useChatSocket()
   const [ordersUnreadCount, setOrdersUnreadCount] = useState(0)
   const [chatsUnreadCount, setChatsUnreadCount] = useState(0)
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0)
+  const [supportUnreadPreview, setSupportUnreadPreview] = useState<string | null>(null)
   const [viewedOrderIds, setViewedOrderIds] = useState<Set<number>>(() => new Set())
   const orderViewedListeners = useRef(new Set<(orderId: number) => void>())
   const chatsInvalidateListeners = useRef(new Set<() => void>())
@@ -64,6 +76,8 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   const chatRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const markChatReadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeChatRef = useRef<ActiveChat | null>(null)
+  const activeSupportChatRef = useRef<number | null>(null)
+  const waIgUnreadRef = useRef(0)
 
   const isOrderUnviewed = useCallback(
     (order: Order) => !order.merchant_viewed_at && !viewedOrderIds.has(order.id),
@@ -79,9 +93,17 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
 
   const syncChatsUnread = useCallback((items: ChatListItem[]) => {
     const activeId = activeChatRef.current?.conversationId
-    setChatsUnreadCount(
-      items.filter((c) => c.unread > 0 && c.id !== activeId).length
-    )
+    const waIgCount = items.filter((c) => c.unread > 0 && c.id !== activeId).length
+    waIgUnreadRef.current = waIgCount
+    setChatsUnreadCount(waIgCount + supportUnreadCount)
+  }, [supportUnreadCount])
+
+  const applySupportUnread = useCallback((count: number, preview: string | null) => {
+    const activeId = activeSupportChatRef.current
+    const effectiveCount = activeId != null ? 0 : count
+    setSupportUnreadCount(effectiveCount)
+    setSupportUnreadPreview(preview)
+    setChatsUnreadCount(waIgUnreadRef.current + effectiveCount)
   }, [])
 
   const refreshOrdersUnread = useCallback(async () => {
@@ -99,18 +121,38 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     try {
       const { whatsapp, instagram } = await fetchAllChats(store.id)
       const activeId = activeChatRef.current?.conversationId
-      const count = [...whatsapp, ...instagram].filter(
+      const waIgCount = [...whatsapp, ...instagram].filter(
         (c) => (c.unread_count ?? 0) > 0 && c.id !== activeId
       ).length
-      setChatsUnreadCount(count)
+      waIgUnreadRef.current = waIgCount
+      setChatsUnreadCount(waIgCount + supportUnreadCount)
     } catch {
       // Keep last known count.
     }
-  }, [store?.id])
+  }, [store?.id, supportUnreadCount])
+
+  const refreshSupportUnread = useCallback(async () => {
+    if (!store?.id) return
+    try {
+      const res = await fetchSupportUnread(store.id)
+      applySupportUnread(res.data.unread_count, res.data.last_preview)
+    } catch {
+      // Keep last known count.
+    }
+  }, [store?.id, applySupportUnread])
 
   const setActiveChat = useCallback((chat: ActiveChat | null) => {
     activeChatRef.current = chat
   }, [])
+
+  const setActiveSupportChat = useCallback((conversationId: number | null) => {
+    activeSupportChatRef.current = conversationId
+    if (conversationId != null) {
+      applySupportUnread(0, null)
+    } else {
+      void refreshSupportUnread()
+    }
+  }, [applySupportUnread, refreshSupportUnread])
 
   const isActiveChat = useCallback((conversationId: number) => {
     return activeChatRef.current?.conversationId === conversationId
@@ -123,6 +165,22 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   const notifyActiveChatMessage = useCallback((conversationId: number) => {
     activeChatMessageListeners.current.forEach((handler) => handler(conversationId))
   }, [])
+
+  const markSupportRead = useCallback(
+    async (conversationId: number) => {
+      if (!store?.id) return
+      try {
+        const res = await markSupportReadApi(store.id, conversationId)
+        applySupportUnread(
+          res.data.summary.unread_count,
+          res.data.summary.last_preview
+        )
+      } catch {
+        // Keep last known count.
+      }
+    },
+    [store?.id, applySupportUnread]
+  )
 
   const markChatRead = useCallback(
     async (conversationId: number, channel: ChatChannel) => {
@@ -196,13 +254,28 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     if (!store?.id) {
       setOrdersUnreadCount(0)
       setChatsUnreadCount(0)
+      setSupportUnreadCount(0)
+      setSupportUnreadPreview(null)
       setViewedOrderIds(new Set())
       activeChatRef.current = null
+      activeSupportChatRef.current = null
+      waIgUnreadRef.current = 0
       return
     }
     void refreshOrdersUnread()
     void refreshChatsUnread()
-  }, [store?.id, refreshOrdersUnread, refreshChatsUnread])
+    void refreshSupportUnread()
+  }, [store?.id, refreshOrdersUnread, refreshChatsUnread, refreshSupportUnread])
+
+  useEffect(() => {
+    if (!store?.id) return
+
+    const interval = setInterval(() => {
+      void refreshSupportUnread()
+    }, SUPPORT_UNREAD_POLL_MS)
+
+    return () => clearInterval(interval)
+  }, [store?.id, refreshSupportUnread])
 
   useEffect(() => {
     const unsub = onOrderNew(() => {
@@ -243,6 +316,10 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     if (!store?.id) return
 
     return addNotificationReceivedListener((data) => {
+      if (data.type === 'support' || data.channel === 'support') {
+        void refreshSupportUnread()
+        return
+      }
       if (data.type === 'chat') {
         const conversationId =
           typeof data.conversationId === 'number'
@@ -308,34 +385,44 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     () => ({
       ordersUnreadCount,
       chatsUnreadCount,
+      supportUnreadCount,
+      supportUnreadPreview,
       syncOrdersUnread,
       syncChatsUnread,
       refreshOrdersUnread,
       refreshChatsUnread,
+      refreshSupportUnread,
       isOrderUnviewed,
       onOrderViewed,
       onChatsInvalidate,
       onActiveChatMessage,
       setActiveChat,
+      setActiveSupportChat,
       isActiveChat,
       markOrderViewed,
       markChatRead,
+      markSupportRead,
     }),
     [
       ordersUnreadCount,
       chatsUnreadCount,
+      supportUnreadCount,
+      supportUnreadPreview,
       syncOrdersUnread,
       syncChatsUnread,
       refreshOrdersUnread,
       refreshChatsUnread,
+      refreshSupportUnread,
       isOrderUnviewed,
       onOrderViewed,
       onChatsInvalidate,
       onActiveChatMessage,
       setActiveChat,
+      setActiveSupportChat,
       isActiveChat,
       markOrderViewed,
       markChatRead,
+      markSupportRead,
     ]
   )
 

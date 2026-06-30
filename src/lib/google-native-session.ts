@@ -9,10 +9,13 @@ export function ensureNativeGoogleConfigured(): void {
     return
   }
 
+  if (Platform.OS === 'ios' && !env.google.iosClientId) {
+    throw new Error('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is required for iOS Google Sign-In')
+  }
+
   GoogleSignin.configure({
     webClientId: env.google.webClientId,
-    iosClientId:
-      Platform.OS === 'ios' ? env.google.iosClientId : undefined,
+    iosClientId: Platform.OS === 'ios' ? env.google.iosClientId : undefined,
     offlineAccess: false,
     scopes: ['openid', 'profile', 'email'],
   })

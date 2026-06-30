@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { SleekModal } from '@/components/ui/Modal'
 import { getProductStockLabel, stockLabelToneClass } from '@src/lib/product-inventory'
@@ -47,23 +55,30 @@ export function OrderProductPickerModal({
       title="Products"
       minHeightRatio={0.5}
       maxHeightRatio={0.8}
+      bodyScroll={false}
     >
       <OrderSearchBar value={search} onChangeText={setSearch} />
 
       {loading ? (
-        <View className="py-10 items-center">
+        <View className="py-10 items-center flex-1">
           <ActivityIndicator color={Colors.brand.primary} />
         </View>
       ) : (
-        <View>
-          {filtered.map((product) => {
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <Text className="text-center text-gray-500 py-8">No products found</Text>
+          }
+          renderItem={({ item: product }) => {
             const variants = variantCount(product)
             const stockLabel = getProductStockLabel(product)
             const status = getProductStatus(product)
 
             return (
               <Pressable
-                key={product.id}
                 className="flex-row items-center gap-3 py-3.5 border-b border-gray-100 active:opacity-80"
                 onPress={() => onSelectProduct(product)}
               >
@@ -103,11 +118,8 @@ export function OrderProductPickerModal({
                 </View>
               </Pressable>
             )
-          })}
-          {filtered.length === 0 ? (
-            <Text className="text-center text-gray-500 py-8">No products found</Text>
-          ) : null}
-        </View>
+          }}
+        />
       )}
     </SleekModal>
   )

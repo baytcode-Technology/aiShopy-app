@@ -25,8 +25,14 @@ import {
 } from '@src/lib/auth-storage'
 import { clearNativeGoogleSignInSession } from '@src/lib/google-native-session'
 import { emailFromAccessToken } from '@src/lib/jwt-email'
-import { ensureValidSession } from '@src/lib/session-manager'
+import {
+  ensureValidSession,
+  isAccessTokenExpired,
+  SessionExpiredError,
+} from '@src/lib/session-manager'
 import type { AuthSession, AuthUser } from '@src/types/auth'
+
+const FOREGROUND_RESUME_DEBOUNCE_MS = 600
 
 type AuthContextValue = {
   isLoading: boolean
@@ -70,6 +76,28 @@ async function applyAuthSession(
   setIsAuthenticated(true)
 }
 
+async function tryRestoreAuthenticatedSession(): Promise<boolean> {
+  const refreshToken = await getRefreshToken()
+  if (!refreshToken) {
+    return false
+  }
+
+  try {
+    await ensureValidSession()
+    return true
+  } catch (error) {
+    if (error instanceof SessionExpiredError) {
+      return false
+    }
+    const accessToken = await getAccessToken()
+    if (!accessToken) {
+      return false
+    }
+    const expired = await isAccessTokenExpired(0)
+    return !expired
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -87,13 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void (async () => {
       try {
-        const refreshToken = await getRefreshToken()
-        if (!refreshToken) {
+        const ok = await tryRestoreAuthenticatedSession()
+        if (!ok) {
+          await clearTokens()
           setIsAuthenticated(false)
           return
         }
 
-        await ensureValidSession()
         const restoredUser = await restoreUserFromStorage()
         if (restoredUser) {
           setUser(restoredUser)
@@ -120,27 +148,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signOut])
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active') return
 
-      void (async () => {
-        try {
-          const refreshToken = await getRefreshToken()
-          if (!refreshToken) return
-          await ensureValidSession()
-          const restoredUser = await restoreUserFromStorage()
-          if (restoredUser) {
-            setUser(restoredUser)
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
+
+      debounceTimer = setTimeout(() => {
+        void (async () => {
+          try {
+            const refreshToken = await getRefreshToken()
+            if (!refreshToken) return
+
+            const ok = await tryRestoreAuthenticatedSession()
+            if (!ok) {
+              await signOut()
+              router.replace('/(auth)/login' as Href)
+              return
+            }
+
+            const restoredUser = await restoreUserFromStorage()
+            if (restoredUser) {
+              setUser(restoredUser)
+            }
+            setIsAuthenticated(true)
+          } catch (error) {
+            if (error instanceof SessionExpiredError) {
+              await signOut()
+              router.replace('/(auth)/login' as Href)
+            } else if (__DEV__) {
+              console.warn('[auth] foreground session refresh skipped', error)
+            }
           }
-          setIsAuthenticated(true)
-        } catch {
-          await signOut()
-          router.replace('/(auth)/login' as Href)
-        }
-      })()
+        })()
+      }, FOREGROUND_RESUME_DEBOUNCE_MS)
     })
 
-    return () => subscription.remove()
+    return () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
+      subscription.remove()
+    }
   }, [signOut])
 
   const sendOtp = useCallback(async (email: string) => {

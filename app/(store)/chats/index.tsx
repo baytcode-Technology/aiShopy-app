@@ -1,6 +1,8 @@
 import { ConversationRow } from "@/components/chat/ConversationRow";
+import { PlatformAdminSupportBanner } from "@/components/support/PlatformAdminSupportBanner";
 import { ChatsSubscriptionGate } from "@/components/subscription/ChatsSubscriptionGate";
 import { AppPressable } from "@/components/ui/AppPressable";
+import { Fab } from "@/components/ui/Fab";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -12,6 +14,7 @@ import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
+import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
@@ -103,7 +106,13 @@ export default function MessagesListScreen() {
 
   const { store } = useStore();
   const premium = hasPremiumAccess(store);
-  const { syncChatsUnread, onChatsInvalidate, isActiveChat } = useStoreUnread();
+  const { isPlatformAdmin } = usePlatformAdmin();
+  const {
+    syncChatsUnread,
+    onChatsInvalidate,
+    isActiveChat,
+    supportUnreadCount,
+  } = useStoreUnread();
   const {
     onConversationUpdated,
     onMessageNew,
@@ -317,6 +326,11 @@ export default function MessagesListScreen() {
       />
 
       <ScreenBody className="flex-1">
+        {isPlatformAdmin ? (
+          <View className="px-4 pt-2">
+            <PlatformAdminSupportBanner />
+          </View>
+        ) : null}
         {!premium && store?.id ? (
           <ChatsSubscriptionGate
             onViewPlans={() => router.push("/subscription" as Href)}
@@ -368,11 +382,24 @@ export default function MessagesListScreen() {
             )
           }
           className="flex-1 bg-surface"
-          contentContainerClassName="pb-6"
+          contentContainerClassName="pb-32"
           showsVerticalScrollIndicator={false}
         />
           </>
         )}
+
+        <Fab
+          variant="brand"
+          badgeCount={supportUnreadCount}
+          accessibilityLabel="Chat with AI"
+          onPress={() => router.push("/(store)/chats/support-ai" as Href)}
+        >
+          <FontAwesome
+            name="comments"
+            size={22}
+            color={Colors.brand.onPrimary}
+          />
+        </Fab>
       </ScreenBody>
     </Screen>
   );

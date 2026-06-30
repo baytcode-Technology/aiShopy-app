@@ -52,7 +52,7 @@ export function CreateOrderModal({ visible, storeId, currency, onClose, onCreate
       .then((res) =>
         setProducts(res.data.products.filter((p) => getProductStatus(p) === 'active'))
       )
-      .catch((e) => showError(e))
+      .catch((e) => showError(e, 'Could not load products'))
       .finally(() => setProductsLoading(false))
   }, [visible, storeId])
 
@@ -191,10 +191,13 @@ export function CreateOrderModal({ visible, storeId, currency, onClose, onCreate
     }
   }
 
+  const childPickerOpen =
+    productPickerOpen || variantPickerOpen || customerPickerOpen
+
   return (
     <>
       <SleekModal
-        isOpen={visible}
+        isOpen={visible && !childPickerOpen}
         onClose={handleClose}
         title="Create order"
         minHeightRatio={0.5}

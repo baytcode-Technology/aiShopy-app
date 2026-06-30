@@ -14,6 +14,7 @@ type Props = {
   message: string
   confirmLabel?: string
   cancelLabel?: string
+  confirmVariant?: 'danger' | 'primary'
   loading?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -25,10 +26,13 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  confirmVariant = 'danger',
   loading = false,
   onConfirm,
   onCancel,
 }: Props) {
+  const confirmBg =
+    confirmVariant === 'primary' ? '#3EB056' : '#EF4444'
   return (
     <RNModal
       visible={visible}
@@ -53,21 +57,25 @@ export function ConfirmDialog({
             <Pressable
               onPress={onCancel}
               disabled={loading}
-              className="flex-1 py-3.5 rounded-xl border border-gray-200 bg-surface items-center justify-center"
+              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 bg-surface items-center justify-center"
               style={loading ? { opacity: 0.5 } : undefined}
             >
-              <Text className="text-[14px] font-bold text-ink">{cancelLabel}</Text>
+              <Text className="text-[16px] font-bold text-ink">{cancelLabel}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
               disabled={loading}
-              className="flex-1 py-3.5 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#EF4444', opacity: loading ? 0.7 : 1 }}
+              className="flex-1 py-4 rounded-2xl items-center justify-center border-2"
+              style={{
+                backgroundColor: confirmBg,
+                borderColor: confirmBg,
+                opacity: loading ? 0.7 : 1,
+              }}
             >
               {loading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text className="text-[14px] font-bold text-white">{confirmLabel}</Text>
+                <Text className="text-[16px] font-bold text-white">{confirmLabel}</Text>
               )}
             </Pressable>
           </View>

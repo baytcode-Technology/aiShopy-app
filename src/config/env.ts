@@ -1,5 +1,7 @@
 /// <reference types="node" />
 
+import { Platform } from "react-native";
+
 const url = process.env.EXPO_PUBLIC_API_URL?.trim();
 
 if (__DEV__ && !url) {
@@ -21,11 +23,25 @@ export const env = {
   storefrontBaseDomain,
   google: {
     webClientId,
-    iosClientId: iosClientId || webClientId,
+    iosClientId,
     androidClientId: androidClientId || webClientId,
   },
 } as const;
 
 export function isGoogleSignInConfigured(): boolean {
-  return Boolean(env.google.webClientId);
+  if (!env.google.webClientId) return false;
+  if (Platform.OS === "ios") {
+    return Boolean(env.google.iosClientId);
+  }
+  return true;
+}
+
+export function getGoogleSignInSetupHint(): string {
+  if (!env.google.webClientId) {
+    return "Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to your .env or EAS build env.";
+  }
+  if (Platform.OS === "ios" && !env.google.iosClientId) {
+    return "Add EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID (iOS OAuth client for bundle com.aishopy.app).";
+  }
+  return "";
 }

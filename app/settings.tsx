@@ -5,6 +5,7 @@ import { StoreLogoEditLink } from "@/components/store/StoreLogoPicker";
 import { StorefrontUrlActions } from "@/components/store/StorefrontUrlActions";
 import { Button } from "@/components/ui/Button";
 import { MenuRow } from "@/components/ui/MenuRow";
+import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
 import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Heading, Muted } from "@/components/ui/Typography";
@@ -20,6 +21,9 @@ import type { Store } from "@src/types/store";
 import { router, type Href } from "expo-router";
 import { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
+import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
+import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -32,6 +36,11 @@ export default function SettingsScreen() {
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [logoOpen, setLogoOpen] = useState(false);
+  const { isPlatformAdmin } = usePlatformAdmin();
+  const { summary } = useSupportAdminSummary(isPlatformAdmin);
+  const goBack = usePlatformAdminBack();
+  const openTickets = summary.escalated_count;
+  const unreadOnTickets = summary.unread_messages;
 
   const handleStoreUpdated = async (updated: Store) => {
     const url = subdomainUrl ?? buildSubdomainUrl(updated.slug);
@@ -55,17 +64,72 @@ export default function SettingsScreen() {
   const storefrontUrl =
     subdomainUrl ?? (store?.slug ? buildSubdomainUrl(store.slug) : null);
 
+  const isAdminWithoutStore = isPlatformAdmin && !store;
+
   return (
     <Screen>
       <ScreenHeader
         showLogo
         variant="tab"
         title="Settings"
-        subtitle="Store & profile"
-        onBack={() => router.back()}
+        subtitle={isAdminWithoutStore ? "Platform admin" : "Store & profile"}
+        onBack={isAdminWithoutStore ? goBack : () => router.back()}
         showSettings={false}
       />
       <ScreenBody className="flex-1">
+        {isAdminWithoutStore ? (
+          <ScrollView
+            className="flex-1"
+            showsVerticalScrollIndicator={false}
+            contentContainerClassName="px-5 pt-4 pb-32 gap-3"
+          >
+            <View
+              className="rounded-[28px] border border-gray-200 bg-surface px-6 py-5"
+              style={shadows.card}
+            >
+              <Caption className="text-[11px] text-gray-400 uppercase tracking-[0.2em] mb-2">
+                Admin account
+              </Caption>
+              <Muted className="text-[15px]">{user?.email}</Muted>
+              <Muted className="text-[13px] mt-2 leading-5">
+                No store linked. Use Support inbox for merchant Chat with AI.
+              </Muted>
+            </View>
+
+            <MenuRow
+              label="Admin home"
+              value="Platform support dashboard"
+              icon="home"
+              showChevron
+              onPress={() => router.replace("/platform-admin" as Href)}
+            />
+            <MenuRow
+              label="Support inbox"
+              value="AiShopy merchant Chat with AI"
+              icon="inbox"
+              showChevron
+              onPress={() => router.push("/platform-support-inbox" as Href)}
+            />
+            <MenuRow
+              label="Create a store"
+              value="Optional"
+              icon="shopping-bag"
+              showChevron
+              onPress={() => router.push("/create-store" as Href)}
+            />
+
+            <View className="pt-4">
+              <Button
+                label="Sign out"
+                variant="primary"
+                onPress={handleSignOut}
+                className="bg-[#E11D48] border-[#E11D48]"
+                labelClassName="text-white"
+              />
+            </View>
+          </ScrollView>
+        ) : (
+          <>
         <View className="px-5 pt-2 pb-4">
           <View
             className="rounded-[28px] border border-gray-200 bg-surface px-6 py-3 relative"
@@ -180,6 +244,31 @@ export default function SettingsScreen() {
                 Support
               </Caption>
 
+              {isPlatformAdmin ? (
+                <View className="relative">
+                  <MenuRow
+                    label="Support inbox"
+                    value={
+                      openTickets > 0
+                        ? `${openTickets} open ticket${openTickets === 1 ? "" : "s"}`
+                        : unreadOnTickets > 0
+                          ? `${unreadOnTickets} unread on tickets`
+                          : "AiShopy merchant Chat with AI"
+                    }
+                    icon="inbox"
+                    showChevron
+                    onPress={() =>
+                      router.push("/platform-support-inbox" as Href)
+                    }
+                  />
+                  {unreadOnTickets > 0 ? (
+                    <View className="absolute top-3 right-5">
+                      <UnreadCountBadge count={unreadOnTickets} />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
               <MenuRow
                 label="Send feedback"
                 value=""
@@ -234,6 +323,8 @@ export default function SettingsScreen() {
           onClose={() => setLogoOpen(false)}
           onUpdated={handleStoreUpdated}
         />
+          </>
+        )}
       </ScreenBody>
     </Screen>
   );

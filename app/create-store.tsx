@@ -6,8 +6,9 @@ import { CurrencyPickerField } from '@/components/store/CurrencyPickerField'
 import { IndustryPicker } from '@/components/store/IndustryPicker'
 import { PhoneNumberField } from '@/components/store/PhoneNumberField'
 import { Button } from '@/components/ui/Button'
-import { Caption, SectionTitle } from '@/components/ui/Typography'
+import { Caption, LinkText, SectionTitle } from '@/components/ui/Typography'
 import { createStore } from '@src/api/stores'
+import { fetchSupportAdminStatus } from '@src/api/support'
 import { env } from '@src/config/env'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
@@ -24,7 +25,8 @@ import {
   type CreateStoreFormValues,
 } from '@src/validations/store.validation'
 import { router, type Href } from 'expo-router'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Pressable, View } from 'react-native'
 
 type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>
 
@@ -42,7 +44,14 @@ export default function CreateStoreScreen() {
   const [industry, setIndustry] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const prevCountryCode = useRef(country.cca2)
+
+  useEffect(() => {
+    void fetchSupportAdminStatus()
+      .then((res) => setIsPlatformAdmin(res.data.isAdmin))
+      .catch(() => setIsPlatformAdmin(false))
+  }, [])
 
   const onNameChange = (value: string) => {
     setName(value)
@@ -120,6 +129,18 @@ export default function CreateStoreScreen() {
         />
       }
     >
+      {isPlatformAdmin ? (
+        <View className="mb-2">
+          <Pressable
+            onPress={() => router.replace("/platform-admin" as Href)}
+            hitSlop={8}
+          >
+            <LinkText className="text-[14px] text-brand-green">
+              Skip — open Admin home
+            </LinkText>
+          </Pressable>
+        </View>
+      ) : null}
       <SectionTitle className="mt-4 mb-1.5">Basics</SectionTitle>
       <AuthInput
         label="Store name *"

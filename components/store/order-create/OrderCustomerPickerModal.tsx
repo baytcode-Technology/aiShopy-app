@@ -60,7 +60,7 @@ export function OrderCustomerPickerModal({
   return (
     <>
       <SleekModal
-        isOpen={visible}
+        isOpen={visible && !newOpen}
         onClose={onClose}
         title="Customer"
         scrollClassName="max-h-[70%]"

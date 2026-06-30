@@ -18,6 +18,7 @@ import {
   type RazorpaySetupTestCheckout,
 } from '@src/api/payment-config'
 import { getRazorpayWebhookUrl, razorpayKeyMatchesMode } from '@src/lib/razorpay-config'
+import { useStore } from '@src/contexts/store-context'
 import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess, showWarning } from '@src/lib/toast'
@@ -42,6 +43,7 @@ function testStatusLabel(
 }
 
 export default function RazorpayPaymentScreen() {
+  const { store } = useStore()
   const [enabled, setEnabled] = useState(false)
   const [mode, setMode] = useState<RazorpayMode>('test')
   const [keyId, setKeyId] = useState('')
@@ -120,9 +122,10 @@ export default function RazorpayPaymentScreen() {
   }, [checkoutSession])
 
   const load = useCallback(async () => {
+    if (!store?.id) return
     setLoading(true)
     try {
-      const res = await fetchPaymentConfig()
+      const res = await fetchPaymentConfig(store.id)
       const rz = res.data.payment_config.razorpay
       setEnabled(rz.enabled)
       setMode(rz.mode)
@@ -140,7 +143,7 @@ export default function RazorpayPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [store?.id])
 
   useFocusEffect(
     useCallback(() => {
@@ -158,6 +161,7 @@ export default function RazorpayPaymentScreen() {
   }
 
   const save = useCallback(async (): Promise<boolean> => {
+    if (!store?.id) return false
     const wantsEnableOnStorefront = enabled
     const canEnableNow = wantsEnableOnStorefront && canEnable
     const savingCredentialsOnly =
@@ -194,7 +198,7 @@ export default function RazorpayPaymentScreen() {
 
     setSaving(true)
     try {
-      await updatePaymentConfig({
+      await updatePaymentConfig(store.id, {
         razorpay: {
           enabled: persistEnabled,
           key_id: keyId.trim() || undefined,
@@ -235,6 +239,7 @@ export default function RazorpayPaymentScreen() {
     credentialsDirty,
     testPassedForCurrentEnv,
     load,
+    store?.id,
   ])
 
   const { requestBack, dialog } = useUnsavedChangesExit({
@@ -244,6 +249,7 @@ export default function RazorpayPaymentScreen() {
   })
 
   const runSetupTest = async () => {
+    if (!store?.id) return
     if (Platform.OS === 'web') {
       showWarning('Run the Razorpay test on the mobile app.')
       return
@@ -255,7 +261,7 @@ export default function RazorpayPaymentScreen() {
 
     setTesting(true)
     try {
-      const res = await startRazorpaySetupTest()
+      const res = await startRazorpaySetupTest(store.id)
       setCheckoutSession(res.data)
       setCheckoutVisible(true)
     } catch (e) {
@@ -270,11 +276,11 @@ export default function RazorpayPaymentScreen() {
     razorpay_order_id: string
     razorpay_signature: string
   }) => {
-    if (!checkoutSession) return
+    if (!checkoutSession || !store?.id) return
 
     setTesting(true)
     try {
-      const res = await verifyRazorpaySetupTest({
+      const res = await verifyRazorpaySetupTest(store.id, {
         order_id: checkoutSession.order_id,
         checkout_token: checkoutSession.checkout_token,
         razorpay_order_id: payment.razorpay_order_id,

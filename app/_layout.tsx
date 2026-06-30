@@ -63,6 +63,7 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="store-check" />
+            <Stack.Screen name="select-store" />
             <Stack.Screen name="create-store" />
             <Stack.Screen name="(store)" />
             <Stack.Screen name="connect-whatsapp" />

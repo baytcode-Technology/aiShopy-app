@@ -8,15 +8,19 @@ import { useStore } from "@src/contexts/store-context";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import { shadows } from "@src/lib/shadows";
 import Colors from "@src/theme/colors";
-import { router, type Href } from "expo-router";
+import { router, Redirect, type Href } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 export default function AdminDashboardScreen() {
-  const { store } = useStore();
+  const { store, role } = useStore();
   const premium = hasPremiumAccess(store);
   const [domainOpen, setDomainOpen] = useState(false);
   const [customDomainComingSoon, setCustomDomainComingSoon] = useState(false);
+
+  if (role === "staff") {
+    return <Redirect href="/settings" />;
+  }
 
   const currentDomain = store?.slug
     ? `${store.slug}.${env.storefrontBaseDomain}`
@@ -92,12 +96,7 @@ export default function AdminDashboardScreen() {
           value="Invite team & assign roles"
           icon="users"
           showChevron
-          onPress={() =>
-            router.push({
-              pathname: "/account-coming-soon",
-              params: { id: "staff-management" },
-            })
-          }
+          onPress={() => router.push("/staff-management" as Href)}
         />
 
         <View>

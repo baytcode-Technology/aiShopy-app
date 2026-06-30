@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/Button'
 import { PaymentMethodConfigSkeleton } from '@/components/ui/Skeleton'
 import { Label, Muted } from '@/components/ui/Typography'
 import { fetchPaymentConfig, updatePaymentConfig } from '@src/api/payment-config'
+import { useStore } from '@src/contexts/store-context'
 import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess } from '@src/lib/toast'
 
 export default function CodPaymentScreen() {
+  const { store } = useStore()
   const [enabled, setEnabled] = useState(true)
   const [savedEnabled, setSavedEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
@@ -19,9 +21,10 @@ export default function CodPaymentScreen() {
   const isDirty = !loading && enabled !== savedEnabled
 
   const load = useCallback(async () => {
+    if (!store?.id) return
     setLoading(true)
     try {
-      const res = await fetchPaymentConfig()
+      const res = await fetchPaymentConfig(store.id)
       const nextEnabled = res.data.payment_config.cod.enabled
       setEnabled(nextEnabled)
       setSavedEnabled(nextEnabled)
@@ -30,7 +33,7 @@ export default function CodPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [store?.id])
 
   useFocusEffect(
     useCallback(() => {
@@ -39,9 +42,10 @@ export default function CodPaymentScreen() {
   )
 
   const save = useCallback(async (): Promise<boolean> => {
+    if (!store?.id) return false
     setSaving(true)
     try {
-      await updatePaymentConfig({ cod: { enabled } })
+      await updatePaymentConfig(store.id, { cod: { enabled } })
       setSavedEnabled(enabled)
       showSuccess('Cash on delivery settings saved')
       return true
@@ -51,7 +55,7 @@ export default function CodPaymentScreen() {
     } finally {
       setSaving(false)
     }
-  }, [enabled])
+  }, [enabled, store?.id])
 
   const { requestBack, dialog } = useUnsavedChangesExit({
     isDirty,

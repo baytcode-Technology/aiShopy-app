@@ -7,6 +7,7 @@ import { Caption, Muted } from "@/components/ui/Typography";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
 import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
+import { performSignOut } from "@src/lib/safe-sign-out";
 import { shadows } from "@src/lib/shadows";
 import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback } from "react";
@@ -26,10 +27,8 @@ export default function PlatformAdminScreen() {
   const openTickets = summary.escalated_count;
   const unreadOnTickets = summary.unread_messages;
 
-  const handleSignOut = async () => {
-    await clearStore();
-    await signOut();
-    router.replace("/(auth)/login" as Href);
+  const handleSignOut = () => {
+    void performSignOut(clearStore, signOut);
   };
 
   return (

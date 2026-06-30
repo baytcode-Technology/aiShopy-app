@@ -1,3 +1,20 @@
+export type StoreAccessRole = "owner" | "staff";
+
+export type StoreListItem = {
+  store: Store;
+  role: StoreAccessRole;
+};
+
+export type StoreStaffStatus = "pending" | "active";
+
+export type StoreStaffMember = {
+  id: number | null;
+  email: string;
+  user_id: string | null;
+  role: "owner" | "staff";
+  status: StoreStaffStatus | "owner";
+};
+
 export type Store = {
   id: number;
   owner_id: string;
@@ -32,6 +49,24 @@ export type MyStoreResponse = {
   data: {
     hasStore: boolean;
     store: Store | null;
+    role: StoreAccessRole | null;
+  };
+};
+
+export type MyStoresResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    stores: StoreListItem[];
+    count: number;
+  };
+};
+
+export type StoreStaffResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    members: StoreStaffMember[];
   };
 };
 
@@ -83,4 +118,5 @@ export type StoreSession = {
   slug: string;
   name: string;
   subdomainUrl: string;
+  role: StoreAccessRole;
 };

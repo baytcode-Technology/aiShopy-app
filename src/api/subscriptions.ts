@@ -1,5 +1,6 @@
 import { authenticatedFetch } from './client'
 import { endpoints } from './endpoints'
+import { storeIdQuery } from './stores'
 
 export type SubscriptionCheckoutData = {
   checkout_id: number
@@ -51,17 +52,21 @@ export type VerifySubscriptionPaymentResponse = {
   }
 }
 
-export async function fetchSubscriptionPricing(): Promise<SubscriptionPricingData> {
+export async function fetchSubscriptionPricing(
+  storeId: number
+): Promise<SubscriptionPricingData> {
   const res = await authenticatedFetch<{
     success: boolean
     data: SubscriptionPricingData
-  }>(endpoints.subscriptionsPricing)
+  }>(`${endpoints.subscriptionsPricing}${storeIdQuery(storeId)}`)
   return res.data
 }
 
-export async function createSubscriptionCheckout(): Promise<SubscriptionCheckoutData> {
+export async function createSubscriptionCheckout(
+  storeId: number
+): Promise<SubscriptionCheckoutData> {
   const res = await authenticatedFetch<CreateSubscriptionCheckoutResponse>(
-    endpoints.subscriptionsCheckout,
+    `${endpoints.subscriptionsCheckout}${storeIdQuery(storeId)}`,
     { method: 'POST' }
   )
   return res.data

@@ -57,6 +57,16 @@ export async function getStoreSession(): Promise<StoreSession | null> {
   }
 }
 
+export function normalizeStoreSession(
+  session: StoreSession | null
+): StoreSession | null {
+  if (!session) return null
+  return {
+    ...session,
+    role: session.role ?? 'owner',
+  }
+}
+
 export async function saveStoreSession(session: StoreSession): Promise<void> {
   await setItem(STORE_SESSION_KEY, JSON.stringify(session))
 }

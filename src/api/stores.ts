@@ -4,12 +4,23 @@ import type {
   CreateStorePayload,
   CreateStoreResponse,
   MyStoreResponse,
+  MyStoresResponse,
+  StoreStaffResponse,
   UpdateStorePayload,
   UpdateStoreResponse,
 } from '@src/types/store'
 
-export async function fetchMyStore(): Promise<MyStoreResponse> {
-  return authenticatedFetch<MyStoreResponse>(endpoints.storesMe)
+export function storeIdQuery(storeId: number) {
+  return `?store_id=${storeId}`
+}
+
+export async function fetchMyStores(): Promise<MyStoresResponse> {
+  return authenticatedFetch<MyStoresResponse>(endpoints.storesMine)
+}
+
+export async function fetchMyStore(storeId?: number): Promise<MyStoreResponse> {
+  const query = storeId != null ? storeIdQuery(storeId) : ''
+  return authenticatedFetch<MyStoreResponse>(`${endpoints.storesMe}${query}`)
 }
 
 export async function createStore(
@@ -22,10 +33,38 @@ export async function createStore(
 }
 
 export async function updateMyStore(
+  storeId: number,
   payload: UpdateStorePayload
 ): Promise<UpdateStoreResponse> {
-  return authenticatedFetch<UpdateStoreResponse>(endpoints.storesMe, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
+  return authenticatedFetch<UpdateStoreResponse>(
+    `${endpoints.storesMe}${storeIdQuery(storeId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  )
+}
+
+export async function fetchStoreStaff(storeId: number): Promise<StoreStaffResponse> {
+  return authenticatedFetch<StoreStaffResponse>(
+    `${endpoints.storesStaff}${storeIdQuery(storeId)}`
+  )
+}
+
+export async function inviteStoreStaff(storeId: number, email: string) {
+  return authenticatedFetch<{
+    success: boolean
+    message: string
+    data: { staff: { id: number; email: string; status: string } }
+  }>(`${endpoints.storesStaff}${storeIdQuery(storeId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   })
+}
+
+export async function removeStoreStaff(storeId: number, staffId: number) {
+  return authenticatedFetch<{ success: boolean; message: string }>(
+    `${endpoints.storesStaff}/${staffId}${storeIdQuery(storeId)}`,
+    { method: 'DELETE' }
+  )
 }

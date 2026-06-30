@@ -8,35 +8,26 @@ import { fetchSupportAdminStatus } from "@src/api/support";
 import { getErrorMessage } from "@src/lib/api-error";
 import Colors from "@src/theme/colors";
 import { router, type Href } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 export default function StoreCheckScreen() {
   const { isAuthenticated } = useAuth();
-  const { refreshStore } = useStore();
+  const { refreshStores, switchStore } = useStore();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const hasRoutedRef = useRef(false);
+  const isRunningRef = useRef(false);
+  const refreshStoresRef = useRef(refreshStores);
+  const switchStoreRef = useRef(switchStore);
 
-  const runStoreCheck = useCallback(async () => {
-    setLoadError(null);
-    const [storeResult, adminRes] = await Promise.all([
-      refreshStore(),
-      fetchSupportAdminStatus().catch(() => ({
-        data: { isAdmin: false as boolean },
-      })),
-    ]);
+  refreshStoresRef.current = refreshStores;
+  switchStoreRef.current = switchStore;
 
-    const { hasStore } = storeResult;
-    const isAdmin = adminRes.data.isAdmin;
-
-    if (isAdmin && !hasStore) {
-      router.replace("/platform-admin" as Href);
-    } else if (hasStore) {
-      router.replace("/(store)/chats" as Href);
-    } else {
-      router.replace("/create-store");
-    }
-  }, [refreshStore]);
+  useEffect(() => {
+    hasRoutedRef.current = false;
+    isRunningRef.current = false;
+  }, [retryKey]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -44,21 +35,55 @@ export default function StoreCheckScreen() {
       return;
     }
 
+    if (hasRoutedRef.current || isRunningRef.current) return;
+    isRunningRef.current = true;
+
     let cancelled = false;
 
     void (async () => {
       try {
-        await runStoreCheck();
+        setLoadError(null);
+        const [list, adminRes] = await Promise.all([
+          refreshStoresRef.current(),
+          fetchSupportAdminStatus().catch(() => ({
+            data: { isAdmin: false as boolean },
+          })),
+        ]);
+
+        if (cancelled || hasRoutedRef.current) return;
+
+        const isAdmin = adminRes.data.isAdmin;
+        hasRoutedRef.current = true;
+
+        if (list.length === 0) {
+          if (isAdmin) {
+            router.replace("/platform-admin" as Href);
+          } else {
+            router.replace("/create-store");
+          }
+          return;
+        }
+
+        if (list.length === 1) {
+          await switchStoreRef.current(list[0].store.id);
+          router.replace("/(store)/chats" as Href);
+          return;
+        }
+
+        router.replace("/select-store" as Href);
       } catch (e) {
         if (cancelled) return;
+        hasRoutedRef.current = false;
         setLoadError(getErrorMessage(e, "Could not load your store"));
+      } finally {
+        isRunningRef.current = false;
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, retryKey, runStoreCheck]);
+  }, [isAuthenticated, retryKey]);
 
   return (
     <View className="flex-1 items-center justify-center bg-gray-100 gap-6 px-8">

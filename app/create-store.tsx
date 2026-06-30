@@ -17,6 +17,7 @@ import {
   defaultCurrencyForCountry,
   type CountryValue,
 } from '@src/lib/country-currency'
+import { performSignOut } from '@src/lib/safe-sign-out'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
   createStoreFormSchema,
@@ -32,7 +33,7 @@ type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>
 
 export default function CreateStoreScreen() {
   const { signOut } = useAuth()
-  const { activateStoreSession, clearStore } = useStore()
+  const { activateStoreSession, clearStore, refreshStores } = useStore()
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
@@ -68,10 +69,8 @@ export default function CreateStoreScreen() {
     prevCountryCode.current = next.cca2
   }
 
-  const handleSignOut = async () => {
-    await clearStore()
-    await signOut()
-    router.replace('/(auth)/login' as Href)
+  const handleSignOut = () => {
+    void performSignOut(clearStore, signOut)
   }
 
   const onSubmit = async () => {
@@ -103,7 +102,8 @@ export default function CreateStoreScreen() {
 
     try {
       const res = await createStore(toCreateStorePayload(parsed.data))
-      await activateStoreSession(res.data.store, res.data.subdomainUrl)
+      await refreshStores()
+      await activateStoreSession(res.data.store, res.data.subdomainUrl, 'owner')
       showSuccess(
         res.message,
         `${res.data.store.slug}.${env.storefrontBaseDomain}`,

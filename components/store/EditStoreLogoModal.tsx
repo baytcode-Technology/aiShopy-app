@@ -48,7 +48,7 @@ export function EditStoreLogoModal({ visible, store, onClose, onUpdated }: Props
         return
       }
 
-      const res = await updateMyStore({ logo_url: logoUrl })
+      const res = await updateMyStore(store.id, { logo_url: logoUrl })
       onUpdated(res.data.store)
       showSuccess('Store logo updated')
       handleClose()

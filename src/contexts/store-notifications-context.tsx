@@ -48,7 +48,7 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
   const refreshPreferences = useCallback(async () => {
     if (!store?.id) return
     try {
-      const res = await fetchNotificationPreferences()
+      const res = await fetchNotificationPreferences(store.id)
       setPreferences(res.data.notification_preferences)
     } catch {
       // Keep last known prefs when offline.
@@ -70,7 +70,7 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
         const token = await getExpoPushToken()
         if (!token) return
 
-        await registerPushToken({
+        await registerPushToken(store.id, {
           expo_push_token: token,
           platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
           sound_channel_id: ALERTS_CHANNEL_ID,

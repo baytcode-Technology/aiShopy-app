@@ -24,6 +24,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
+import { performSignOut } from "@src/lib/safe-sign-out";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
     activateStoreSession,
     subdomainUrl,
     clearStore,
+    role,
   } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [logoOpen, setLogoOpen] = useState(false);
@@ -44,14 +46,12 @@ export default function SettingsScreen() {
 
   const handleStoreUpdated = async (updated: Store) => {
     const url = subdomainUrl ?? buildSubdomainUrl(updated.slug);
-    await activateStoreSession(updated, url);
+    await activateStoreSession(updated, url, role ?? "owner");
     await refreshStore();
   };
 
-  const handleSignOut = async () => {
-    await clearStore();
-    await signOut();
-    router.replace("/(auth)/login" as Href);
+  const handleSignOut = () => {
+    void performSignOut(clearStore, signOut);
   };
 
   const handleComingSoon = (feature: string) => {
@@ -231,13 +231,15 @@ export default function SettingsScreen() {
               showChevron
               onPress={() => router.push("/subscription" as Href)}
             />
-            <MenuRow
-              label="Admin Dashboard"
-              value="WhatsApp · Instagram · Chat Boat · Domain"
-              icon="cog"
-              showChevron
-              onPress={() => router.push("/admin-dashboard" as Href)}
-            />
+            {role === "owner" ? (
+              <MenuRow
+                label="Admin Dashboard"
+                value="WhatsApp · Instagram · Chat Boat · Domain"
+                icon="cog"
+                showChevron
+                onPress={() => router.push("/admin-dashboard" as Href)}
+              />
+            ) : null}
 
             <View className="mt-2 gap-3">
               <Caption className="text-[11px] text-gray-400 uppercase tracking-[0.2em]">

@@ -61,9 +61,10 @@ export default function UpiPaymentScreen() {
   }, [loading, enabled, saved, vpa, displayName, qrUrl, qrImage])
 
   const load = useCallback(async () => {
+    if (!store?.id) return
     setLoading(true)
     try {
-      const res = await fetchPaymentConfig()
+      const res = await fetchPaymentConfig(store.id)
       const upi = res.data.payment_config.upi
       const nextSaved: UpiSavedSnapshot = {
         enabled: upi.enabled,
@@ -82,7 +83,7 @@ export default function UpiPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [store?.id])
 
   useFocusEffect(
     useCallback(() => {
@@ -131,7 +132,7 @@ export default function UpiPaymentScreen() {
         nextQrUrl = uploaded ?? qrUrl
       }
 
-      await updatePaymentConfig({
+      await updatePaymentConfig(store.id, {
         upi: {
           enabled,
           vpa: vpa.trim(),

@@ -12,6 +12,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SleekModal } from "@/components/ui/Modal";
 import { Caption, Muted } from "@/components/ui/Typography";
 import {
@@ -43,6 +44,7 @@ export default function StaffManagementScreen() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<StoreStaffMember | null>(null);
 
   const isOwner = role === "owner";
 
@@ -101,6 +103,7 @@ export default function StaffManagementScreen() {
     try {
       await removeStoreStaff(store.id, staffId);
       showSuccess("Staff removed");
+      setRemoveTarget(null);
       await loadStaff();
     } catch (e: unknown) {
       showError(e, "Failed to remove staff");
@@ -187,7 +190,7 @@ export default function StaffManagementScreen() {
                     />
                     {member.role === "staff" && member.id != null ? (
                       <Pressable
-                        onPress={() => void handleRemove(member.id!)}
+                        onPress={() => setRemoveTarget(member)}
                         disabled={removingId === member.id}
                         hitSlop={8}
                         className="p-2"
@@ -264,6 +267,27 @@ export default function StaffManagementScreen() {
           />
         </View>
       </SleekModal>
+
+      <ConfirmDialog
+        visible={removeTarget != null}
+        title="Remove staff?"
+        message={
+          removeTarget
+            ? `Remove ${removeTarget.email} from this store? They will lose access to products, orders, and chats.`
+            : ""
+        }
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        loading={removingId != null}
+        onCancel={() => {
+          if (removingId == null) setRemoveTarget(null);
+        }}
+        onConfirm={() => {
+          if (removeTarget?.id != null) {
+            void handleRemove(removeTarget.id);
+          }
+        }}
+      />
     </Screen>
   );
 }

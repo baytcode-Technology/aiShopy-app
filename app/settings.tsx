@@ -61,8 +61,9 @@ export default function SettingsScreen() {
   const storefrontHost = store?.slug
     ? `${store.slug}.${env.storefrontBaseDomain}`
     : null;
-  const storefrontUrl =
-    subdomainUrl ?? (store?.slug ? buildSubdomainUrl(store.slug) : null);
+  const storefrontUrl = store?.slug
+    ? buildSubdomainUrl(store.slug)
+    : subdomainUrl;
 
   const isAdminWithoutStore = isPlatformAdmin && !store;
 

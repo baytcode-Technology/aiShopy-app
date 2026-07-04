@@ -1,5 +1,6 @@
 import { Caption } from "@/components/ui/Typography";
 import { cn } from "@src/lib/cn";
+import { FormattedMessageText } from "@src/lib/parse-inline-markdown";
 import type { SupportMessage } from "@src/types/support";
 import { Text, View } from "react-native";
 
@@ -16,9 +17,10 @@ export function SupportMessageBubble({ message }: Props) {
     return (
       <View className="mb-3 w-full px-2">
         <View className="rounded-full bg-gray-100 border border-gray-200 px-4 py-2 self-center max-w-[95%]">
-          <Text className="text-[12px] text-gray-600 text-center leading-4">
-            {message.content}
-          </Text>
+          <FormattedMessageText
+            text={message.content}
+            className="text-[12px] text-gray-600 text-center leading-4"
+          />
         </View>
         <Caption className="text-center text-gray-400 mt-1">{message.time}</Caption>
       </View>
@@ -42,14 +44,21 @@ export function SupportMessageBubble({ message }: Props) {
             : "bg-surface border border-gray-200",
         )}
       >
-        <Text
-          className={cn(
-            "text-[15px] leading-[21px]",
-            isUser ? "text-brand-on-primary" : "text-ink",
-          )}
-        >
-          {message.content}
-        </Text>
+        {isUser ? (
+          <Text
+            className={cn(
+              "text-[15px] leading-[21px]",
+              "text-brand-on-primary",
+            )}
+          >
+            {message.content}
+          </Text>
+        ) : (
+          <FormattedMessageText
+            text={message.content}
+            className="text-[15px] leading-[21px] text-ink"
+          />
+        )}
         <Caption className="self-end text-gray-400">{message.time}</Caption>
       </View>
     </View>

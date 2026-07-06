@@ -29,7 +29,11 @@ import {
   ensureValidSession,
   isAccessTokenExpired,
   SessionExpiredError,
+  setSigningOut,
+  SigningOutAbortError,
+  isSigningOut,
 } from '@src/lib/session-manager'
+import { disconnectChatSocket } from '@src/lib/socket'
 import type { AuthSession, AuthUser } from '@src/types/auth'
 
 const FOREGROUND_RESUME_DEBOUNCE_MS = 600
@@ -71,6 +75,7 @@ async function applyAuthSession(
   setUser: (user: AuthUser) => void,
   setIsAuthenticated: (value: boolean) => void
 ) {
+  setSigningOut(false)
   await saveAuthSession(data.session, data.user)
   setUser(data.user)
   setIsAuthenticated(true)
@@ -86,7 +91,7 @@ async function tryRestoreAuthenticatedSession(): Promise<boolean> {
     await ensureValidSession()
     return true
   } catch (error) {
-    if (error instanceof SessionExpiredError) {
+    if (error instanceof SessionExpiredError || error instanceof SigningOutAbortError) {
       return false
     }
     const accessToken = await getAccessToken()
@@ -105,6 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [googleAuthInProgress, setGoogleAuthInProgress] = useState(false)
 
   const signOut = useCallback(async () => {
+    setSigningOut(true)
+    disconnectChatSocket()
     setGoogleAuthInProgress(false)
     await clearNativeGoogleSignInSession()
     await clearTokens()
@@ -140,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setOnSessionExpired(() => {
       void (async () => {
+        if (isSigningOut()) return
         await signOut()
         router.replace('/(auth)/login' as Href)
       })()
@@ -176,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             setIsAuthenticated(true)
           } catch (error) {
-            if (error instanceof SessionExpiredError) {
+            if (error instanceof SessionExpiredError || error instanceof SigningOutAbortError) {
               await signOut()
               router.replace('/(auth)/login' as Href)
             } else if (__DEV__) {

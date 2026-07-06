@@ -7,18 +7,21 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { PaymentMethodsListSkeleton } from '@/components/ui/Skeleton'
 import { Muted } from '@/components/ui/Typography'
 import { fetchPaymentConfig } from '@src/api/payment-config'
+import { useStore } from '@src/contexts/store-context'
 import { showError } from '@src/lib/toast'
 
 export default function PaymentMethodsScreen() {
+  const { store } = useStore()
   const [loading, setLoading] = useState(true)
   const [codEnabled, setCodEnabled] = useState(false)
   const [razorpayEnabled, setRazorpayEnabled] = useState(false)
   const [upiEnabled, setUpiEnabled] = useState(false)
 
   const load = useCallback(async () => {
+    if (!store?.id) return
     setLoading(true)
     try {
-      const res = await fetchPaymentConfig()
+      const res = await fetchPaymentConfig(store.id)
       const cfg = res.data.payment_config
       setCodEnabled(cfg.cod.enabled)
       setRazorpayEnabled(cfg.razorpay.enabled)
@@ -28,7 +31,7 @@ export default function PaymentMethodsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [store?.id])
 
   useFocusEffect(
     useCallback(() => {

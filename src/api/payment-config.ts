@@ -1,5 +1,6 @@
 import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
+import { storeIdQuery } from '@src/api/stores'
 import type {
   PaymentConfigResponse,
   RazorpayMode,
@@ -41,31 +42,42 @@ export type VerifyRazorpaySetupTestResponse = {
   }
 }
 
-export async function fetchPaymentConfig(): Promise<PaymentConfigResponse> {
-  return authenticatedFetch<PaymentConfigResponse>(endpoints.paymentConfig)
+export async function fetchPaymentConfig(
+  storeId: number
+): Promise<PaymentConfigResponse> {
+  return authenticatedFetch<PaymentConfigResponse>(
+    `${endpoints.paymentConfig}${storeIdQuery(storeId)}`
+  )
 }
 
 export async function updatePaymentConfig(
+  storeId: number,
   payload: UpdatePaymentConfigPayload
 ): Promise<PaymentConfigResponse> {
-  return authenticatedFetch<PaymentConfigResponse>(endpoints.paymentConfig, {
-    method: 'PATCH',
-    body: JSON.stringify(payload),
-  })
+  return authenticatedFetch<PaymentConfigResponse>(
+    `${endpoints.paymentConfig}${storeIdQuery(storeId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  )
 }
 
-export async function startRazorpaySetupTest(): Promise<RazorpaySetupTestCheckoutResponse> {
+export async function startRazorpaySetupTest(
+  storeId: number
+): Promise<RazorpaySetupTestCheckoutResponse> {
   return authenticatedFetch<RazorpaySetupTestCheckoutResponse>(
-    endpoints.paymentConfigRazorpayTestCheckout,
+    `${endpoints.paymentConfigRazorpayTestCheckout}${storeIdQuery(storeId)}`,
     { method: 'POST' }
   )
 }
 
 export async function verifyRazorpaySetupTest(
+  storeId: number,
   payload: VerifyRazorpaySetupTestPayload
 ): Promise<VerifyRazorpaySetupTestResponse> {
   return authenticatedFetch<VerifyRazorpaySetupTestResponse>(
-    endpoints.paymentConfigRazorpayVerifyTest,
+    `${endpoints.paymentConfigRazorpayVerifyTest}${storeIdQuery(storeId)}`,
     {
       method: 'POST',
       body: JSON.stringify(payload),

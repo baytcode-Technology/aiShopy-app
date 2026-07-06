@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native'
 import { Caption } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
+import { FormattedMessageText } from '@src/lib/parse-inline-markdown'
 import type { ChatMessage } from '@src/types/chat'
 
 type Props = {
@@ -22,14 +23,21 @@ export function MessageBubble({ message }: Props) {
             : 'bg-surface border border-gray-200'
         )}
       >
-        <Text
-          className={cn(
-            'text-[15px] leading-[21px]',
-            outgoing ? 'text-brand-on-primary' : 'text-ink'
-          )}
-        >
-          {message.text}
-        </Text>
+        {outgoing ? (
+          <Text
+            className={cn(
+              'text-[15px] leading-[21px]',
+              'text-brand-on-primary'
+            )}
+          >
+            {message.text}
+          </Text>
+        ) : (
+          <FormattedMessageText
+            text={message.text}
+            className="text-[15px] leading-[21px] text-ink"
+          />
+        )}
         <Caption className={cn('self-end', outgoing ? 'text-gray-400' : 'text-gray-400')}>
           {message.time}
           {outgoing && message.status ? ` · ${message.status}` : ''}

@@ -64,20 +64,21 @@ export default function SubscriptionScreen() {
   }, [currentPlan, store?.id])
 
   useEffect(() => {
-    if (premium) {
+    if (premium || !store?.id) {
       setPricing(null)
       setPricingLoading(false)
       return
     }
 
     setPricingLoading(true)
-    void fetchSubscriptionPricing()
+    void fetchSubscriptionPricing(store.id)
       .then(setPricing)
       .catch(() => setPricing(null))
       .finally(() => setPricingLoading(false))
   }, [premium, store?.id])
 
   const handleSubscribe = async () => {
+    if (!store?.id) return
     if (Platform.OS === 'web') {
       showWarning('Subscribe on the mobile app to complete payment.')
       return
@@ -85,7 +86,7 @@ export default function SubscriptionScreen() {
 
     setSubscribing(true)
     try {
-      const checkout = await createSubscriptionCheckout()
+      const checkout = await createSubscriptionCheckout(store.id)
       setCheckoutSession(checkout)
     } catch (error) {
       showError(error, 'Could not start checkout')

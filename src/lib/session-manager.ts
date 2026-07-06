@@ -16,6 +16,24 @@ export class SessionExpiredError extends Error {
   }
 }
 
+/** Thrown when auth is intentionally cleared (sign-out); callers should ignore. */
+export class SigningOutAbortError extends Error {
+  constructor() {
+    super('Signing out')
+    this.name = 'SigningOutAbortError'
+  }
+}
+
+let signingOut = false
+
+export function setSigningOut(value: boolean): void {
+  signingOut = value
+}
+
+export function isSigningOut(): boolean {
+  return signingOut
+}
+
 type TokensRefreshedListener = (accessToken: string) => void
 
 const tokensRefreshedListeners = new Set<TokensRefreshedListener>()
@@ -79,6 +97,9 @@ export async function isAccessTokenExpired(bufferSeconds = 120): Promise<boolean
 }
 
 export async function refreshSession(): Promise<string> {
+  if (signingOut) {
+    throw new SigningOutAbortError()
+  }
   if (refreshPromise) {
     return refreshPromise
   }
@@ -101,6 +122,9 @@ export async function refreshSession(): Promise<string> {
 }
 
 export async function ensureValidSession(): Promise<string> {
+  if (signingOut) {
+    throw new SigningOutAbortError()
+  }
   const refreshToken = await getRefreshToken()
   if (!refreshToken) {
     throw new SessionExpiredError()

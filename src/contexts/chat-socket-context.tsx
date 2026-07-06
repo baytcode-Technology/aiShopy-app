@@ -19,7 +19,7 @@ import {
   type SocketOrderNewPayload,
   type SocketStatusPayload,
 } from '@src/lib/socket'
-import { ensureValidSession, onTokensRefreshed } from '@src/lib/session-manager'
+import { ensureValidSession, onTokensRefreshed, SigningOutAbortError } from '@src/lib/session-manager'
 import { useStore } from '@src/contexts/store-context'
 
 type ChatSocketContextValue = {
@@ -119,7 +119,8 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
 
     void ensureValidSession()
       .then((token) => connectWithToken(token))
-      .catch(() => {
+      .catch((err) => {
+        if (err instanceof SigningOutAbortError) return
         disconnectChatSocket()
         isConnectedRef.current = false
       })

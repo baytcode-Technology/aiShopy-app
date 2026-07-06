@@ -111,7 +111,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
         return
       }
 
-      const res = await updateMyStore(patch)
+      const res = await updateMyStore(store.id, patch)
       onUpdated(res.data.store)
       showSuccess('Store updated')
       handleClose()

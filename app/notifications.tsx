@@ -16,6 +16,7 @@ import {
 import { shadows } from '@src/lib/shadows'
 import { showError, showSuccess } from '@src/lib/toast'
 import { useStoreNotifications } from '@src/contexts/store-notifications-context'
+import { useStore } from '@src/contexts/store-context'
 import type { NotificationPreferences } from '@src/types/notification-preferences'
 import Colors from '@src/theme/colors'
 import { router } from 'expo-router'
@@ -29,15 +30,17 @@ function notificationSettingsErrorMessage(error: unknown, fallback: string): str
 }
 
 export default function NotificationsScreen() {
+  const { store } = useStore()
   const { refreshPreferences: refreshProviderPrefs } = useStoreNotifications()
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
+    if (!store?.id) return
     setLoading(true)
     try {
-      const res = await fetchNotificationPreferences()
+      const res = await fetchNotificationPreferences(store.id)
       setPrefs(res.data.notification_preferences)
     } catch (e) {
       setPrefs(null)
@@ -45,7 +48,7 @@ export default function NotificationsScreen() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [store?.id])
 
   useFocusEffect(
     useCallback(() => {
@@ -56,9 +59,13 @@ export default function NotificationsScreen() {
   )
 
   const save = async (next: NotificationPreferences) => {
+    if (!store?.id) return
     setSaving(true)
     try {
-      const res = await updateNotificationPreferences({ ...next, sound_id: 'default' })
+      const res = await updateNotificationPreferences(store.id, {
+        ...next,
+        sound_id: 'default',
+      })
       setPrefs(res.data.notification_preferences)
       await refreshProviderPrefs()
       showSuccess('Notification settings saved')

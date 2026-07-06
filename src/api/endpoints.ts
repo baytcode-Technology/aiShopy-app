@@ -5,6 +5,8 @@ export const endpoints = {
   authGoogleCode: "/api/auth/google/code",
   authRefresh: "/api/auth/refresh",
   storesMe: "/api/stores/me",
+  storesMine: "/api/stores/mine",
+  storesStaff: "/api/stores/staff",
   stores: "/api/stores",
   paymentConfig: "/api/stores/me/payment-config",
   paymentConfigRazorpayTestCheckout: "/api/stores/me/payment-config/razorpay/test-checkout",

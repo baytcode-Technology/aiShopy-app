@@ -5,20 +5,21 @@ import { StoreUnreadProvider } from "@src/contexts/store-unread-context";
 import { useStore } from "@src/contexts/store-context";
 import Colors from "@src/theme/colors";
 import { Redirect, Tabs } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 export default function StoreLayout() {
   const { isLoading, isAuthenticated } = useAuth();
   const { store, isLoading: storeLoading, refreshStore } = useStore();
+  const didInitialRefreshRef = useRef(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void refreshStore();
-    }
-  }, [isAuthenticated, refreshStore]);
+    if (!isAuthenticated || didInitialRefreshRef.current) return;
+    didInitialRefreshRef.current = true;
+    void refreshStore({ silent: Boolean(store?.id) });
+  }, [isAuthenticated, refreshStore, store?.id]);
 
-  if (isLoading || storeLoading) {
+  if (isLoading || (storeLoading && !store)) {
     return (
       <View className="flex-1 items-center justify-center bg-surface gap-6">
         <AppLogo variant="wordmark" align="center" className="mb-6" />

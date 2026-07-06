@@ -3,6 +3,8 @@ import {
   ensureValidSession,
   refreshSession,
   SessionExpiredError,
+  SigningOutAbortError,
+  isSigningOut,
 } from '@src/lib/session-manager'
 
 type FetchOptions = RequestInit & {
@@ -78,17 +80,32 @@ export async function authenticatedFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  if (isSigningOut()) {
+    throw new SigningOutAbortError()
+  }
+
   const run = async (isRetry: boolean): Promise<T> => {
     const token = await ensureValidSession()
     try {
       return await apiFetch<T>(path, { ...options, token })
     } catch (err) {
+      if (err instanceof SigningOutAbortError) {
+        throw err
+      }
       if (err instanceof ApiHttpError && err.status === 401 && !isRetry) {
+        if (isSigningOut()) {
+          throw new SigningOutAbortError()
+        }
         try {
           await refreshSession()
           return run(true)
-        } catch {
-          onSessionExpiredCallback?.()
+        } catch (refreshErr) {
+          if (refreshErr instanceof SigningOutAbortError) {
+            throw refreshErr
+          }
+          if (!isSigningOut()) {
+            onSessionExpiredCallback?.()
+          }
           throw new SessionExpiredError()
         }
       }
@@ -101,5 +118,8 @@ export async function authenticatedFetch<T>(
 
 /** Returns a valid access token for non-JSON requests (uploads, axios). */
 export async function getValidAccessToken(): Promise<string> {
+  if (isSigningOut()) {
+    throw new SigningOutAbortError()
+  }
   return ensureValidSession()
 }

@@ -21,6 +21,7 @@ import {
 type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'polling' | 'connected' | 'error'
 
 const POLL_INTERVAL_MS = 4000
+const POLL_MAX_ATTEMPTS = 4
 
 function syncJobLabel(job: WhatsAppSyncJob): string {
   const type =
@@ -65,14 +66,7 @@ export default function ConnectWhatsAppScreen() {
   const [phase, setPhase] = useState<ScreenPhase>('loading')
   const [connection, setConnection] = useState<WhatsAppConnectionStatus | null>(null)
   const [retryingSync, setRetryingSync] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }, [])
+  const oauthRunRef = useRef(0)
 
   const refreshStatus = useCallback(async () => {
     if (!store?.id) return null
@@ -81,41 +75,63 @@ export default function ConnectWhatsAppScreen() {
     return res.data
   }, [store?.id])
 
-  const startPolling = useCallback(() => {
-    stopPolling()
+  const waitForConnection = useCallback(async (runId: number): Promise<boolean> => {
     setPhase('polling')
 
-    void refreshStatus().then((status) => {
+    for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+      if (oauthRunRef.current !== runId) return false
+
+      const status = await refreshStatus()
       if (status?.connected) {
         setPhase('connected')
-        stopPolling()
+        return true
       }
-    })
+      if (attempt < POLL_MAX_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+      }
+    }
 
-    pollRef.current = setInterval(() => {
-      void refreshStatus().then((status) => {
-        if (status?.connected) {
-          setPhase('connected')
-          stopPolling()
-        }
-      })
-    }, POLL_INTERVAL_MS)
-  }, [refreshStatus, stopPolling])
+    if (oauthRunRef.current !== runId) return false
+    setPhase('disconnected')
+    return false
+  }, [refreshStatus])
 
   const startOAuth = useCallback(async () => {
     if (!store?.id) return
+    const runId = ++oauthRunRef.current
     setPhase('oauth')
     try {
       const res = await getWhatsAppConnectUrl(store.id)
-      await WebBrowser.openBrowserAsync(res.data.url, {
+      const result = await WebBrowser.openBrowserAsync(res.data.url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
       })
-      startPolling()
+
+      if (oauthRunRef.current !== runId) return
+
+      const status = await refreshStatus()
+      if (status?.connected) {
+        setPhase('connected')
+        return
+      }
+
+      if (result.type === 'cancel') {
+        setPhase('disconnected')
+        return
+      }
+
+      const connected = await waitForConnection(runId)
+      if (!connected && oauthRunRef.current === runId) {
+        showError(
+          'Connection not completed',
+          'Finish signup in Meta or tap Connect WhatsApp to try again.'
+        )
+      }
     } catch (e: unknown) {
+      if (oauthRunRef.current !== runId) return
       setPhase('error')
       showError('Connect failed', e instanceof Error ? e.message : 'Unknown error')
     }
-  }, [store?.id, startPolling])
+  }, [store?.id, refreshStatus, waitForConnection])
 
   useEffect(() => {
     let cancelled = false
@@ -143,9 +159,9 @@ export default function ConnectWhatsAppScreen() {
 
     return () => {
       cancelled = true
-      stopPolling()
+      oauthRunRef.current += 1
     }
-  }, [store?.id, refreshStatus, stopPolling])
+  }, [store?.id, refreshStatus])
 
   const handleRetrySync = async () => {
     if (!store?.id) return
@@ -153,7 +169,8 @@ export default function ConnectWhatsAppScreen() {
     try {
       await triggerWhatsAppSync(store.id)
       showSuccess('Sync started', 'Contact and history sync triggered')
-      startPolling()
+      await refreshStatus()
+      setPhase('connected')
     } catch (e: unknown) {
       showError('Sync failed', e instanceof Error ? e.message : 'Unknown error')
     } finally {

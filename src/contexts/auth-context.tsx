@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -23,6 +24,7 @@ import {
   getRefreshToken,
   saveAuthSession,
 } from '@src/lib/auth-storage'
+import { isGoogleAuthFlowInProgress, setGoogleAuthFlowInProgress } from '@src/lib/auth-flow-guard'
 import { clearNativeGoogleSignInSession } from '@src/lib/google-native-session'
 import { emailFromAccessToken } from '@src/lib/jwt-email'
 import {
@@ -34,6 +36,7 @@ import {
   isSigningOut,
 } from '@src/lib/session-manager'
 import { disconnectChatSocket } from '@src/lib/socket'
+import { withTransientNetworkRetry } from '@src/lib/ios-network-settle'
 import type { AuthSession, AuthUser } from '@src/types/auth'
 
 const FOREGROUND_RESUME_DEBOUNCE_MS = 600
@@ -108,16 +111,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [googleAuthInProgress, setGoogleAuthInProgress] = useState(false)
+  const isAuthenticatedRef = useRef(isAuthenticated)
+  const googleAuthInProgressRef = useRef(googleAuthInProgress)
+
+  useEffect(() => {
+    isAuthenticatedRef.current = isAuthenticated
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    googleAuthInProgressRef.current = googleAuthInProgress
+  }, [googleAuthInProgress])
+
+  const setGoogleAuthInProgressGuarded = useCallback((value: boolean) => {
+    setGoogleAuthFlowInProgress(value)
+    setGoogleAuthInProgress(value)
+  }, [])
 
   const signOut = useCallback(async () => {
     setSigningOut(true)
     disconnectChatSocket()
-    setGoogleAuthInProgress(false)
-    await clearNativeGoogleSignInSession()
-    await clearTokens()
-    setUser(null)
-    setIsAuthenticated(false)
-  }, [])
+    setGoogleAuthInProgressGuarded(false)
+    try {
+      await clearNativeGoogleSignInSession()
+      await clearTokens()
+      setUser(null)
+      setIsAuthenticated(false)
+    } finally {
+      setSigningOut(false)
+    }
+  }, [setGoogleAuthInProgressGuarded])
 
   useEffect(() => {
     void (async () => {
@@ -168,6 +190,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       debounceTimer = setTimeout(() => {
         void (async () => {
           try {
+            if (googleAuthInProgressRef.current || isGoogleAuthFlowInProgress()) {
+              return
+            }
+            if (!isAuthenticatedRef.current) {
+              return
+            }
+
             const refreshToken = await getRefreshToken()
             if (!refreshToken) return
 
@@ -204,22 +233,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signOut])
 
   const sendOtp = useCallback(async (email: string) => {
-    await sendSignInOtp(email)
+    await withTransientNetworkRetry(() => sendSignInOtp(email))
   }, [])
 
   const verifyOtp = useCallback(async (email: string, otp: string) => {
-    const res = await verifyOtpApi(email, otp)
+    const res = await withTransientNetworkRetry(() => verifyOtpApi(email, otp))
     await applyAuthSession(res.data, setUser, setIsAuthenticated)
   }, [])
 
   const signInWithGoogle = useCallback(async (idToken: string) => {
-    const res = await signInWithGoogleApi(idToken)
+    const res = await withTransientNetworkRetry(() => signInWithGoogleApi(idToken))
     await applyAuthSession(res.data, setUser, setIsAuthenticated)
   }, [])
 
   const signInWithGoogleAuthCode = useCallback(
     async (input: { code: string; redirectUri: string; codeVerifier: string }) => {
-      const res = await signInWithGoogleAuthCodeApi(input)
+      const res = await withTransientNetworkRetry(() => signInWithGoogleAuthCodeApi(input))
       await applyAuthSession(res.data, setUser, setIsAuthenticated)
     },
     []
@@ -231,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       user,
       googleAuthInProgress,
-      setGoogleAuthInProgress,
+      setGoogleAuthInProgress: setGoogleAuthInProgressGuarded,
       sendOtp,
       verifyOtp,
       signInWithGoogle,
@@ -243,6 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       user,
       googleAuthInProgress,
+      setGoogleAuthInProgressGuarded,
       sendOtp,
       verifyOtp,
       signInWithGoogle,

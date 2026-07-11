@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, InteractionManager, Platform } from 'react-native'
+import { Alert, Platform } from 'react-native'
 import { router } from 'expo-router'
 import {
   GoogleSignin,
@@ -7,24 +7,27 @@ import {
   statusCodes,
 } from '@react-native-google-signin/google-signin'
 import { useAuth } from '@src/contexts/auth-context'
-import { env, getGoogleSignInSetupHint, isGoogleSignInConfigured } from '@src/config/env'
+import { getGoogleSignInSetupHint, isGoogleSignInConfigured } from '@src/config/env'
 import {
   clearNativeGoogleSignInSession,
   ensureNativeGoogleConfigured,
 } from '@src/lib/google-native-session'
-
-function afterNativeUiSettled(): Promise<void> {
-  return new Promise((resolve) => {
-    InteractionManager.runAfterInteractions(() => {
-      requestAnimationFrame(() => resolve())
-    })
-  })
-}
+import {
+  isTransientNetworkError,
+  settleAfterNativeAuthUi,
+} from '@src/lib/ios-network-settle'
 
 export function useNativeGoogleSignIn() {
   const { signInWithGoogle, setGoogleAuthInProgress } = useAuth()
   const signingInRef = useRef(false)
   const [loading, setLoading] = useState(false)
+
+  const setGoogleFlowActive = useCallback(
+    (active: boolean) => {
+      setGoogleAuthInProgress(active)
+    },
+    [setGoogleAuthInProgress]
+  )
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -52,7 +55,7 @@ export function useNativeGoogleSignIn() {
     ensureNativeGoogleConfigured()
     signingInRef.current = true
     setLoading(true)
-    setGoogleAuthInProgress(true)
+    setGoogleFlowActive(true)
 
     try {
       if (Platform.OS === 'android') {
@@ -61,16 +64,11 @@ export function useNativeGoogleSignIn() {
         })
       }
 
-      // Show Google account picker (do not reuse last account silently).
       await clearNativeGoogleSignInSession()
 
       const result = await GoogleSignin.signIn()
 
-      // Let the login screen remount cleanly after the native Google UI closes.
-      setGoogleAuthInProgress(false)
-      setLoading(false)
-      signingInRef.current = false
-      await afterNativeUiSettled()
+      await settleAfterNativeAuthUi()
 
       if (result.type === 'cancelled') {
         return
@@ -87,7 +85,7 @@ export function useNativeGoogleSignIn() {
       }
 
       await signInWithGoogle(idToken)
-      await afterNativeUiSettled()
+      await settleAfterNativeAuthUi()
       router.replace('/store-check')
     } catch (e) {
       if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) {
@@ -104,6 +102,10 @@ export function useNativeGoogleSignIn() {
       if (__DEV__ && isErrorWithCode(e)) {
         console.warn('[google-sign-in]', e.code, message)
       }
+      if (isTransientNetworkError(e)) {
+        message =
+          'Could not reach the server after Google sign-in. Check your connection and try again, or use email sign-in.'
+      }
       if (
         isErrorWithCode(e) &&
         (e.code === '10' || message.includes('DEVELOPER_ERROR'))
@@ -119,14 +121,14 @@ export function useNativeGoogleSignIn() {
               'Get it: keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android -keypass android\n' +
               'Wait ~10 minutes, then try again.'
       }
-      await afterNativeUiSettled()
+      await settleAfterNativeAuthUi()
       Alert.alert('Google sign-in', message)
     } finally {
       signingInRef.current = false
       setLoading(false)
-      setGoogleAuthInProgress(false)
+      setGoogleFlowActive(false)
     }
-  }, [signInWithGoogle, setGoogleAuthInProgress])
+  }, [signInWithGoogle, setGoogleFlowActive])
 
   return { signIn, loading }
 }

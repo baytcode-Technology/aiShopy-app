@@ -13,6 +13,8 @@ export async function performSignOut(
     await signOut()
   } catch {
     // Ignore in-flight request failures while clearing session.
+  } finally {
+    setSigningOut(false)
   }
   router.replace('/(auth)/login' as Href)
 }

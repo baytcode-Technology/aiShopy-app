@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { router, useLocalSearchParams } from 'expo-router'
-import { Alert, Pressable, Text } from 'react-native'
+import { Alert, Keyboard, Pressable, Text } from 'react-native'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { useAuth } from '@src/contexts/auth-context'
+import {
+  deferNavigationAfterNativeAuth,
+  settleAfterNativeAuthUi,
+} from '@src/lib/ios-network-settle'
 
 export default function VerifyOtpScreen() {
   const { email } = useLocalSearchParams<{ email: string }>()
@@ -30,12 +34,18 @@ export default function VerifyOtpScreen() {
 
     setError('')
     setLoading(true)
+    Keyboard.dismiss()
     try {
       await verifyOtp(emailValue, code)
-      router.replace('/store-check')
+      // Same Fabric race as Google: remounting this screen while replace runs crashes Android.
+      await settleAfterNativeAuthUi()
+      await deferNavigationAfterNativeAuth(() => {
+        router.replace('/store-check')
+      })
+      // Keep loading=true until this screen unmounts — flipping the button
+      // (spinner ↔ label) mid-transition triggers addViewAt crashes.
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Invalid code')
-    } finally {
       setLoading(false)
     }
   }

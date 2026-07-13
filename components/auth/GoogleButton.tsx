@@ -43,9 +43,8 @@ export function GoogleButton() {
       <View className="w-6 items-center">
         <GoogleIcon size={20} />
       </View>
-      <Text className="text-[15px] font-semibold text-ink">
-        {googleLoading ? 'Signing in…' : 'Continue with Google'}
-      </Text>
+      {/* Fixed label avoids remounting text nodes while Google UI is dismissing (Fabric crash). */}
+      <Text className="text-[15px] font-semibold text-ink">Continue with Google</Text>
     </AppPressable>
   )
 }

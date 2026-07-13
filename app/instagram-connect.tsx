@@ -20,20 +20,14 @@ import {
 type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'polling' | 'connected' | 'error'
 
 const POLL_INTERVAL_MS = 4000
+const POLL_MAX_ATTEMPTS = 4
 
 export default function InstagramConnectScreen() {
   const { store } = useStore()
   const [phase, setPhase] = useState<ScreenPhase>('loading')
   const [connection, setConnection] = useState<InstagramConnectionStatus | null>(null)
   const [subscribing, setSubscribing] = useState(false)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }, [])
+  const oauthRunRef = useRef(0)
 
   const refreshStatus = useCallback(async () => {
     if (!store?.id) return null
@@ -42,41 +36,63 @@ export default function InstagramConnectScreen() {
     return res.data
   }, [store?.id])
 
-  const startPolling = useCallback(() => {
-    stopPolling()
+  const waitForConnection = useCallback(async (runId: number): Promise<boolean> => {
     setPhase('polling')
 
-    void refreshStatus().then((status) => {
+    for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
+      if (oauthRunRef.current !== runId) return false
+
+      const status = await refreshStatus()
       if (status?.connected) {
         setPhase('connected')
-        stopPolling()
+        return true
       }
-    })
+      if (attempt < POLL_MAX_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+      }
+    }
 
-    pollRef.current = setInterval(() => {
-      void refreshStatus().then((status) => {
-        if (status?.connected) {
-          setPhase('connected')
-          stopPolling()
-        }
-      })
-    }, POLL_INTERVAL_MS)
-  }, [refreshStatus, stopPolling])
+    if (oauthRunRef.current !== runId) return false
+    setPhase('disconnected')
+    return false
+  }, [refreshStatus])
 
   const startOAuth = useCallback(async () => {
     if (!store?.id) return
+    const runId = ++oauthRunRef.current
     setPhase('oauth')
     try {
       const res = await getInstagramConnectUrl(store.id)
-      await WebBrowser.openBrowserAsync(res.data.url, {
+      const result = await WebBrowser.openBrowserAsync(res.data.url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
       })
-      startPolling()
+
+      if (oauthRunRef.current !== runId) return
+
+      const status = await refreshStatus()
+      if (status?.connected) {
+        setPhase('connected')
+        return
+      }
+
+      if (result.type === 'cancel') {
+        setPhase('disconnected')
+        return
+      }
+
+      const connected = await waitForConnection(runId)
+      if (!connected && oauthRunRef.current === runId) {
+        showError(
+          'Connection not completed',
+          'Finish login in the browser or tap Connect Instagram to try again.'
+        )
+      }
     } catch (e: unknown) {
+      if (oauthRunRef.current !== runId) return
       setPhase('error')
       showError(e, 'Connect failed')
     }
-  }, [store?.id, startPolling])
+  }, [store?.id, refreshStatus, waitForConnection])
 
   useEffect(() => {
     let cancelled = false
@@ -101,9 +117,9 @@ export default function InstagramConnectScreen() {
 
     return () => {
       cancelled = true
-      stopPolling()
+      oauthRunRef.current += 1
     }
-  }, [store?.id, refreshStatus, stopPolling])
+  }, [store?.id, refreshStatus])
 
   const subtitle =
     phase === 'connected'

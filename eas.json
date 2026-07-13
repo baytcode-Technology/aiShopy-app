@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "http://43.205.195.35:5000",
         "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "aishopy.io",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",
@@ -20,7 +20,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "http://43.205.195.35:5000",
         "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "aishopy.io",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",
@@ -29,7 +29,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://aishopy.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "http://43.205.195.35:5000",
         "EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN": "aishopy.io",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "573339565981-as4fmlf8pmsaejbav5si1qbpkotc2le9.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "573339565981-vdanmkkiua7b27vatukthqiomh3qvs3h.apps.googleusercontent.com",

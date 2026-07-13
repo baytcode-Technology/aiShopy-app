@@ -6,6 +6,7 @@ import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
 import { fetchSupportAdminStatus } from "@src/api/support";
 import { getErrorMessage } from "@src/lib/api-error";
+import { deferNavigationAfterNativeAuth } from "@src/lib/ios-network-settle";
 import Colors from "@src/theme/colors";
 import { router, type Href } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -57,20 +58,28 @@ export default function StoreCheckScreen() {
 
         if (list.length === 0) {
           if (isAdmin) {
-            router.replace("/platform-admin" as Href);
+            await deferNavigationAfterNativeAuth(() => {
+              router.replace("/platform-admin" as Href);
+            });
           } else {
-            router.replace("/create-store");
+            await deferNavigationAfterNativeAuth(() => {
+              router.replace("/create-store");
+            });
           }
           return;
         }
 
         if (list.length === 1) {
           await switchStoreRef.current(list[0].store.id);
-          router.replace("/(store)/chats" as Href);
+          await deferNavigationAfterNativeAuth(() => {
+            router.replace("/(store)/chats" as Href);
+          });
           return;
         }
 
-        router.replace("/select-store" as Href);
+        await deferNavigationAfterNativeAuth(() => {
+          router.replace("/select-store" as Href);
+        });
       } catch (e) {
         if (cancelled) return;
         hasRoutedRef.current = false;

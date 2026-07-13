@@ -13,6 +13,7 @@ import {
   ensureNativeGoogleConfigured,
 } from '@src/lib/google-native-session'
 import {
+  deferNavigationAfterNativeAuth,
   isTransientNetworkError,
   settleAfterNativeAuthUi,
 } from '@src/lib/ios-network-settle'
@@ -57,6 +58,7 @@ export function useNativeGoogleSignIn() {
     setLoading(true)
     setGoogleFlowActive(true)
 
+    let navigatedAway = false
     try {
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices({
@@ -85,8 +87,13 @@ export function useNativeGoogleSignIn() {
       }
 
       await signInWithGoogle(idToken)
+      // Wait for Google UI dismiss + auth state commit before swapping screens.
+      // Immediate replace remounts login controls mid-transition and crashes Fabric on Android.
       await settleAfterNativeAuthUi()
-      router.replace('/store-check')
+      await deferNavigationAfterNativeAuth(() => {
+        router.replace('/store-check')
+      })
+      navigatedAway = true
     } catch (e) {
       if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) {
         return
@@ -125,8 +132,16 @@ export function useNativeGoogleSignIn() {
       Alert.alert('Google sign-in', message)
     } finally {
       signingInRef.current = false
-      setLoading(false)
-      setGoogleFlowActive(false)
+      if (navigatedAway) {
+        // Clear after the stack transition commits (avoid remount under Fabric).
+        setTimeout(() => {
+          setLoading(false)
+          setGoogleFlowActive(false)
+        }, 800)
+      } else {
+        setLoading(false)
+        setGoogleFlowActive(false)
+      }
     }
   }, [signInWithGoogle, setGoogleFlowActive])
 

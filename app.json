@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/aishopy_logo.png",
+      "image": "./assets/images/app_logo.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -33,7 +33,16 @@
           "credpay",
           "bhim"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "43.205.195.35": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
       }
     },
     "android": {
@@ -104,7 +113,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/aishopy_logo.png",
+          "image": "./assets/images/app_logo.jpg",
           "backgroundColor": "#ffffff",
           "resizeMode": "contain",
           "imageWidth": 200,

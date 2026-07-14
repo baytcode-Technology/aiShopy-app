@@ -10,7 +10,7 @@ export default function Index() {
   if (isLoading || googleAuthInProgress) {
     return (
       <View className="flex-1 items-center justify-center bg-surface gap-6">
-        <AppLogo variant="wordmark" align="center" className="mb-6" />
+        <AppLogo variant="mark" align="center" className="mb-6" />
         <ActivityIndicator size="large" color={Colors.brand.primary} />
       </View>
     );

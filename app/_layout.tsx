@@ -75,6 +75,8 @@ export default function RootLayout() {
             <Stack.Screen name="platform-admin" />
             <Stack.Screen name="settings" />
             <Stack.Screen name="storefront" />
+            <Stack.Screen name="website-customize" />
+            <Stack.Screen name="template-preview" />
             <Stack.Screen name="payment-methods" />
             <Stack.Screen name="notifications" />
             <Stack.Screen name="account-coming-soon" />

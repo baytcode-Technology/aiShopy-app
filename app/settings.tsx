@@ -187,12 +187,7 @@ export default function SettingsScreen() {
               value="UI design & customization"
               icon="paint-brush"
               showChevron
-              onPress={() =>
-                router.push({
-                  pathname: "/account-coming-soon",
-                  params: { id: "website" },
-                })
-              }
+              onPress={() => router.push("/website-customize" as Href)}
             />
             <MenuRow
               label="Currency"

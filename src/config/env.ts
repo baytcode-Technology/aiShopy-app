@@ -13,6 +13,10 @@ if (__DEV__ && !url) {
 const storefrontBaseDomain =
   process.env.EXPO_PUBLIC_STOREFRONT_BASE_DOMAIN?.trim() || "aishopy.io";
 
+const storefrontPreviewBaseUrl =
+  process.env.EXPO_PUBLIC_STOREFRONT_PREVIEW_BASE_URL?.trim() ||
+  `https://${storefrontBaseDomain}`;
+
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() ?? "";
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? "";
 const androidClientId =
@@ -21,6 +25,7 @@ const androidClientId =
 export const env = {
   apiBaseUrl: url ?? "",
   storefrontBaseDomain,
+  storefrontPreviewBaseUrl,
   google: {
     webClientId,
     iosClientId,

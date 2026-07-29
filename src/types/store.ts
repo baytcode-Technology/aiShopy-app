@@ -15,6 +15,22 @@ export type StoreStaffMember = {
   status: StoreStaffStatus | "owner";
 };
 
+export type ThemeTemplate = "classic" | "boutique" | "modern";
+
+export type ThemeProductCard = "classic" | "minimal" | "bold";
+
+/** Storefront theme settings. null/missing = platform defaults. */
+export type ThemeConfig = {
+  template: ThemeTemplate;
+  colors: {
+    primary: string;
+    background: string;
+    text: string;
+  };
+  /** @deprecated Ignored — each template owns product card markup. */
+  productCard?: ThemeProductCard;
+};
+
 export type Store = {
   id: number;
   owner_id: string;
@@ -31,6 +47,7 @@ export type Store = {
   country: string;
   timezone: string;
   payment_config: Record<string, unknown>;
+  theme_config?: ThemeConfig | null;
   ai_system_prompt: string | null;
   ai_language: string | null;
   industry: string | null;
@@ -96,6 +113,7 @@ export type UpdateStorePayload = Partial<{
   ai_system_prompt: string | null;
   ai_language: string | null;
   is_active: boolean;
+  theme_config: ThemeConfig | null;
 }>;
 
 export type UpdateStoreResponse = {

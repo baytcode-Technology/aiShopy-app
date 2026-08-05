@@ -24,6 +24,23 @@ function canUseUriDirectly(uri: string): boolean {
   );
 }
 
+function normalizePathUri(uri: string): string {
+  const trimmed = uri.trim();
+  if (
+    trimmed.startsWith("file://") ||
+    trimmed.startsWith("content://") ||
+    trimmed.startsWith("ph://") ||
+    trimmed.startsWith("blob:") ||
+    trimmed.startsWith("data:")
+  ) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("/")) {
+    return `file://${trimmed}`;
+  }
+  return trimmed;
+}
+
 /**
  * React Native on Android may return content:// URIs that fetch cannot attach to FormData.
  * Copy to cache as file:// when needed. Web and file:// URIs are used as-is.
@@ -33,23 +50,27 @@ export async function prepareUploadFile(
   name: string,
   type?: string,
 ): Promise<UploadableFile> {
+  const normalizedUri = normalizePathUri(uri);
   const safeName = name.replace(/[^\w.-]+/g, "_") || `image-${Date.now()}.jpg`;
   const mime = type?.trim() || mimeFromName(safeName);
 
-  if (canUseUriDirectly(uri)) {
-    return { uri, name: safeName, type: mime };
+  if (canUseUriDirectly(normalizedUri)) {
+    return { uri: normalizedUri, name: safeName, type: mime };
   }
 
   const cache = FileSystem.cacheDirectory;
   if (!cache) {
-    return { uri, name: safeName, type: mime };
+    return { uri: normalizedUri, name: safeName, type: mime };
   }
 
   const dest = `${cache}upload-${Date.now()}-${safeName}`;
   try {
-    await FileSystem.copyAsync({ from: uri, to: dest });
+    await FileSystem.copyAsync({ from: normalizedUri, to: dest });
     return { uri: dest, name: safeName, type: mime };
   } catch {
-    return { uri, name: safeName, type: mime };
+    if (normalizedUri.startsWith("content://")) {
+      throw new Error("Could not read media from device storage");
+    }
+    return { uri: normalizedUri, name: safeName, type: mime };
   }
 }

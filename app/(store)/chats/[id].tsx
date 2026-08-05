@@ -2,6 +2,7 @@ import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
 import { ChatMessageActionsSheet } from "@/components/chat/ChatMessageActionsSheet";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
+import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
 import { HeaderActionsRow } from "@/components/navigation/HeaderActionsRow";
 import { LinkText, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -27,9 +28,10 @@ import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-ro
 import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Pressable,
   Text,
   View,
@@ -60,6 +62,8 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   return out;
 }
 
+const MESSAGE_PAGE_SIZE = 25;
+
 export default function ChatDetailScreen() {
   const { store } = useStore();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
@@ -78,7 +82,16 @@ export default function ChatDetailScreen() {
   const [actionsVisible, setActionsVisible] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
   const [forwardVisible, setForwardVisible] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const initialScrollDoneRef = useRef(false);
+  const stickToBottomRef = useRef(true);
+
+  const scrollToBottom = useCallback((animated: boolean) => {
+    listRef.current?.scrollToEnd({ animated });
+  }, []);
 
   const idRaw = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
   const conversationId = idRaw ? Number(idRaw) : NaN;
@@ -112,19 +125,23 @@ export default function ChatDetailScreen() {
     async (options?: { silent?: boolean }) => {
       if (!store?.id || !Number.isFinite(conversationId)) return;
       const silent = options?.silent ?? false;
-      if (!silent) setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+        initialScrollDoneRef.current = false;
+        stickToBottomRef.current = true;
+      }
       try {
         const res =
           channel === "instagram"
             ? await fetchInstagramMessages({
                 storeId: store.id,
                 conversationId,
-                limit: 50,
+                limit: MESSAGE_PAGE_SIZE,
               })
             : await fetchChatMessages({
                 storeId: store.id,
                 conversationId,
-                limit: 50,
+                limit: MESSAGE_PAGE_SIZE,
               });
         const mapped = res.data.messages
           .slice()
@@ -134,6 +151,10 @@ export default function ChatDetailScreen() {
           channel === "whatsapp"
             ? prepareWhatsAppMessagesForDisplay(mapped)
             : mapped,
+        );
+        setNextCursor(res.data.nextCursor);
+        setHasMore(
+          res.data.messages.length >= MESSAGE_PAGE_SIZE && Boolean(res.data.nextCursor),
         );
       } catch (e: unknown) {
         if (!silent) {
@@ -148,6 +169,68 @@ export default function ChatDetailScreen() {
     },
     [store?.id, conversationId, channel],
   );
+
+  const loadOlderMessages = useCallback(async () => {
+    if (
+      !store?.id ||
+      !Number.isFinite(conversationId) ||
+      !nextCursor ||
+      loadingMore ||
+      !hasMore
+    ) {
+      return;
+    }
+
+    setLoadingMore(true);
+    stickToBottomRef.current = false;
+
+    try {
+      const res =
+        channel === "instagram"
+          ? await fetchInstagramMessages({
+              storeId: store.id,
+              conversationId,
+              limit: MESSAGE_PAGE_SIZE,
+              cursor: nextCursor,
+            })
+          : await fetchChatMessages({
+              storeId: store.id,
+              conversationId,
+              limit: MESSAGE_PAGE_SIZE,
+              cursor: nextCursor,
+            });
+
+      const older = res.data.messages
+        .slice()
+        .reverse()
+        .map((m) => mapApiMessageToChatMessage(m, store.id));
+
+      setMessages((prev) => {
+        const merged = dedupeByIdAndMeta([...older, ...prev]);
+        return channel === "whatsapp"
+          ? prepareWhatsAppMessagesForDisplay(merged)
+          : merged;
+      });
+      setNextCursor(res.data.nextCursor);
+      setHasMore(
+        res.data.messages.length >= MESSAGE_PAGE_SIZE && Boolean(res.data.nextCursor),
+      );
+    } catch (e: unknown) {
+      showError(
+        "Failed to load older messages",
+        e instanceof Error ? e.message : "Unknown error",
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [
+    store?.id,
+    conversationId,
+    channel,
+    nextCursor,
+    loadingMore,
+    hasMore,
+  ]);
 
   useEffect(() => {
     void loadMessages();
@@ -192,11 +275,25 @@ export default function ChatDetailScreen() {
   }, [conversationId, onActiveChatMessage, loadMessages]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || initialScrollDoneRef.current) return;
     requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated: true });
+      scrollToBottom(false);
+      initialScrollDoneRef.current = true;
     });
-  }, [messages.length]);
+  }, [messages.length, scrollToBottom]);
+
+  const handleListScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+      if (contentOffset.y < 80 && hasMore && !loadingMore) {
+        void loadOlderMessages();
+      }
+      const nearBottom =
+        contentOffset.y + layoutMeasurement.height >= contentSize.height - 80;
+      stickToBottomRef.current = nearBottom;
+    },
+    [hasMore, loadingMore, loadOlderMessages],
+  );
 
   useEffect(() => {
     if (!Number.isFinite(conversationId)) return;
@@ -232,6 +329,8 @@ export default function ChatDetailScreen() {
           ? prepareWhatsAppMessagesForDisplay(next)
           : next;
       });
+      stickToBottomRef.current = true;
+      requestAnimationFrame(() => scrollToBottom(true));
       if (payload.message.direction === "inbound") {
         scheduleMarkReadRef.current();
       }
@@ -268,10 +367,11 @@ export default function ChatDetailScreen() {
     return "Voice message";
   };
 
-  const sendMediaMessage = async (payload: OutboundMediaPayload) => {
-    if (!store?.id || isSending || channel !== "whatsapp") return;
-
-    const tempId = -Date.now();
+  const sendOneMediaMessage = async (
+    payload: OutboundMediaPayload,
+    tempIdOffset = 0,
+  ) => {
+    const tempId = -(Date.now() + tempIdOffset);
     const now = new Date();
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
@@ -290,25 +390,27 @@ export default function ChatDetailScreen() {
         pending: true,
       },
     ]);
-    setIsSending(true);
+    stickToBottomRef.current = true;
+    requestAnimationFrame(() => scrollToBottom(true));
 
     try {
       const uploaded = await uploadWhatsAppMedia({
-        storeId: store.id,
+        storeId: store!.id,
         kind: payload.type,
         uri: payload.uri,
         name: payload.name,
         type: payload.mimeType,
+        voice: payload.voice,
       });
 
       const res = await sendWhatsAppMediaMessage({
-        storeId: store.id,
+        storeId: store!.id,
         to: customerPhone,
         conversationId,
         type: payload.type,
         mediaId: uploaded.data.media_id,
         mimeType: uploaded.data.mime_type,
-        voice: payload.voice,
+        voice: payload.voice === true,
       });
 
       setMessages((prev) =>
@@ -316,7 +418,7 @@ export default function ChatDetailScreen() {
           prev.map((m) =>
             m.id === tempId
               ? {
-                  ...mapApiMessageToChatMessage(res.data.message, store.id),
+                  ...mapApiMessageToChatMessage(res.data.message, store!.id),
                   pending: false,
                 }
               : m,
@@ -326,6 +428,23 @@ export default function ChatDetailScreen() {
     } catch (e: unknown) {
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       showError(e, "Failed to send media");
+      throw e;
+    }
+  };
+
+  const sendMediaMessage = async (
+    payload: OutboundMediaPayload | OutboundMediaPayload[],
+  ) => {
+    if (!store?.id || isSending || channel !== "whatsapp") return;
+
+    const payloads = Array.isArray(payload) ? payload : [payload];
+    if (!payloads.length) return;
+
+    setIsSending(true);
+    try {
+      for (let i = 0; i < payloads.length; i++) {
+        await sendOneMediaMessage(payloads[i], i);
+      }
     } finally {
       setIsSending(false);
     }
@@ -366,6 +485,8 @@ export default function ChatDetailScreen() {
         pending: true,
       },
     ]);
+    stickToBottomRef.current = true;
+    requestAnimationFrame(() => scrollToBottom(true));
     setDraft("");
     setIsSending(true);
 
@@ -441,10 +562,18 @@ export default function ChatDetailScreen() {
         <HeaderActionsRow settingsTone="onPrimary" />
       </View>
 
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={0}
+      <SupportKeyboardChatLayout
+        listRef={listRef}
+        composer={
+          <ChatComposer
+            draft={draft}
+            onChangeDraft={setDraft}
+            onSendText={() => void sendMessage()}
+            onSendMedia={sendMediaMessage}
+            disabled={isSending}
+            channel={channel}
+          />
+        }
       >
         <FlatList
           ref={listRef}
@@ -459,23 +588,36 @@ export default function ChatDetailScreen() {
                 setActionsMessage(message);
                 setActionsVisible(true);
               }}
+              onForward={(message) => {
+                if (channel !== "whatsapp") return;
+                setForwardMessage(message);
+                setForwardVisible(true);
+              }}
             />
           )}
           contentContainerClassName="p-4 pb-2 flex-grow"
-          onContentSizeChange={() => {
-            listRef.current?.scrollToEnd({ animated: true });
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 20,
           }}
+          onScroll={handleListScroll}
+          scrollEventThrottle={16}
+          onContentSizeChange={() => {
+            if (stickToBottomRef.current) {
+              scrollToBottom(initialScrollDoneRef.current);
+            }
+          }}
+          ListHeaderComponent={
+            loadingMore ? (
+              <View className="py-3 items-center">
+                <ActivityIndicator color={Colors.brand.primary} size="small" />
+              </View>
+            ) : null
+          }
         />
-
-        <ChatComposer
-          draft={draft}
-          onChangeDraft={setDraft}
-          onSendText={() => void sendMessage()}
-          onSendMedia={sendMediaMessage}
-          disabled={isSending}
-          channel={channel}
-        />
-      </KeyboardAvoidingView>
+      </SupportKeyboardChatLayout>
 
       <ChatMessageActionsSheet
         visible={actionsVisible}

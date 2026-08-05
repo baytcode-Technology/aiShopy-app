@@ -4,9 +4,13 @@ import { endpoints } from '@src/api/endpoints'
 
 import { env } from '@src/config/env'
 
+import * as FileSystem from 'expo-file-system/legacy'
+
 import { buildWhatsAppMediaUrl } from '@src/lib/whatsapp-media'
 
 import { enrichMessageFromRawPayload } from '@src/lib/prepare-whatsapp-messages'
+
+import { prepareWhatsAppMediaUpload } from '@src/lib/prepare-whatsapp-media-upload'
 
 import type { ChatChannel, ChatMessage } from '@src/types/chat'
 
@@ -241,36 +245,59 @@ export async function uploadWhatsAppMedia(input: {
   uri: string
   name: string
   type: string
+  voice?: boolean
 }): Promise<UploadWhatsAppMediaResponse> {
+  let prepared
+  try {
+    prepared = await prepareWhatsAppMediaUpload({
+      kind: input.kind,
+      uri: input.uri,
+      name: input.name,
+      type: input.type,
+    })
+  } catch (e: unknown) {
+    throw new ApiHttpError(
+      e instanceof Error ? e.message : 'Media file is missing or empty',
+      400,
+      null,
+    )
+  }
+
   const token = await getValidAccessToken()
-  const qs = new URLSearchParams({ store_id: String(input.storeId) }).toString()
-  const formData = new FormData()
-  formData.append('kind', input.kind)
-  formData.append('file', {
-    uri: input.uri,
-    name: input.name,
-    type: input.type,
-  } as unknown as Blob)
+  const qs = new URLSearchParams({
+    store_id: String(input.storeId),
+    kind: input.kind,
+    ...(input.voice ? { voice: 'true' } : {}),
+  }).toString()
 
   const base = env.apiBaseUrl.replace(/\/$/, '')
-  const res = await fetch(`${base}${endpoints.whatsappMediaUpload}?${qs}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
+  const uploadUrl = `${base}${endpoints.whatsappMediaUpload}?${qs}`
+
+  const uploadResult = await FileSystem.uploadAsync(uploadUrl, prepared.uri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: prepared.type,
+    parameters: {
+      kind: input.kind,
+      ...(input.voice ? { voice: 'true' } : {}),
+    },
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
   })
 
-  const text = await res.text()
   let body: UploadWhatsAppMediaResponse | null = null
   try {
-    body = text ? JSON.parse(text) : null
+    body = uploadResult.body ? JSON.parse(uploadResult.body) : null
   } catch {
     body = null
   }
 
-  if (!res.ok) {
+  if (uploadResult.status < 200 || uploadResult.status >= 300) {
     throw new ApiHttpError(
-      (body as { message?: string } | null)?.message || res.statusText,
-      res.status,
+      (body as { message?: string } | null)?.message || 'Upload failed',
+      uploadResult.status,
       body,
     )
   }

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, Pressable, Text, TextInput, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 import { Audio } from 'expo-av'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { ChatAttachSheet } from '@/components/chat/ChatAttachSheet'
 import { IconButton } from '@/components/ui/IconButton'
 import { showError } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { ChatChannel } from '@src/types/chat'
+
+const MAX_MEDIA_SELECTION = 10
 
 export type OutboundMediaPayload = {
   type: 'image' | 'audio' | 'video'
@@ -20,7 +23,7 @@ type Props = {
   draft: string
   onChangeDraft: (value: string) => void
   onSendText: () => void
-  onSendMedia: (payload: OutboundMediaPayload) => Promise<void>
+  onSendMedia: (payload: OutboundMediaPayload | OutboundMediaPayload[]) => Promise<void>
   disabled?: boolean
   channel: ChatChannel
 }
@@ -29,6 +32,21 @@ function formatRecordingTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function assetToPayload(
+  asset: ImagePicker.ImagePickerAsset,
+  index: number,
+): OutboundMediaPayload {
+  const isVideo = asset.type === 'video' || asset.mimeType?.startsWith('video/')
+  const type = isVideo ? 'video' : 'image'
+  const ext = isVideo ? 'mp4' : 'jpg'
+  return {
+    type,
+    uri: asset.uri,
+    name: asset.fileName ?? `${type}-${Date.now()}-${index}.${ext}`,
+    mimeType: asset.mimeType ?? (isVideo ? 'video/mp4' : 'image/jpeg'),
+  }
 }
 
 export function ChatComposer({
@@ -44,6 +62,7 @@ export function ChatComposer({
   const [isRecording, setIsRecording] = useState(false)
   const [recordSeconds, setRecordSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [attachOpen, setAttachOpen] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -63,20 +82,20 @@ export function ChatComposer({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: kind === 'image' ? ['images'] : ['videos'],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_MEDIA_SELECTION,
         quality: 0.85,
         videoMaxDuration: 120,
       })
 
-      if (result.canceled || !result.assets[0]) return
-      const asset = result.assets[0]
+      if (result.canceled || !result.assets.length) return
+
+      const payloads = result.assets.map((asset, index) => assetToPayload(asset, index))
       setBusy(true)
       try {
-        await onSendMedia({
-          type: kind,
-          uri: asset.uri,
-          name: asset.fileName ?? `${kind}-${Date.now()}.${kind === 'image' ? 'jpg' : 'mp4'}`,
-          mimeType: asset.mimeType ?? (kind === 'image' ? 'image/jpeg' : 'video/mp4'),
-        })
+        await onSendMedia(payloads.length === 1 ? payloads[0] : payloads)
+      } catch (e: unknown) {
+        showError('Failed to send media', e instanceof Error ? e.message : 'Unknown error')
       } finally {
         setBusy(false)
       }
@@ -84,14 +103,37 @@ export function ChatComposer({
     [busy, channel, disabled, onSendMedia],
   )
 
+  const captureFromCamera = useCallback(async () => {
+    if (disabled || busy || channel !== 'whatsapp') return
+    const permission = await ImagePicker.requestCameraPermissionsAsync()
+    if (!permission.granted) {
+      showError('Permission required', 'Allow camera access to take photos and videos')
+      return
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images', 'videos'],
+      quality: 0.85,
+      videoMaxDuration: 120,
+      exif: false,
+    })
+
+    if (result.canceled || !result.assets[0]) return
+
+    setBusy(true)
+    try {
+      await onSendMedia(assetToPayload(result.assets[0], 0))
+    } catch (e: unknown) {
+      showError('Failed to send media', e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setBusy(false)
+    }
+  }, [busy, channel, disabled, onSendMedia])
+
   const showAttachMenu = useCallback(() => {
-    if (channel !== 'whatsapp') return
-    Alert.alert('Send media', undefined, [
-      { text: 'Photo', onPress: () => void pickMedia('image') },
-      { text: 'Video', onPress: () => void pickMedia('video') },
-      { text: 'Cancel', style: 'cancel' },
-    ])
-  }, [channel, pickMedia])
+    if (channel !== 'whatsapp' || disabled || busy) return
+    setAttachOpen(true)
+  }, [busy, channel, disabled])
 
   const startRecording = useCallback(async () => {
     if (disabled || busy || channel !== 'whatsapp') return
@@ -140,8 +182,9 @@ export function ChatComposer({
     if (!recordingRef.current) return
     setBusy(true)
     try {
-      await recordingRef.current.stopAndUnloadAsync()
-      const uri = recordingRef.current.getURI()
+      const recording = recordingRef.current
+      const uri = recording.getURI()
+      await recording.stopAndUnloadAsync()
       recordingRef.current = null
       if (timerRef.current) {
         clearInterval(timerRef.current)
@@ -157,7 +200,7 @@ export function ChatComposer({
         uri,
         name: `voice-${Date.now()}.m4a`,
         mimeType: 'audio/mp4',
-        voice: true,
+        voice: false,
       })
     } catch (e: unknown) {
       showError('Failed to send voice message', e instanceof Error ? e.message : 'Unknown error')
@@ -194,44 +237,54 @@ export function ChatComposer({
   }
 
   return (
-    <View className="flex-row items-end gap-2 px-3 py-2.5 bg-surface border-t border-gray-200">
-      {channel === 'whatsapp' ? (
-        <>
-          <IconButton
-            className="bg-gray-100 border border-gray-200 w-11 h-11"
-            onPress={showAttachMenu}
-            disabled={disabled || busy}
-          >
-            <FontAwesome name="paperclip" size={18} color={Colors.brand.primary} />
-          </IconButton>
-          <IconButton
-            className="bg-gray-100 border border-gray-200 w-11 h-11"
-            onPress={() => void startRecording()}
-            disabled={disabled || busy}
-          >
-            <FontAwesome name="microphone" size={18} color={Colors.brand.primary} />
-          </IconButton>
-        </>
-      ) : null}
+    <>
+      <View className="flex-row items-end gap-2 px-3 py-2.5">
+        {channel === 'whatsapp' ? (
+          <>
+            <IconButton
+              className="bg-gray-100 border border-gray-200 w-11 h-11"
+              onPress={showAttachMenu}
+              disabled={disabled || busy}
+            >
+              <FontAwesome name="paperclip" size={18} color={Colors.brand.primary} />
+            </IconButton>
+            <IconButton
+              className="bg-gray-100 border border-gray-200 w-11 h-11"
+              onPress={() => void startRecording()}
+              disabled={disabled || busy}
+            >
+              <FontAwesome name="microphone" size={18} color={Colors.brand.primary} />
+            </IconButton>
+          </>
+        ) : null}
 
-      <TextInput
-        className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
-        placeholder="Type a message"
-        placeholderTextColor={Colors.text.muted}
-        value={draft}
-        onChangeText={onChangeDraft}
-        multiline
-        maxLength={2000}
-        editable={!disabled && !busy}
+        <TextInput
+          className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
+          placeholder="Type a message"
+          placeholderTextColor={Colors.text.muted}
+          value={draft}
+          onChangeText={onChangeDraft}
+          multiline
+          maxLength={2000}
+          editable={!disabled && !busy}
+        />
+
+        <IconButton
+          className="bg-brand-primary border-0 w-11 h-11"
+          onPress={onSendText}
+          disabled={disabled || busy}
+        >
+          <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
+        </IconButton>
+      </View>
+
+      <ChatAttachSheet
+        visible={attachOpen}
+        onClose={() => setAttachOpen(false)}
+        onPickPhoto={() => void pickMedia('image')}
+        onPickVideo={() => void pickMedia('video')}
+        onOpenCamera={() => void captureFromCamera()}
       />
-
-      <IconButton
-        className="bg-brand-primary border-0 w-11 h-11"
-        onPress={onSendText}
-        disabled={disabled || busy}
-      >
-        <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
-      </IconButton>
-    </View>
+    </>
   )
 }

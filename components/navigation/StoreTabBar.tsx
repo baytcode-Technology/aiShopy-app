@@ -25,6 +25,19 @@ const labels: Record<string, string> = {
 
 const VISIBLE_TAB_ROUTES = new Set(['chats', 'products', 'orders', 'dashboard'])
 
+function shouldHideTabBar(state: BottomTabBarProps['state']): boolean {
+  const tab = state.routes[state.index]
+  if (!tab || tab.name !== 'chats') return false
+
+  const stackState = tab.state as
+    | { routes?: Array<{ name?: string }>; index?: number }
+    | undefined
+  if (!stackState?.routes?.length) return false
+
+  const focused = stackState.routes[stackState.index ?? stackState.routes.length - 1]
+  return focused?.name !== 'index'
+}
+
 const TAB_PILL_RADIUS = 18
 
 export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
@@ -35,6 +48,10 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
   const tabBadgeCount: Record<string, number> = {
     orders: ordersUnreadCount,
     chats: chatsUnreadCount,
+  }
+
+  if (shouldHideTabBar(state)) {
+    return null
   }
 
   return (

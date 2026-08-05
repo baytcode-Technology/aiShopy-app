@@ -12,9 +12,10 @@ const videoStyle = StyleSheet.create({
 type Props = {
   uri: string
   onPress: () => void
+  onLongPress?: () => void
 }
 
-export function ChatVideoBubble({ uri, onPress }: Props) {
+export function ChatVideoBubble({ uri, onPress, onLongPress }: Props) {
   const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
     null,
   )
@@ -39,7 +40,13 @@ export function ChatVideoBubble({ uri, onPress }: Props) {
   }
 
   return (
-    <Pressable style={videoStyle.video} onPress={onPress} className="overflow-hidden">
+    <Pressable
+      style={videoStyle.video}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      className="overflow-hidden"
+    >
       <Video
         source={source}
         style={videoStyle.video}

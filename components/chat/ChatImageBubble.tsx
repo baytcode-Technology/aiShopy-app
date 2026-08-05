@@ -13,9 +13,10 @@ type Props = {
   uri: string
   variant: 'image' | 'sticker'
   onPress?: () => void
+  onLongPress?: () => void
 }
 
-export function ChatImageBubble({ uri, variant, onPress }: Props) {
+export function ChatImageBubble({ uri, variant, onPress, onLongPress }: Props) {
   const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
     null,
   )
@@ -63,7 +64,11 @@ export function ChatImageBubble({ uri, variant, onPress }: Props) {
     />
   )
 
-  if (variant === 'sticker' || !onPress) return content
+  if (variant === 'sticker' || (!onPress && !onLongPress)) return content
 
-  return <Pressable onPress={onPress}>{content}</Pressable>
+  return (
+    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350}>
+      {content}
+    </Pressable>
+  )
 }

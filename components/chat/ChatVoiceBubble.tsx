@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { Audio } from 'expo-av'
+import * as FileSystem from 'expo-file-system/legacy'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { cn } from '@src/lib/cn'
 import { showError } from '@src/lib/toast'
@@ -17,6 +18,14 @@ function formatMs(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function extFromUri(uri: string): string {
+  const lower = uri.toLowerCase()
+  if (lower.includes('.ogg')) return 'ogg'
+  if (lower.includes('.mp3')) return 'mp3'
+  if (lower.includes('.aac')) return 'aac'
+  return 'm4a'
+}
+
 type Props = {
   uri: string
   outgoing: boolean
@@ -24,6 +33,7 @@ type Props = {
 
 export function ChatVoiceBubble({ uri, outgoing }: Props) {
   const soundRef = useRef<Audio.Sound | null>(null)
+  const cachedUriRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [positionMs, setPositionMs] = useState(0)
@@ -43,10 +53,31 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
   }, [])
 
   useEffect(() => {
+    cachedUriRef.current = null
+    void unload()
+    setIsPlaying(false)
+    setPositionMs(0)
+    setDurationMs(0)
+  }, [uri, unload])
+
+  useEffect(() => {
     return () => {
       void unload()
     }
   }, [unload])
+
+  const resolvePlayableUri = useCallback(async (): Promise<string> => {
+    if (cachedUriRef.current) return cachedUriRef.current
+    if (uri.startsWith('file://')) {
+      cachedUriRef.current = uri
+      return uri
+    }
+    const headers = await getWhatsAppMediaAuthHeaders()
+    const cachePath = `${FileSystem.cacheDirectory}wa-voice-${Date.now()}.${extFromUri(uri)}`
+    const result = await FileSystem.downloadAsync(uri, cachePath, { headers })
+    cachedUriRef.current = result.uri
+    return result.uri
+  }, [uri])
 
   const togglePlay = useCallback(async () => {
     if (loading) return
@@ -64,8 +95,8 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
         return
       }
 
-      const headers = await getWhatsAppMediaAuthHeaders()
-      const { sound } = await Audio.Sound.createAsync({ uri, headers })
+      const playableUri = await resolvePlayableUri()
+      const { sound } = await Audio.Sound.createAsync({ uri: playableUri })
       soundRef.current = sound
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) return
@@ -84,7 +115,7 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [isPlaying, loading, unload, uri])
+  }, [isPlaying, loading, resolvePlayableUri, unload])
 
   const seekToRatio = useCallback(
     async (ratio: number) => {

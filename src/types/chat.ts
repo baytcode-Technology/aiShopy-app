@@ -27,4 +27,6 @@ export type ChatMessage = {
   caption?: string
   mediaUrl?: string
   reactionEmoji?: string
+  reactionTargetId?: string
+  reactions?: string[]
 }

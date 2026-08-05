@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  Text,
-  View,
-} from 'react-native'
-import { Image } from 'expo-image'
-import { Audio, Video, ResizeMode } from 'expo-av'
+import { useCallback, useState } from 'react'
+import { Linking, Pressable, Text, View } from 'react-native'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as Sharing from 'expo-sharing'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { Caption } from '@/components/ui/Typography'
+import { BubbleMeta } from '@/components/chat/BubbleMeta'
+import { ChatImageBubble } from '@/components/chat/ChatImageBubble'
+import { ChatMediaViewerModal } from '@/components/chat/ChatMediaViewerModal'
+import { ChatVideoBubble } from '@/components/chat/ChatVideoBubble'
+import { ChatVoiceBubble } from '@/components/chat/ChatVoiceBubble'
 import { cn } from '@src/lib/cn'
 import { FormattedMessageText } from '@src/lib/parse-inline-markdown'
 import { showError } from '@src/lib/toast'
@@ -22,197 +18,10 @@ import Colors from '@src/theme/colors'
 type Props = {
   message: ChatMessage
   storeId?: number
+  onLongPress?: (message: ChatMessage) => void
 }
 
-function BubbleMeta({
-  message,
-  outgoing,
-}: {
-  message: ChatMessage
-  outgoing: boolean
-}) {
-  return (
-    <Caption className={cn('self-end', outgoing ? 'text-gray-400' : 'text-gray-400')}>
-      {message.time}
-      {outgoing && message.status ? ` · ${message.status}` : ''}
-      {message.pending ? ' · sending…' : ''}
-    </Caption>
-  )
-}
-
-function AuthenticatedMediaImage({
-  uri,
-  className,
-  contentFit = 'cover',
-}: {
-  uri: string
-  className?: string
-  contentFit?: 'cover' | 'contain'
-}) {
-  const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
-    null
-  )
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      try {
-        const headers = await getWhatsAppMediaAuthHeaders()
-        if (!cancelled) setSource({ uri, headers })
-      } catch {
-        if (!cancelled) setFailed(true)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [uri])
-
-  if (failed) {
-    return (
-      <View className="h-40 items-center justify-center bg-gray-100 rounded-xl">
-        <Text className="text-gray-500 text-sm">Failed to load media</Text>
-      </View>
-    )
-  }
-
-  if (!source) {
-    return (
-      <View className="h-40 items-center justify-center bg-gray-100 rounded-xl">
-        <ActivityIndicator color={Colors.brand.primary} />
-      </View>
-    )
-  }
-
-  return (
-    <Image
-      source={source}
-      className={className}
-      contentFit={contentFit}
-      recyclingKey={uri}
-      onError={() => setFailed(true)}
-    />
-  )
-}
-
-function WhatsAppVideoBubble({ uri }: { uri: string }) {
-  const [playing, setPlaying] = useState(false)
-  const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
-    null
-  )
-
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const headers = await getWhatsAppMediaAuthHeaders()
-      if (!cancelled) setSource({ uri, headers })
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [uri])
-
-  if (!source) {
-    return (
-      <View className="w-56 h-40 items-center justify-center bg-gray-100 rounded-xl">
-        <ActivityIndicator color={Colors.brand.primary} />
-      </View>
-    )
-  }
-
-  if (playing) {
-    return (
-      <Video
-        source={source}
-        useNativeControls
-        resizeMode={ResizeMode.CONTAIN}
-        className="w-56 h-40 rounded-xl bg-black"
-        shouldPlay
-      />
-    )
-  }
-
-  return (
-    <Pressable
-      className="w-56 h-40 rounded-xl overflow-hidden bg-gray-900 items-center justify-center"
-      onPress={() => setPlaying(true)}
-    >
-      <FontAwesome name="play-circle" size={48} color={Colors.brand.onPrimary} />
-      <Text className="text-brand-on-primary text-xs mt-2">Tap to play</Text>
-    </Pressable>
-  )
-}
-
-function WhatsAppAudioBubble({ uri, label }: { uri: string; label: string }) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const soundRef = useRef<Audio.Sound | null>(null)
-
-  const togglePlay = useCallback(async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      if (isPlaying && soundRef.current) {
-        await soundRef.current.stopAsync()
-        await soundRef.current.unloadAsync()
-        soundRef.current = null
-        setIsPlaying(false)
-        return
-      }
-
-      const headers = await getWhatsAppMediaAuthHeaders()
-      const { sound } = await Audio.Sound.createAsync({ uri, headers })
-      soundRef.current = sound
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) return
-        if (status.didJustFinish) {
-          setIsPlaying(false)
-          void sound.unloadAsync()
-          soundRef.current = null
-        }
-      })
-      await sound.playAsync()
-      setIsPlaying(true)
-    } catch (e: unknown) {
-      showError('Failed to play audio', e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setLoading(false)
-    }
-  }, [isPlaying, loading, uri])
-
-  useEffect(() => {
-    return () => {
-      void soundRef.current?.unloadAsync()
-    }
-  }, [])
-
-  return (
-    <Pressable
-      className="flex-row items-center gap-3 min-w-[180px]"
-      onPress={() => void togglePlay()}
-    >
-      <View className="w-9 h-9 rounded-full bg-brand-primary/15 items-center justify-center">
-        <FontAwesome
-          name={isPlaying ? 'pause' : 'play'}
-          size={14}
-          color={Colors.brand.primary}
-        />
-      </View>
-      <Text className="text-[15px] text-ink flex-1" numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
-  )
-}
-
-function WhatsAppDocumentBubble({
-  uri,
-  label,
-}: {
-  uri: string
-  label: string
-}) {
+function WhatsAppDocumentBubble({ uri, label }: { uri: string; label: string }) {
   const openDocument = useCallback(async () => {
     try {
       const headers = await getWhatsAppMediaAuthHeaders()
@@ -261,80 +70,126 @@ function TextBubbleContent({ message, outgoing }: { message: ChatMessage; outgoi
   )
 }
 
-export function MessageBubble({ message, storeId }: Props) {
+function ReactionBadge({ reactions, outgoing }: { reactions: string[]; outgoing: boolean }) {
+  return (
+    <View className={cn('absolute -bottom-3 z-10', outgoing ? 'right-3' : 'left-3')}>
+      <View className="rounded-full bg-surface border border-gray-200 px-2 py-0.5 shadow-sm min-w-[28px] items-center">
+        <Text className="text-[15px] leading-[18px]">{reactions.join('')}</Text>
+      </View>
+    </View>
+  )
+}
+
+export function MessageBubble({ message, storeId, onLongPress }: Props) {
   const outgoing = message.outgoing
   const type = message.type ?? 'text'
   const mediaUrl = message.mediaUrl
-
-  if (type === 'reaction') {
-    return (
-      <View className="mb-3 self-center">
-        <View className="rounded-full bg-surface border border-gray-200 px-4 py-2">
-          <Text className="text-2xl text-center">{message.reactionEmoji ?? message.text}</Text>
-          <BubbleMeta message={message} outgoing={outgoing} />
-        </View>
-      </View>
-    )
-  }
-
   const showMedia = Boolean(mediaUrl && storeId)
+  const isMediaMessage =
+    showMedia && ['image', 'sticker', 'video', 'audio', 'document'].includes(type)
+  const hasReactions = Boolean(message.reactions?.length)
+  const [viewerMode, setViewerMode] = useState<'image' | 'video' | null>(null)
 
   return (
-    <View
-      className={cn('mb-3 max-w-[82%]', outgoing ? 'self-end' : 'self-start')}
-    >
-      <View
+    <>
+      <Pressable
         className={cn(
-          'rounded-2xl px-3.5 py-2.5 gap-1.5 overflow-hidden',
-          outgoing ? 'bg-brand-primary' : 'bg-surface border border-gray-200'
+          'max-w-[82%]',
+          hasReactions ? 'mb-5' : 'mb-3',
+          outgoing ? 'self-end' : 'self-start',
         )}
+        onLongPress={() => onLongPress?.(message)}
+        delayLongPress={350}
       >
-        {showMedia && (type === 'image' || type === 'sticker') ? (
-          <>
-            <AuthenticatedMediaImage
-              uri={mediaUrl!}
-              className={cn(
-                'rounded-xl bg-gray-100',
-                type === 'sticker' ? 'w-32 h-32' : 'w-56 h-56'
-              )}
-              contentFit={type === 'sticker' ? 'contain' : 'cover'}
-            />
-            {message.caption ? (
-              outgoing ? (
-                <Text className="text-[15px] leading-[21px] text-brand-on-primary">
-                  {message.caption}
-                </Text>
-              ) : (
-                <FormattedMessageText
-                  text={message.caption}
-                  className="text-[15px] leading-[21px] text-ink"
+        <View className="relative">
+          <View
+            className={cn(
+              'rounded-2xl gap-1.5 overflow-hidden',
+              isMediaMessage ? 'p-1' : 'px-3.5 py-2.5',
+              outgoing ? 'bg-brand-primary' : 'bg-surface border border-gray-200',
+            )}
+          >
+            {showMedia && (type === 'image' || type === 'sticker') ? (
+              <View>
+                <ChatImageBubble
+                  uri={mediaUrl!}
+                  variant={type === 'sticker' ? 'sticker' : 'image'}
+                  onPress={type === 'image' ? () => setViewerMode('image') : undefined}
                 />
-              )
-            ) : null}
-          </>
-        ) : showMedia && type === 'video' ? (
-          <>
-            <WhatsAppVideoBubble uri={mediaUrl!} />
-            {message.caption ? (
-              <FormattedMessageText
-                text={message.caption}
-                className={cn(
-                  'text-[15px] leading-[21px]',
-                  outgoing ? 'text-brand-on-primary' : 'text-ink'
-                )}
-              />
-            ) : null}
-          </>
-        ) : showMedia && type === 'audio' ? (
-          <WhatsAppAudioBubble uri={mediaUrl!} label={message.text} />
-        ) : showMedia && type === 'document' ? (
-          <WhatsAppDocumentBubble uri={mediaUrl!} label={message.caption || message.text} />
-        ) : (
-          <TextBubbleContent message={message} outgoing={outgoing} />
-        )}
+                {message.caption ? (
+                  <View className="px-2.5 pt-1.5 pb-1">
+                    {outgoing ? (
+                      <Text className="text-[15px] leading-[21px] text-brand-on-primary">
+                        {message.caption}
+                      </Text>
+                    ) : (
+                      <FormattedMessageText
+                        text={message.caption}
+                        className="text-[15px] leading-[21px] text-ink"
+                      />
+                    )}
+                  </View>
+                ) : null}
+                <View className="px-2.5 pb-1">
+                  <BubbleMeta message={message} outgoing={outgoing} overlay={type === 'image'} />
+                </View>
+              </View>
+            ) : showMedia && type === 'video' ? (
+              <>
+                <ChatVideoBubble uri={mediaUrl!} onPress={() => setViewerMode('video')} />
+                {message.caption ? (
+                  <View className="px-2.5 pt-1">
+                    <FormattedMessageText
+                      text={message.caption}
+                      className={cn(
+                        'text-[15px] leading-[21px]',
+                        outgoing ? 'text-brand-on-primary' : 'text-ink',
+                      )}
+                    />
+                  </View>
+                ) : null}
+                <View className="px-2.5 pb-1">
+                  <BubbleMeta message={message} outgoing={outgoing} />
+                </View>
+              </>
+            ) : showMedia && type === 'audio' ? (
+              <>
+                <View className="px-2.5 pt-1.5">
+                  <ChatVoiceBubble uri={mediaUrl!} outgoing={outgoing} />
+                </View>
+                <View className="px-2.5 pb-1">
+                  <BubbleMeta message={message} outgoing={outgoing} />
+                </View>
+              </>
+            ) : showMedia && type === 'document' ? (
+              <>
+                <View className="px-2.5 pt-1.5">
+                  <WhatsAppDocumentBubble uri={mediaUrl!} label={message.caption || message.text} />
+                </View>
+                <View className="px-2.5 pb-1">
+                  <BubbleMeta message={message} outgoing={outgoing} />
+                </View>
+              </>
+            ) : (
+              <>
+                <TextBubbleContent message={message} outgoing={outgoing} />
+                <BubbleMeta message={message} outgoing={outgoing} />
+              </>
+            )}
+          </View>
 
-        {type !== 'reaction' ? <BubbleMeta message={message} outgoing={outgoing} /> : null}
-      </View>
-    </View>
+          {hasReactions ? (
+            <ReactionBadge reactions={message.reactions!} outgoing={outgoing} />
+          ) : null}
+        </View>
+      </Pressable>
+
+      <ChatMediaViewerModal
+        visible={viewerMode !== null}
+        mode={viewerMode}
+        uri={mediaUrl ?? null}
+        onClose={() => setViewerMode(null)}
+      />
+    </>
   )
 }

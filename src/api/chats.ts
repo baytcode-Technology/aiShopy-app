@@ -1,8 +1,12 @@
-import { authenticatedFetch } from '@src/api/client'
+import { ApiHttpError, authenticatedFetch, getValidAccessToken } from '@src/api/client'
 
 import { endpoints } from '@src/api/endpoints'
 
+import { env } from '@src/config/env'
+
 import { buildWhatsAppMediaUrl } from '@src/lib/whatsapp-media'
+
+import { enrichMessageFromRawPayload } from '@src/lib/prepare-whatsapp-messages'
 
 import type { ChatChannel, ChatMessage } from '@src/types/chat'
 
@@ -81,6 +85,8 @@ export type ApiMessage = {
   status?: string
 
   timestamp: string | null
+
+  raw_payload?: unknown
 
 }
 
@@ -208,6 +214,108 @@ export type ApiInstagramMessage = {
 
   timestamp: string | null
 
+}
+
+export type UploadWhatsAppMediaResponse = {
+  success: boolean
+  message: string
+  data: { store_id: number; media_id: string; mime_type: string }
+}
+
+export type SendMediaMessageResponse = {
+  success: boolean
+  message: string
+  data: {
+    store_id: number
+    conversation_id: number
+    message: ApiMessage
+    meta_message_id: string
+  }
+}
+
+export type ForwardMessageResponse = SendMediaMessageResponse
+
+export async function uploadWhatsAppMedia(input: {
+  storeId: number
+  kind: 'image' | 'audio' | 'video'
+  uri: string
+  name: string
+  type: string
+}): Promise<UploadWhatsAppMediaResponse> {
+  const token = await getValidAccessToken()
+  const qs = new URLSearchParams({ store_id: String(input.storeId) }).toString()
+  const formData = new FormData()
+  formData.append('kind', input.kind)
+  formData.append('file', {
+    uri: input.uri,
+    name: input.name,
+    type: input.type,
+  } as unknown as Blob)
+
+  const base = env.apiBaseUrl.replace(/\/$/, '')
+  const res = await fetch(`${base}${endpoints.whatsappMediaUpload}?${qs}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+
+  const text = await res.text()
+  let body: UploadWhatsAppMediaResponse | null = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = null
+  }
+
+  if (!res.ok) {
+    throw new ApiHttpError(
+      (body as { message?: string } | null)?.message || res.statusText,
+      res.status,
+      body,
+    )
+  }
+
+  return body as UploadWhatsAppMediaResponse
+}
+
+export async function sendWhatsAppMediaMessage(input: {
+  storeId: number
+  to: string
+  conversationId?: number
+  type: 'image' | 'audio' | 'video'
+  mediaId: string
+  mimeType?: string
+  caption?: string
+  voice?: boolean
+}): Promise<SendMediaMessageResponse> {
+  return authenticatedFetch<SendMediaMessageResponse>(endpoints.whatsappSendMedia, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      to: input.to,
+      conversationId: input.conversationId,
+      type: input.type,
+      mediaId: input.mediaId,
+      mimeType: input.mimeType,
+      caption: input.caption,
+      voice: input.voice,
+    }),
+  })
+}
+
+export async function forwardWhatsAppMessage(input: {
+  storeId: number
+  sourceMessageId: number
+  targetConversationId: number
+}): Promise<ForwardMessageResponse> {
+  return authenticatedFetch<ForwardMessageResponse>(endpoints.whatsappForward, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      sourceMessageId: input.sourceMessageId,
+      targetConversationId: input.targetConversationId,
+    }),
+  })
 }
 
 
@@ -414,6 +522,7 @@ function mapMessageFields(
     media_id?: string | null
     mime_type?: string | null
     caption?: string | null
+    raw_payload?: unknown
     status?: string
     timestamp: string | null
   },
@@ -426,26 +535,38 @@ function mapMessageFields(
       })
     : ''
 
-  const mediaId = m.media_id?.trim() || undefined
+  const enriched = enrichMessageFromRawPayload({
+    type: m.type,
+    textBody: m.text_body,
+    mediaId: m.media_id,
+    mimeType: m.mime_type,
+    caption: m.caption,
+    rawPayload: m.raw_payload,
+  })
+
+  const mediaId = enriched.mediaId
   const reactionEmoji =
     m.type === 'reaction'
-      ? m.text_body?.replace(/^Reacted\s+/u, '').trim() || undefined
+      ? (enriched.reactionEmoji ??
+          enriched.textBody.replace(/^Reacted\s+/u, '').trim()) ||
+        undefined
       : undefined
 
   return {
     id: m.id,
     metaMessageId: m.meta_message_id,
     type: m.type,
-    text: m.text_body?.trim() || `[${m.type}]`,
+    text: enriched.textBody,
     time,
     outgoing: m.direction === 'outbound',
     status: m.status as ChatMessage['status'],
     mediaId,
-    mimeType: m.mime_type?.trim() || undefined,
-    caption: m.caption?.trim() || undefined,
+    mimeType: enriched.mimeType,
+    caption: enriched.caption,
     mediaUrl:
       mediaId && storeId ? buildWhatsAppMediaUrl(mediaId, storeId) : undefined,
     reactionEmoji,
+    reactionTargetId: enriched.reactionTargetId,
   }
 }
 
@@ -473,6 +594,7 @@ type SocketMessageShape = {
   media_id?: string | null
   mime_type?: string | null
   caption?: string | null
+  raw_payload?: unknown
   status: string
   timestamp: string | null
 }

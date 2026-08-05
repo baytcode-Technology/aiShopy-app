@@ -1,15 +1,21 @@
 import { MessageBubble } from "@/components/chat/MessageBubble";
+import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
+import { ChatMessageActionsSheet } from "@/components/chat/ChatMessageActionsSheet";
+import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
 import { HeaderActionsRow } from "@/components/navigation/HeaderActionsRow";
-import { IconButton } from "@/components/ui/IconButton";
 import { LinkText, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   fetchChatMessages,
   fetchInstagramMessages,
+  forwardWhatsAppMessage,
   mapApiMessageToChatMessage,
   mapSocketMessageToChatMessage,
   sendChatMessage,
+  sendWhatsAppMediaMessage,
+  uploadWhatsAppMedia,
 } from "@src/api/chats";
+import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
@@ -26,7 +32,6 @@ import {
   Platform,
   Pressable,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -69,6 +74,10 @@ export default function ChatDetailScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null);
+  const [actionsVisible, setActionsVisible] = useState(false);
+  const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
+  const [forwardVisible, setForwardVisible] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   const idRaw = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
@@ -121,7 +130,11 @@ export default function ChatDetailScreen() {
           .slice()
           .reverse()
           .map((m) => mapApiMessageToChatMessage(m, store.id));
-        setMessages(mapped);
+        setMessages(
+          channel === "whatsapp"
+            ? prepareWhatsAppMessagesForDisplay(mapped)
+            : mapped,
+        );
       } catch (e: unknown) {
         if (!silent) {
           showError(
@@ -208,12 +221,16 @@ export default function ChatDetailScreen() {
             (m) =>
               m.id === incoming.id ||
               (incoming.metaMessageId &&
-                m.metaMessageId === incoming.metaMessageId),
+                m.metaMessageId === incoming.metaMessageId &&
+                incoming.type !== 'reaction'),
           )
         ) {
           return prev;
         }
-        return dedupeByIdAndMeta([...prev, incoming]);
+        const next = dedupeByIdAndMeta([...prev, incoming]);
+        return channel === "whatsapp"
+          ? prepareWhatsAppMessagesForDisplay(next)
+          : next;
       });
       if (payload.message.direction === "inbound") {
         scheduleMarkReadRef.current();
@@ -243,7 +260,76 @@ export default function ChatDetailScreen() {
       unsubIg();
       unsubStatus();
     };
-  }, [conversationId, store?.id, onMessageNew, onInstagramMessageNew, onMessageStatus]);
+  }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus]);
+
+  const previewForMediaType = (type: OutboundMediaPayload["type"]) => {
+    if (type === "image") return "Photo";
+    if (type === "video") return "Video";
+    return "Voice message";
+  };
+
+  const sendMediaMessage = async (payload: OutboundMediaPayload) => {
+    if (!store?.id || isSending || channel !== "whatsapp") return;
+
+    const tempId = -Date.now();
+    const now = new Date();
+    const time = now.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        type: payload.type,
+        text: previewForMediaType(payload.type),
+        time,
+        outgoing: true,
+        status: "pending",
+        pending: true,
+      },
+    ]);
+    setIsSending(true);
+
+    try {
+      const uploaded = await uploadWhatsAppMedia({
+        storeId: store.id,
+        kind: payload.type,
+        uri: payload.uri,
+        name: payload.name,
+        type: payload.mimeType,
+      });
+
+      const res = await sendWhatsAppMediaMessage({
+        storeId: store.id,
+        to: customerPhone,
+        conversationId,
+        type: payload.type,
+        mediaId: uploaded.data.media_id,
+        mimeType: uploaded.data.mime_type,
+        voice: payload.voice,
+      });
+
+      setMessages((prev) =>
+        dedupeByIdAndMeta(
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  ...mapApiMessageToChatMessage(res.data.message, store.id),
+                  pending: false,
+                }
+              : m,
+          ),
+        ),
+      );
+    } catch (e: unknown) {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      showError(e, "Failed to send media");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   if (!Number.isFinite(conversationId)) {
     return (
@@ -365,7 +451,15 @@ export default function ChatDetailScreen() {
           data={messages}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            <MessageBubble message={item} storeId={store?.id} />
+            <MessageBubble
+              message={item}
+              storeId={store?.id}
+              onLongPress={(message) => {
+                if (channel !== "whatsapp") return;
+                setActionsMessage(message);
+                setActionsVisible(true);
+              }}
+            />
           )}
           contentContainerClassName="p-4 pb-2 flex-grow"
           onContentSizeChange={() => {
@@ -373,25 +467,49 @@ export default function ChatDetailScreen() {
           }}
         />
 
-        <View className="flex-row items-end gap-2.5 px-3 py-2.5 bg-surface border-t border-gray-200">
-          <TextInput
-            className="flex-1 min-h-11 max-h-[100px] rounded-full border border-gray-200 bg-gray-100 px-4 py-2.5 text-[15px] text-ink"
-            placeholder="Type a message"
-            placeholderTextColor={Colors.text.muted}
-            value={draft}
-            onChangeText={setDraft}
-            multiline
-            maxLength={2000}
-            editable={!isSending}
-          />
-          <IconButton
-            className="bg-brand-primary border-0 w-11 h-11"
-            onPress={() => void sendMessage()}
-          >
-            <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
-          </IconButton>
-        </View>
+        <ChatComposer
+          draft={draft}
+          onChangeDraft={setDraft}
+          onSendText={() => void sendMessage()}
+          onSendMedia={sendMediaMessage}
+          disabled={isSending}
+          channel={channel}
+        />
       </KeyboardAvoidingView>
+
+      <ChatMessageActionsSheet
+        visible={actionsVisible}
+        message={actionsMessage}
+        onClose={() => {
+          setActionsVisible(false);
+          setActionsMessage(null);
+        }}
+        onForward={(message) => {
+          setForwardMessage(message);
+          setForwardVisible(true);
+        }}
+      />
+
+      {store?.id ? (
+        <ForwardMessageModal
+          visible={forwardVisible}
+          storeId={store.id}
+          sourceConversationId={conversationId}
+          message={forwardMessage}
+          onClose={() => {
+            setForwardVisible(false);
+            setForwardMessage(null);
+          }}
+          onForward={async ({ targetConversationId }) => {
+            if (!forwardMessage) return;
+            await forwardWhatsAppMessage({
+              storeId: store.id,
+              sourceMessageId: forwardMessage.id,
+              targetConversationId,
+            });
+          }}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

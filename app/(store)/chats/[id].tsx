@@ -59,10 +59,11 @@ export default function ChatDetailScreen() {
   const { store } = useStore();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
-  const { id, phone, channel: channelParam } = useLocalSearchParams<{
+  const { id, phone, channel: channelParam, displayName } = useLocalSearchParams<{
     id: string;
     phone?: string;
     channel?: string;
+    displayName?: string;
   }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -73,6 +74,10 @@ export default function ChatDetailScreen() {
   const idRaw = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
   const conversationId = idRaw ? Number(idRaw) : NaN;
   const customerPhone = typeof phone === "string" ? phone : "";
+  const headerLabel =
+    typeof displayName === "string" && displayName.trim()
+      ? displayName.trim()
+      : customerPhone;
   const chatsListHref = "/(store)/chats" as Href;
 
   useNavigateBackTo(chatsListHref);
@@ -91,8 +96,8 @@ export default function ChatDetailScreen() {
     if (channel === "instagram" && customerPhone && !customerPhone.startsWith("@")) {
       return customerPhone.length > 12 ? `IG ${customerPhone.slice(0, 8)}…` : customerPhone;
     }
-    return customerPhone || "Chat";
-  }, [channel, customerPhone]);
+    return headerLabel || "Chat";
+  }, [channel, customerPhone, headerLabel]);
 
   const loadMessages = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -115,7 +120,7 @@ export default function ChatDetailScreen() {
         const mapped = res.data.messages
           .slice()
           .reverse()
-          .map((m) => mapApiMessageToChatMessage(m));
+          .map((m) => mapApiMessageToChatMessage(m, store.id));
         setMessages(mapped);
       } catch (e: unknown) {
         if (!silent) {
@@ -195,9 +200,9 @@ export default function ChatDetailScreen() {
         timestamp: string | null;
       };
     }) => {
-      if (payload.conversationId !== conversationId) return;
+      if (payload.conversationId !== conversationId || !store?.id) return;
       setMessages((prev) => {
-        const incoming = mapSocketMessageToChatMessage(payload.message);
+        const incoming = mapSocketMessageToChatMessage(payload.message, store.id);
         if (
           prev.some(
             (m) =>
@@ -238,7 +243,7 @@ export default function ChatDetailScreen() {
       unsubIg();
       unsubStatus();
     };
-  }, [conversationId, onMessageNew, onInstagramMessageNew, onMessageStatus]);
+  }, [conversationId, store?.id, onMessageNew, onInstagramMessageNew, onMessageStatus]);
 
   if (!Number.isFinite(conversationId)) {
     return (
@@ -292,7 +297,7 @@ export default function ChatDetailScreen() {
           prev.map((m) =>
             m.id === tempId
               ? {
-                  ...mapApiMessageToChatMessage(res.data.message),
+                  ...mapApiMessageToChatMessage(res.data.message, store.id),
                   pending: false,
                 }
               : m,
@@ -359,7 +364,9 @@ export default function ChatDetailScreen() {
           ref={listRef}
           data={messages}
           keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <MessageBubble message={item} />}
+          renderItem={({ item }) => (
+            <MessageBubble message={item} storeId={store?.id} />
+          )}
           contentContainerClassName="p-4 pb-2 flex-grow"
           onContentSizeChange={() => {
             listRef.current?.scrollToEnd({ animated: true });

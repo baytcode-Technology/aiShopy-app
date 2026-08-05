@@ -67,6 +67,7 @@ export default function RootLayout() {
             <Stack.Screen name="create-store" />
             <Stack.Screen name="(store)" />
             <Stack.Screen name="connect-whatsapp" />
+            <Stack.Screen name="whatsapp-oauth" options={{ animation: 'none' }} />
             <Stack.Screen name="admin-dashboard" />
             <Stack.Screen name="instagram-connect" />
             <Stack.Screen name="chat-boat" />

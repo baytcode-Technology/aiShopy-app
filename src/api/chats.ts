@@ -2,7 +2,9 @@ import { authenticatedFetch } from '@src/api/client'
 
 import { endpoints } from '@src/api/endpoints'
 
-import type { ChatChannel } from '@src/types/chat'
+import { buildWhatsAppMediaUrl } from '@src/lib/whatsapp-media'
+
+import type { ChatChannel, ChatMessage } from '@src/types/chat'
 
 
 
@@ -13,6 +15,8 @@ export type ApiConversation = {
   store_id: number
 
   customer_wa_number: string
+
+  customer_name?: string | null
 
   last_message_at: string | null
 
@@ -67,6 +71,12 @@ export type ApiMessage = {
   type: string
 
   text_body: string | null
+
+  media_id?: string | null
+
+  mime_type?: string | null
+
+  caption?: string | null
 
   status?: string
 
@@ -394,125 +404,76 @@ export async function markChatRead(input: {
 
 
 
-export function mapApiMessageToChatMessage(m: ApiMessage) {
-
+function mapMessageFields(
+  m: {
+    id: number
+    meta_message_id?: string
+    direction: string
+    type: string
+    text_body: string | null
+    media_id?: string | null
+    mime_type?: string | null
+    caption?: string | null
+    status?: string
+    timestamp: string | null
+  },
+  storeId?: number
+): ChatMessage {
   const time = m.timestamp
-
     ? new Date(m.timestamp).toLocaleTimeString([], {
-
         hour: '2-digit',
-
         minute: '2-digit',
-
       })
-
     : ''
 
-
+  const mediaId = m.media_id?.trim() || undefined
+  const reactionEmoji =
+    m.type === 'reaction'
+      ? m.text_body?.replace(/^Reacted\s+/u, '').trim() || undefined
+      : undefined
 
   return {
-
     id: m.id,
-
     metaMessageId: m.meta_message_id,
-
-    text: m.text_body ?? `[${m.type}]`,
-
+    type: m.type,
+    text: m.text_body?.trim() || `[${m.type}]`,
     time,
-
     outgoing: m.direction === 'outbound',
-
-    status: m.status as
-
-      | 'pending'
-
-      | 'sent'
-
-      | 'delivered'
-
-      | 'read'
-
-      | 'failed'
-
-      | 'received'
-
-      | undefined,
-
+    status: m.status as ChatMessage['status'],
+    mediaId,
+    mimeType: m.mime_type?.trim() || undefined,
+    caption: m.caption?.trim() || undefined,
+    mediaUrl:
+      mediaId && storeId ? buildWhatsAppMediaUrl(mediaId, storeId) : undefined,
+    reactionEmoji,
   }
-
 }
 
-
+export function mapApiMessageToChatMessage(m: ApiMessage, storeId: number) {
+  return mapMessageFields(m, storeId)
+}
 
 export function mapSocketMessageToChatMessage(
-
-  m: SendMessageResponse['data']['message'] | SocketMessageShape
-
+  m: SendMessageResponse['data']['message'] | SocketMessageShape,
+  storeId: number
 ) {
-
-  const time = m.timestamp
-
-    ? new Date(m.timestamp).toLocaleTimeString([], {
-
-        hour: '2-digit',
-
-        minute: '2-digit',
-
-      })
-
-    : ''
-
-
-
-  return {
-
-    id: m.id,
-
-    metaMessageId: 'meta_message_id' in m ? m.meta_message_id : undefined,
-
-    text: m.text_body ?? `[${m.type}]`,
-
-    time,
-
-    outgoing: m.direction === 'outbound',
-
-    status: m.status as
-
-      | 'pending'
-
-      | 'sent'
-
-      | 'delivered'
-
-      | 'read'
-
-      | 'failed'
-
-      | 'received'
-
-      | undefined,
-
-  }
-
+  return mapMessageFields(m, storeId)
 }
 
-
+export function messagePreviewText(m: { text_body: string | null; type: string }): string {
+  return m.text_body?.trim() || `[${m.type}]`
+}
 
 type SocketMessageShape = {
-
   id: number
-
   meta_message_id?: string
-
   direction: string
-
   type: string
-
   text_body: string | null
-
+  media_id?: string | null
+  mime_type?: string | null
+  caption?: string | null
   status: string
-
   timestamp: string | null
-
 }
 

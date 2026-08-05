@@ -9,7 +9,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { fetchAllChats } from "@src/api/chats";
+import { fetchAllChats, messagePreviewText } from "@src/api/chats";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
@@ -41,25 +41,34 @@ function formatTime(iso: string | null) {
   });
 }
 
+function formatWaPhone(phone: string): string {
+  const trimmed = phone.trim()
+  if (!trimmed) return phone
+  return trimmed.startsWith('+') ? trimmed : `+${trimmed}`
+}
+
 function mapWhatsAppConversation(c: {
   id: number;
   customer_wa_number: string;
+  customer_name?: string | null;
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count?: number;
 }): ChatListItem {
   const phone = c.customer_wa_number;
+  const name = c.customer_name?.trim();
+  const title = name || formatWaPhone(phone);
   return {
     id: c.id,
     channel: "whatsapp",
-    title: phone,
+    title,
     subtitle: c.last_message_preview ?? "—",
     time: formatTime(c.last_message_at),
     sortAt: c.last_message_at,
     unread: c.unread_count ?? 0,
     online: false,
     phone,
-    initials: initialsFromLabel(phone, "WA"),
+    initials: initialsFromLabel(title, "WA"),
   };
 }
 
@@ -205,7 +214,7 @@ export default function MessagesListScreen() {
         const isInbound = payload.message.direction === "inbound";
         const updated: ChatListItem = {
           ...existing,
-          subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
+          subtitle: messagePreviewText(payload.message),
           time,
           sortAt,
           unread: isInbound
@@ -248,7 +257,7 @@ export default function MessagesListScreen() {
         const isInbound = payload.message.direction === "inbound";
         const updated: ChatListItem = {
           ...existing,
-          subtitle: payload.message.text_body ?? `[${payload.message.type}]`,
+          subtitle: messagePreviewText(payload.message),
           time,
           sortAt,
           unread: isInbound
@@ -359,7 +368,11 @@ export default function MessagesListScreen() {
               onPress={() =>
                 router.push({
                   pathname: `/(store)/chats/${item.id}`,
-                  params: { phone: item.phone, channel: item.channel },
+                  params: {
+                    phone: item.phone,
+                    channel: item.channel,
+                    displayName: item.title,
+                  },
                 } as unknown as Href)
               }
             />

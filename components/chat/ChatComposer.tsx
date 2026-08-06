@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pressable, Text, TextInput, View } from 'react-native'
+import { InteractionManager, Pressable, Text, TextInput, View } from 'react-native'
 import { Audio } from 'expo-av'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { ChatAttachSheet } from '@/components/chat/ChatAttachSheet'
+import { ChatMediaComposeBar } from '@/components/chat/ChatMediaComposeBar'
 import { IconButton } from '@/components/ui/IconButton'
 import { showError } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { ChatChannel } from '@src/types/chat'
 
 const MAX_MEDIA_SELECTION = 10
+const ATTACH_SHEET_CLOSE_MS = 350
 
 export type OutboundMediaPayload = {
   type: 'image' | 'audio' | 'video'
@@ -17,6 +19,7 @@ export type OutboundMediaPayload = {
   name: string
   mimeType: string
   voice?: boolean
+  caption?: string
 }
 
 type Props = {
@@ -34,6 +37,19 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function inferMimeType(uri: string, isVideo: boolean): string {
+  const lower = uri.toLowerCase()
+  if (isVideo) {
+    if (lower.includes('.mov')) return 'video/quicktime'
+    if (lower.includes('.3gp')) return 'video/3gpp'
+    return 'video/mp4'
+  }
+  if (lower.includes('.png')) return 'image/png'
+  if (lower.includes('.webp')) return 'image/webp'
+  if (lower.includes('.heic') || lower.includes('.heif')) return 'image/heic'
+  return 'image/jpeg'
+}
+
 function assetToPayload(
   asset: ImagePicker.ImagePickerAsset,
   index: number,
@@ -41,12 +57,21 @@ function assetToPayload(
   const isVideo = asset.type === 'video' || asset.mimeType?.startsWith('video/')
   const type = isVideo ? 'video' : 'image'
   const ext = isVideo ? 'mp4' : 'jpg'
+  const mimeType = asset.mimeType?.trim() || inferMimeType(asset.uri, isVideo)
   return {
     type,
     uri: asset.uri,
     name: asset.fileName ?? `${type}-${Date.now()}-${index}.${ext}`,
-    mimeType: asset.mimeType ?? (isVideo ? 'video/mp4' : 'image/jpeg'),
+    mimeType,
   }
+}
+
+function mergePendingMedia(
+  current: OutboundMediaPayload[],
+  incoming: OutboundMediaPayload[],
+): OutboundMediaPayload[] {
+  const merged = [...current, ...incoming]
+  return merged.slice(0, MAX_MEDIA_SELECTION)
 }
 
 export function ChatComposer({
@@ -63,12 +88,33 @@ export function ChatComposer({
   const [recordSeconds, setRecordSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
   const [attachOpen, setAttachOpen] = useState(false)
+  const [pendingMedia, setPendingMedia] = useState<OutboundMediaPayload[]>([])
+  const [mediaCaption, setMediaCaption] = useState('')
 
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
       void recordingRef.current?.stopAndUnloadAsync()
     }
+  }, [])
+
+  const runAfterAttachSheetCloses = useCallback((action: () => void | Promise<void>) => {
+    setAttachOpen(false)
+    InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => {
+        void action()
+      }, ATTACH_SHEET_CLOSE_MS)
+    })
+  }, [])
+
+  const stageMedia = useCallback((payloads: OutboundMediaPayload[]) => {
+    if (!payloads.length) return
+    setPendingMedia((current) => mergePendingMedia(current, payloads))
+  }, [])
+
+  const clearPendingMedia = useCallback(() => {
+    setPendingMedia([])
+    setMediaCaption('')
   }, [])
 
   const pickMedia = useCallback(
@@ -80,55 +126,76 @@ export function ChatComposer({
         return
       }
 
+      const remaining = MAX_MEDIA_SELECTION - pendingMedia.length
+      if (remaining <= 0) {
+        showError('Limit reached', `You can send up to ${MAX_MEDIA_SELECTION} items at a time`)
+        return
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: kind === 'image' ? ['images'] : ['videos'],
         allowsMultipleSelection: true,
-        selectionLimit: MAX_MEDIA_SELECTION,
+        selectionLimit: remaining,
         quality: 0.85,
         videoMaxDuration: 120,
       })
 
       if (result.canceled || !result.assets.length) return
 
-      const payloads = result.assets.map((asset, index) => assetToPayload(asset, index))
-      setBusy(true)
-      try {
-        await onSendMedia(payloads.length === 1 ? payloads[0] : payloads)
-      } catch (e: unknown) {
-        showError('Failed to send media', e instanceof Error ? e.message : 'Unknown error')
-      } finally {
-        setBusy(false)
-      }
+      stageMedia(result.assets.map((asset, index) => assetToPayload(asset, index)))
     },
-    [busy, channel, disabled, onSendMedia],
+    [busy, channel, disabled, pendingMedia.length, stageMedia],
   )
 
   const captureFromCamera = useCallback(async () => {
     if (disabled || busy || channel !== 'whatsapp') return
+
+    if (pendingMedia.length >= MAX_MEDIA_SELECTION) {
+      showError('Limit reached', `You can send up to ${MAX_MEDIA_SELECTION} items at a time`)
+      return
+    }
+
     const permission = await ImagePicker.requestCameraPermissionsAsync()
     if (!permission.granted) {
-      showError('Permission required', 'Allow camera access to take photos and videos')
+      showError('Permission required', 'Allow camera access to take photos')
       return
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images', 'videos'],
+      mediaTypes: ['images'],
       quality: 0.85,
-      videoMaxDuration: 120,
       exif: false,
     })
 
     if (result.canceled || !result.assets[0]) return
 
+    stageMedia([assetToPayload(result.assets[0], 0)])
+  }, [busy, channel, disabled, pendingMedia.length, stageMedia])
+
+  const sendPendingMedia = useCallback(async () => {
+    if (!pendingMedia.length || disabled || busy) return
+
+    const caption = mediaCaption.trim()
+    const payloads = pendingMedia.map((item, index) => ({
+      ...item,
+      caption:
+        caption && index === pendingMedia.length - 1
+          ? caption
+          : undefined,
+    }))
+
+    clearPendingMedia()
     setBusy(true)
     try {
-      await onSendMedia(assetToPayload(result.assets[0], 0))
+      await onSendMedia(payloads.length === 1 ? payloads[0] : payloads)
     } catch (e: unknown) {
-      showError('Failed to send media', e instanceof Error ? e.message : 'Unknown error')
+      showError(e, 'Failed to send media')
+      setPendingMedia(payloads)
+      setMediaCaption(caption)
     } finally {
       setBusy(false)
     }
-  }, [busy, channel, disabled, onSendMedia])
+  }, [busy, clearPendingMedia, disabled, mediaCaption, onSendMedia, pendingMedia])
 
   const showAttachMenu = useCallback(() => {
     if (channel !== 'whatsapp' || disabled || busy) return
@@ -236,6 +303,33 @@ export function ChatComposer({
     )
   }
 
+  if (pendingMedia.length > 0) {
+    return (
+      <>
+        <ChatMediaComposeBar
+          items={pendingMedia}
+          caption={mediaCaption}
+          onChangeCaption={setMediaCaption}
+          onRemoveAt={(index) => {
+            setPendingMedia((current) => current.filter((_, i) => i !== index))
+          }}
+          onCancel={clearPendingMedia}
+          onSend={() => void sendPendingMedia()}
+          onAddMore={showAttachMenu}
+          disabled={disabled || busy}
+        />
+
+        <ChatAttachSheet
+          visible={attachOpen}
+          onClose={() => setAttachOpen(false)}
+          onPickPhoto={() => runAfterAttachSheetCloses(() => pickMedia('image'))}
+          onPickVideo={() => runAfterAttachSheetCloses(() => pickMedia('video'))}
+          onOpenCamera={() => runAfterAttachSheetCloses(() => captureFromCamera())}
+        />
+      </>
+    )
+  }
+
   return (
     <>
       <View className="flex-row items-end gap-2 px-3 py-2.5">
@@ -281,9 +375,9 @@ export function ChatComposer({
       <ChatAttachSheet
         visible={attachOpen}
         onClose={() => setAttachOpen(false)}
-        onPickPhoto={() => void pickMedia('image')}
-        onPickVideo={() => void pickMedia('video')}
-        onOpenCamera={() => void captureFromCamera()}
+        onPickPhoto={() => runAfterAttachSheetCloses(() => pickMedia('image'))}
+        onPickVideo={() => runAfterAttachSheetCloses(() => pickMedia('video'))}
+        onOpenCamera={() => runAfterAttachSheetCloses(() => captureFromCamera())}
       />
     </>
   )

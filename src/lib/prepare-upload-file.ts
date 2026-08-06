@@ -15,13 +15,13 @@ function mimeFromName(name: string): string {
   return "image/jpeg";
 }
 
-function canUseUriDirectly(uri: string): boolean {
-  return (
-    Platform.OS === "web" ||
-    uri.startsWith("file://") ||
-    uri.startsWith("blob:") ||
-    uri.startsWith("data:")
-  );
+function needsCacheStaging(uri: string): boolean {
+  if (Platform.OS === "web") return false;
+  if (uri.startsWith("blob:") || uri.startsWith("data:")) return false;
+  // Camera captures on Android use file:// under ImagePicker cache; uploadAsync
+  // cannot read those paths reliably unless we copy into app cache first.
+  if (Platform.OS === "android") return true;
+  return !uri.startsWith("file://");
 }
 
 function normalizePathUri(uri: string): string {
@@ -54,7 +54,7 @@ export async function prepareUploadFile(
   const safeName = name.replace(/[^\w.-]+/g, "_") || `image-${Date.now()}.jpg`;
   const mime = type?.trim() || mimeFromName(safeName);
 
-  if (canUseUriDirectly(normalizedUri)) {
+  if (!needsCacheStaging(normalizedUri)) {
     return { uri: normalizedUri, name: safeName, type: mime };
   }
 
@@ -67,9 +67,14 @@ export async function prepareUploadFile(
   try {
     await FileSystem.copyAsync({ from: normalizedUri, to: dest });
     return { uri: dest, name: safeName, type: mime };
-  } catch {
+  } catch (err) {
     if (normalizedUri.startsWith("content://")) {
       throw new Error("Could not read media from device storage");
+    }
+    if (Platform.OS === "android") {
+      const message =
+        err instanceof Error ? err.message : "Could not prepare media for upload";
+      throw new Error(message);
     }
     return { uri: normalizedUri, name: safeName, type: mime };
   }

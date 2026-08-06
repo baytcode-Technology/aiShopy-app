@@ -65,28 +65,19 @@ export function ChatAttachSheet({
               label="Photo"
               icon="picture-o"
               backgroundColor="#25D366"
-              onPress={() => {
-                onClose()
-                onPickPhoto()
-              }}
+              onPress={onPickPhoto}
             />
             <AttachTile
               label="Video"
               icon="video-camera"
               backgroundColor="#7C3AED"
-              onPress={() => {
-                onClose()
-                onPickVideo()
-              }}
+              onPress={onPickVideo}
             />
             <AttachTile
               label="Camera"
               icon="camera"
               backgroundColor="#2563EB"
-              onPress={() => {
-                onClose()
-                onOpenCamera()
-              }}
+              onPress={onOpenCamera}
             />
           </View>
 

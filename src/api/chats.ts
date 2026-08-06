@@ -4,8 +4,6 @@ import { endpoints } from '@src/api/endpoints'
 
 import { env } from '@src/config/env'
 
-import * as FileSystem from 'expo-file-system/legacy'
-
 import { buildWhatsAppMediaUrl } from '@src/lib/whatsapp-media'
 
 import { enrichMessageFromRawPayload } from '@src/lib/prepare-whatsapp-messages'
@@ -239,6 +237,72 @@ export type SendMediaMessageResponse = {
 
 export type ForwardMessageResponse = SendMediaMessageResponse
 
+function parseUploadErrorBody(body: unknown, fallback: string): string {
+  if (typeof body === 'object' && body !== null) {
+    if ('error' in body) {
+      const message = (body as { error?: { message?: string } }).error?.message
+      if (message) return message
+    }
+    if ('message' in body && typeof (body as { message?: string }).message === 'string') {
+      return (body as { message: string }).message
+    }
+  }
+  return fallback
+}
+
+async function postWhatsAppMediaUpload(
+  uploadUrl: string,
+  prepared: { uri: string; name: string; type: string },
+  input: { kind: 'image' | 'audio' | 'video'; voice?: boolean },
+  token: string,
+): Promise<UploadWhatsAppMediaResponse> {
+  const formData = new FormData()
+  formData.append('file', {
+    uri: prepared.uri,
+    name: prepared.name,
+    type: prepared.type,
+  } as unknown as Blob)
+  formData.append('kind', input.kind)
+  if (input.voice) {
+    formData.append('voice', 'true')
+  }
+
+  let res: Response
+  try {
+    res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Network request failed while uploading media'
+    throw new ApiHttpError(message, 0, null)
+  }
+
+  const text = await res.text()
+  let body: unknown = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = text
+  }
+
+  if (!res.ok) {
+    throw new ApiHttpError(
+      parseUploadErrorBody(body, res.statusText || 'Upload failed'),
+      res.status,
+      body,
+    )
+  }
+
+  return body as UploadWhatsAppMediaResponse
+}
+
 export async function uploadWhatsAppMedia(input: {
   storeId: number
   kind: 'image' | 'audio' | 'video'
@@ -263,7 +327,6 @@ export async function uploadWhatsAppMedia(input: {
     )
   }
 
-  const token = await getValidAccessToken()
   const qs = new URLSearchParams({
     store_id: String(input.storeId),
     kind: input.kind,
@@ -273,36 +336,8 @@ export async function uploadWhatsAppMedia(input: {
   const base = env.apiBaseUrl.replace(/\/$/, '')
   const uploadUrl = `${base}${endpoints.whatsappMediaUpload}?${qs}`
 
-  const uploadResult = await FileSystem.uploadAsync(uploadUrl, prepared.uri, {
-    httpMethod: 'POST',
-    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-    fieldName: 'file',
-    mimeType: prepared.type,
-    parameters: {
-      kind: input.kind,
-      ...(input.voice ? { voice: 'true' } : {}),
-    },
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  let body: UploadWhatsAppMediaResponse | null = null
-  try {
-    body = uploadResult.body ? JSON.parse(uploadResult.body) : null
-  } catch {
-    body = null
-  }
-
-  if (uploadResult.status < 200 || uploadResult.status >= 300) {
-    throw new ApiHttpError(
-      (body as { message?: string } | null)?.message || 'Upload failed',
-      uploadResult.status,
-      body,
-    )
-  }
-
-  return body as UploadWhatsAppMediaResponse
+  const token = await getValidAccessToken()
+  return postWhatsAppMediaUpload(uploadUrl, prepared, input, token)
 }
 
 export async function sendWhatsAppMediaMessage(input: {

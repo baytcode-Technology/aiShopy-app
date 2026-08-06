@@ -361,7 +361,11 @@ export default function ChatDetailScreen() {
     };
   }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus]);
 
-  const previewForMediaType = (type: OutboundMediaPayload["type"]) => {
+  const previewForMediaType = (
+    type: OutboundMediaPayload["type"],
+    caption?: string,
+  ) => {
+    if (caption?.trim()) return caption.trim();
     if (type === "image") return "Photo";
     if (type === "video") return "Video";
     return "Voice message";
@@ -383,7 +387,8 @@ export default function ChatDetailScreen() {
       {
         id: tempId,
         type: payload.type,
-        text: previewForMediaType(payload.type),
+        text: previewForMediaType(payload.type, payload.caption),
+        caption: payload.caption,
         time,
         outgoing: true,
         status: "pending",
@@ -410,6 +415,7 @@ export default function ChatDetailScreen() {
         type: payload.type,
         mediaId: uploaded.data.media_id,
         mimeType: uploaded.data.mime_type,
+        caption: payload.caption,
         voice: payload.voice === true,
       });
 

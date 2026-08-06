@@ -53,7 +53,9 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   const out: ChatMessage[] = [];
 
   for (const m of list) {
-    const key = m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`;
+    const key =
+      m.clientKey ??
+      (m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(m);
@@ -62,17 +64,40 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   return out;
 }
 
+function patchOutgoingWithServer(
+  existing: ChatMessage,
+  server: ChatMessage,
+): ChatMessage {
+  return {
+    ...existing,
+    id: server.id,
+    metaMessageId: server.metaMessageId ?? existing.metaMessageId,
+    type: server.type ?? existing.type,
+    text: server.text,
+    time: server.time || existing.time,
+    status: server.status ?? "sent",
+    pending: false,
+    mediaId: server.mediaId ?? existing.mediaId,
+    mimeType: server.mimeType ?? existing.mimeType,
+    caption: server.caption ?? existing.caption,
+    mediaUrl: server.mediaUrl ?? existing.mediaUrl,
+    clientKey: existing.clientKey,
+  };
+}
+
+const INITIAL_MESSAGE_LIMIT = 20;
 const MESSAGE_PAGE_SIZE = 25;
 
 export default function ChatDetailScreen() {
   const { store } = useStore();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
-  const { id, phone, channel: channelParam, displayName } = useLocalSearchParams<{
+  const { id, phone, channel: channelParam, displayName, unread } = useLocalSearchParams<{
     id: string;
     phone?: string;
     channel?: string;
     displayName?: string;
+    unread?: string;
   }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -86,12 +111,28 @@ export default function ChatDetailScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
-  const initialScrollDoneRef = useRef(false);
   const stickToBottomRef = useRef(true);
+  const shouldAutoScrollRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
+
+  const unreadCount = useMemo(() => {
+    const raw =
+      typeof unread === "string" ? unread : Array.isArray(unread) ? unread[0] : "0";
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [unread]);
+
+  const initialLimit = Math.max(INITIAL_MESSAGE_LIMIT, unreadCount);
 
   const scrollToBottom = useCallback((animated: boolean) => {
-    listRef.current?.scrollToEnd({ animated });
+    listRef.current?.scrollToOffset({ offset: 0, animated });
   }, []);
+
+  const triggerAutoScroll = useCallback(() => {
+    shouldAutoScrollRef.current = true;
+    stickToBottomRef.current = true;
+    requestAnimationFrame(() => scrollToBottom(true));
+  }, [scrollToBottom]);
 
   const idRaw = typeof id === "string" ? id : Array.isArray(id) ? id[0] : "";
   const conversationId = idRaw ? Number(idRaw) : NaN;
@@ -125,9 +166,11 @@ export default function ChatDetailScreen() {
     async (options?: { silent?: boolean }) => {
       if (!store?.id || !Number.isFinite(conversationId)) return;
       const silent = options?.silent ?? false;
+      const isInitialLoad = !silent && !initialLoadDoneRef.current;
+      const limit = isInitialLoad ? initialLimit : MESSAGE_PAGE_SIZE;
+
       if (!silent) {
         setIsLoading(true);
-        initialScrollDoneRef.current = false;
         stickToBottomRef.current = true;
       }
       try {
@@ -136,17 +179,16 @@ export default function ChatDetailScreen() {
             ? await fetchInstagramMessages({
                 storeId: store.id,
                 conversationId,
-                limit: MESSAGE_PAGE_SIZE,
+                limit,
               })
             : await fetchChatMessages({
                 storeId: store.id,
                 conversationId,
-                limit: MESSAGE_PAGE_SIZE,
+                limit,
               });
-        const mapped = res.data.messages
-          .slice()
-          .reverse()
-          .map((m) => mapApiMessageToChatMessage(m, store.id));
+        const mapped = res.data.messages.map((m) =>
+          mapApiMessageToChatMessage(m, store.id),
+        );
         setMessages(
           channel === "whatsapp"
             ? prepareWhatsAppMessagesForDisplay(mapped)
@@ -154,8 +196,11 @@ export default function ChatDetailScreen() {
         );
         setNextCursor(res.data.nextCursor);
         setHasMore(
-          res.data.messages.length >= MESSAGE_PAGE_SIZE && Boolean(res.data.nextCursor),
+          res.data.messages.length >= limit && Boolean(res.data.nextCursor),
         );
+        if (isInitialLoad) {
+          initialLoadDoneRef.current = true;
+        }
       } catch (e: unknown) {
         if (!silent) {
           showError(
@@ -167,7 +212,7 @@ export default function ChatDetailScreen() {
         if (!silent) setIsLoading(false);
       }
     },
-    [store?.id, conversationId, channel],
+    [store?.id, conversationId, channel, initialLimit],
   );
 
   const loadOlderMessages = useCallback(async () => {
@@ -200,20 +245,20 @@ export default function ChatDetailScreen() {
               cursor: nextCursor,
             });
 
-      const older = res.data.messages
-        .slice()
-        .reverse()
-        .map((m) => mapApiMessageToChatMessage(m, store.id));
+      const older = res.data.messages.map((m) =>
+        mapApiMessageToChatMessage(m, store.id),
+      );
 
       setMessages((prev) => {
-        const merged = dedupeByIdAndMeta([...older, ...prev]);
+        const merged = dedupeByIdAndMeta([...prev, ...older]);
         return channel === "whatsapp"
           ? prepareWhatsAppMessagesForDisplay(merged)
           : merged;
       });
       setNextCursor(res.data.nextCursor);
       setHasMore(
-        res.data.messages.length >= MESSAGE_PAGE_SIZE && Boolean(res.data.nextCursor),
+        res.data.messages.length >= MESSAGE_PAGE_SIZE &&
+          Boolean(res.data.nextCursor),
       );
     } catch (e: unknown) {
       showError(
@@ -233,6 +278,7 @@ export default function ChatDetailScreen() {
   ]);
 
   useEffect(() => {
+    initialLoadDoneRef.current = false;
     void loadMessages();
   }, [loadMessages]);
 
@@ -274,25 +320,12 @@ export default function ChatDetailScreen() {
     });
   }, [conversationId, onActiveChatMessage, loadMessages]);
 
-  useEffect(() => {
-    if (messages.length === 0 || initialScrollDoneRef.current) return;
-    requestAnimationFrame(() => {
-      scrollToBottom(false);
-      initialScrollDoneRef.current = true;
-    });
-  }, [messages.length, scrollToBottom]);
-
   const handleListScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
-      if (contentOffset.y < 80 && hasMore && !loadingMore) {
-        void loadOlderMessages();
-      }
-      const nearBottom =
-        contentOffset.y + layoutMeasurement.height >= contentSize.height - 80;
-      stickToBottomRef.current = nearBottom;
+      const { contentOffset } = event.nativeEvent;
+      stickToBottomRef.current = contentOffset.y < 80;
     },
-    [hasMore, loadingMore, loadOlderMessages],
+    [],
   );
 
   useEffect(() => {
@@ -324,13 +357,12 @@ export default function ChatDetailScreen() {
         ) {
           return prev;
         }
-        const next = dedupeByIdAndMeta([...prev, incoming]);
+        const next = dedupeByIdAndMeta([incoming, ...prev]);
         return channel === "whatsapp"
           ? prepareWhatsAppMessagesForDisplay(next)
           : next;
       });
-      stickToBottomRef.current = true;
-      requestAnimationFrame(() => scrollToBottom(true));
+      triggerAutoScroll();
       if (payload.message.direction === "inbound") {
         scheduleMarkReadRef.current();
       }
@@ -359,7 +391,7 @@ export default function ChatDetailScreen() {
       unsubIg();
       unsubStatus();
     };
-  }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus]);
+  }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus, triggerAutoScroll]);
 
   const previewForMediaType = (
     type: OutboundMediaPayload["type"],
@@ -376,6 +408,7 @@ export default function ChatDetailScreen() {
     tempIdOffset = 0,
   ) => {
     const tempId = -(Date.now() + tempIdOffset);
+    const clientKey = `client-${tempId}`;
     const now = new Date();
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
@@ -383,9 +416,9 @@ export default function ChatDetailScreen() {
     });
 
     setMessages((prev) => [
-      ...prev,
       {
         id: tempId,
+        clientKey,
         type: payload.type,
         text: previewForMediaType(payload.type, payload.caption),
         caption: payload.caption,
@@ -394,9 +427,9 @@ export default function ChatDetailScreen() {
         status: "pending",
         pending: true,
       },
+      ...prev,
     ]);
-    stickToBottomRef.current = true;
-    requestAnimationFrame(() => scrollToBottom(true));
+    triggerAutoScroll();
 
     try {
       const uploaded = await uploadWhatsAppMedia({
@@ -419,20 +452,17 @@ export default function ChatDetailScreen() {
         voice: payload.voice === true,
       });
 
+      const serverMessage = mapApiMessageToChatMessage(res.data.message, store!.id);
+
       setMessages((prev) =>
-        dedupeByIdAndMeta(
-          prev.map((m) =>
-            m.id === tempId
-              ? {
-                  ...mapApiMessageToChatMessage(res.data.message, store!.id),
-                  pending: false,
-                }
-              : m,
-          ),
+        prev.map((m) =>
+          m.clientKey === clientKey
+            ? patchOutgoingWithServer(m, serverMessage)
+            : m,
         ),
       );
     } catch (e: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
       showError(e, "Failed to send media");
       throw e;
     }
@@ -474,6 +504,7 @@ export default function ChatDetailScreen() {
     if (!text || !store?.id || isSending) return;
 
     const tempId = -Date.now();
+    const clientKey = `client-${tempId}`;
     const now = new Date();
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
@@ -481,18 +512,18 @@ export default function ChatDetailScreen() {
     });
 
     setMessages((prev) => [
-      ...prev,
       {
         id: tempId,
+        clientKey,
         text,
         time,
         outgoing: true,
         status: "pending",
         pending: true,
       },
+      ...prev,
     ]);
-    stickToBottomRef.current = true;
-    requestAnimationFrame(() => scrollToBottom(true));
+    triggerAutoScroll();
     setDraft("");
     setIsSending(true);
 
@@ -505,20 +536,17 @@ export default function ChatDetailScreen() {
         channel,
       });
 
+      const serverMessage = mapApiMessageToChatMessage(res.data.message, store.id);
+
       setMessages((prev) =>
-        dedupeByIdAndMeta(
-          prev.map((m) =>
-            m.id === tempId
-              ? {
-                  ...mapApiMessageToChatMessage(res.data.message, store.id),
-                  pending: false,
-                }
-              : m,
-          ),
+        prev.map((m) =>
+          m.clientKey === clientKey
+            ? patchOutgoingWithServer(m, serverMessage)
+            : m,
         ),
       );
     } catch (e: unknown) {
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
       setDraft(text);
       showError(e, "Failed to send");
     } finally {
@@ -570,6 +598,7 @@ export default function ChatDetailScreen() {
 
       <SupportKeyboardChatLayout
         listRef={listRef}
+        onKeyboardShow={() => scrollToBottom(true)}
         composer={
           <ChatComposer
             draft={draft}
@@ -581,48 +610,52 @@ export default function ChatDetailScreen() {
           />
         }
       >
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <MessageBubble
-              message={item}
-              storeId={store?.id}
-              onLongPress={(message) => {
-                if (channel !== "whatsapp") return;
-                setActionsMessage(message);
-                setActionsVisible(true);
-              }}
-              onForward={(message) => {
-                if (channel !== "whatsapp") return;
-                setForwardMessage(message);
-                setForwardVisible(true);
-              }}
-            />
-          )}
-          contentContainerClassName="p-4 pb-2 flex-grow"
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 20,
-          }}
-          onScroll={handleListScroll}
-          scrollEventThrottle={16}
-          onContentSizeChange={() => {
-            if (stickToBottomRef.current) {
-              scrollToBottom(initialScrollDoneRef.current);
-            }
-          }}
-          ListHeaderComponent={
-            loadingMore ? (
-              <View className="py-3 items-center">
-                <ActivityIndicator color={Colors.brand.primary} size="small" />
-              </View>
-            ) : null
-          }
-        />
+        <View className="flex-1 relative">
+          {loadingMore ? (
+            <View className="absolute top-0 left-0 right-0 z-10 py-2 items-center">
+              <ActivityIndicator color={Colors.brand.primary} size="small" />
+            </View>
+          ) : null}
+          <FlatList
+            ref={listRef}
+            inverted
+            data={messages}
+            keyExtractor={(item) => item.clientKey ?? String(item.id)}
+            renderItem={({ item }) => (
+              <MessageBubble
+                message={item}
+                storeId={store?.id}
+                onLongPress={(message) => {
+                  if (channel !== "whatsapp") return;
+                  setActionsMessage(message);
+                  setActionsVisible(true);
+                }}
+                onForward={(message) => {
+                  if (channel !== "whatsapp") return;
+                  setForwardMessage(message);
+                  setForwardVisible(true);
+                }}
+              />
+            )}
+            contentContainerStyle={{
+              paddingTop: 12,
+              paddingHorizontal: 16,
+              paddingBottom: 8,
+            }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            onScroll={handleListScroll}
+            scrollEventThrottle={16}
+            onEndReached={() => void loadOlderMessages()}
+            onEndReachedThreshold={0.2}
+            onContentSizeChange={() => {
+              if (stickToBottomRef.current && shouldAutoScrollRef.current) {
+                scrollToBottom(false);
+                shouldAutoScrollRef.current = false;
+              }
+            }}
+          />
+        </View>
       </SupportKeyboardChatLayout>
 
       <ChatMessageActionsSheet

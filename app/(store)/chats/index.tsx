@@ -372,6 +372,7 @@ export default function MessagesListScreen() {
                     phone: item.phone,
                     channel: item.channel,
                     displayName: item.title,
+                    unread: String(item.unread),
                   },
                 } as unknown as Href)
               }

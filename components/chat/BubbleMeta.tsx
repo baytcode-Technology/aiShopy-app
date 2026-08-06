@@ -8,7 +8,16 @@ type Props = {
   overlay?: boolean
 }
 
+function statusLabel(message: ChatMessage): string | null {
+  if (message.pending || message.status === 'pending') return 'sending…'
+  if (!message.status || message.status === 'received') return null
+  if (message.status === 'failed') return 'failed'
+  return message.status
+}
+
 export function BubbleMeta({ message, outgoing, overlay }: Props) {
+  const status = outgoing ? statusLabel(message) : null
+
   return (
     <Caption
       className={cn(
@@ -17,8 +26,7 @@ export function BubbleMeta({ message, outgoing, overlay }: Props) {
       )}
     >
       {message.time}
-      {outgoing && message.status ? ` · ${message.status}` : ''}
-      {message.pending ? ' · sending…' : ''}
+      {status ? ` · ${status}` : ''}
     </Caption>
   )
 }

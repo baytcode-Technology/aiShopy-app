@@ -15,6 +15,8 @@ export type ChatListItem = {
 
 export type ChatMessage = {
   id: number
+  /** Stable key for optimistic sends — prevents FlatList remount on server ack. */
+  clientKey?: string
   metaMessageId?: string
   type?: string
   text: string

@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props<T = unknown> = {
   listRef?: React.RefObject<FlatList<T> | null>;
+  onKeyboardShow?: () => void;
   children: ReactNode;
   composer: ReactNode;
   footer?: ReactNode;
@@ -34,6 +35,7 @@ function ComposerBar({
 
 export function SupportKeyboardChatLayout<T = unknown>({
   listRef,
+  onKeyboardShow,
   children,
   composer,
   footer,
@@ -50,7 +52,11 @@ export function SupportKeyboardChatLayout<T = unknown>({
     const showSub = Keyboard.addListener(showEvent, (event) => {
       setKeyboardHeight(event.endCoordinates.height);
       requestAnimationFrame(() => {
-        listRef?.current?.scrollToEnd({ animated: true });
+        if (onKeyboardShow) {
+          onKeyboardShow();
+        } else {
+          listRef?.current?.scrollToEnd({ animated: true });
+        }
       });
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
@@ -61,7 +67,7 @@ export function SupportKeyboardChatLayout<T = unknown>({
       showSub.remove();
       hideSub.remove();
     };
-  }, [listRef]);
+  }, [listRef, onKeyboardShow]);
 
   const composerPaddingBottom =
     Platform.OS === "android" && keyboardHeight > 0

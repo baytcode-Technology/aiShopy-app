@@ -34,6 +34,9 @@ export function ConversationRow({ conversation, onPress }: Props) {
             <Text className="flex-1 text-base font-bold text-ink" numberOfLines={1}>
               {conversation.title}
             </Text>
+            {conversation.aiHandling ? (
+              <FontAwesome name="magic" size={12} color={Colors.brand.primary} accessibilityLabel="AI replying" />
+            ) : null}
           </View>
           <Caption>{conversation.time}</Caption>
         </View>

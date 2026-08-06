@@ -8,6 +8,11 @@ export const endpoints = {
   storesMine: "/api/stores/mine",
   storesStaff: "/api/stores/staff",
   stores: "/api/stores",
+  inboxAiSettings: (storeId: number) => `/api/stores/${storeId}/inbox-ai/settings`,
+  whatsappReplyMode: (conversationId: number, storeId: number) =>
+    `/api/whatsapp/chats/${conversationId}/reply-mode?store_id=${storeId}`,
+  instagramReplyMode: (conversationId: number, storeId: number) =>
+    `/api/instagram/chats/${conversationId}/reply-mode?store_id=${storeId}`,
   paymentConfig: "/api/stores/me/payment-config",
   paymentConfigRazorpayTestCheckout: "/api/stores/me/payment-config/razorpay/test-checkout",
   paymentConfigRazorpayVerifyTest: "/api/stores/me/payment-config/razorpay/verify-test",

@@ -17,6 +17,7 @@ import {
   sendWhatsAppMediaMessage,
   uploadWhatsAppMedia,
 } from "@src/api/chats";
+import { setChatReplyMode } from "@src/api/inbox-ai";
 import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { useStore } from "@src/contexts/store-context";
@@ -93,12 +94,13 @@ export default function ChatDetailScreen() {
   const { store } = useStore();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
-  const { id, phone, channel: channelParam, displayName, unread } = useLocalSearchParams<{
+  const { id, phone, channel: channelParam, displayName, unread, replyMode: replyModeParam } = useLocalSearchParams<{
     id: string;
     phone?: string;
     channel?: string;
     displayName?: string;
     unread?: string;
+    replyMode?: string;
   }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -109,6 +111,10 @@ export default function ChatDetailScreen() {
   const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
   const [forwardVisible, setForwardVisible] = useState(false);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [replyMode, setReplyMode] = useState<'ai' | 'manual'>(
+    replyModeParam === 'manual' ? 'manual' : 'ai',
+  );
+  const [replyModeBusy, setReplyModeBusy] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -150,6 +156,29 @@ export default function ChatDetailScreen() {
   const goBackToChats = () => router.navigate(chatsListHref);
   const channel: ChatChannel =
     channelParam === "instagram" ? "instagram" : "whatsapp";
+
+  const chatBoatActive =
+    hasPremiumAccess(store) &&
+    store?.ai_auto_reply_enabled === true &&
+    replyMode === "ai";
+
+  const toggleReplyMode = async (mode: 'ai' | 'manual') => {
+    if (!store?.id) return;
+    setReplyModeBusy(true);
+    try {
+      await setChatReplyMode({
+        channel,
+        storeId: store.id,
+        conversationId,
+        replyMode: mode,
+      });
+      setReplyMode(mode);
+    } catch (e) {
+      showError(e, "Could not update reply mode");
+    } finally {
+      setReplyModeBusy(false);
+    }
+  };
 
   useEffect(() => {
     if (store && !hasPremiumAccess(store)) {
@@ -620,6 +649,37 @@ export default function ChatDetailScreen() {
         </View>
         <HeaderActionsRow settingsTone="onPrimary" />
       </View>
+
+      {chatBoatActive ? (
+        <View className="flex-row items-center justify-between px-3 py-2 bg-emerald-50 border-b border-emerald-100">
+          <View className="flex-row items-center gap-2 flex-1 min-w-0">
+            <FontAwesome name="magic" size={14} color={Colors.brand.primary} />
+            <Text className="text-sm text-emerald-900 font-medium flex-1" numberOfLines={1}>
+              Chat Boat is replying automatically
+            </Text>
+          </View>
+          <Pressable
+            className="px-3 py-1.5 rounded-full bg-white border border-emerald-200"
+            disabled={replyModeBusy}
+            onPress={() => void toggleReplyMode('manual')}
+          >
+            <Text className="text-xs font-semibold text-emerald-800">Take over</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {!chatBoatActive && store?.ai_auto_reply_enabled && replyMode === 'manual' && hasPremiumAccess(store) ? (
+        <View className="flex-row items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+          <Text className="text-sm text-gray-600 flex-1">You are replying manually</Text>
+          <Pressable
+            className="px-3 py-1.5 rounded-full bg-brand-primary"
+            disabled={replyModeBusy}
+            onPress={() => void toggleReplyMode('ai')}
+          >
+            <Text className="text-xs font-semibold text-brand-on-primary">Resume AI</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <SupportKeyboardChatLayout
         listRef={listRef}

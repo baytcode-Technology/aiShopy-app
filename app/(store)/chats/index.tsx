@@ -54,6 +54,7 @@ function mapWhatsAppConversation(c: {
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count?: number;
+  reply_mode?: 'ai' | 'manual';
 }): ChatListItem {
   const phone = c.customer_wa_number;
   const name = c.customer_name?.trim();
@@ -69,6 +70,7 @@ function mapWhatsAppConversation(c: {
     online: false,
     phone,
     initials: initialsFromLabel(title, "WA"),
+    replyMode: c.reply_mode ?? 'ai',
   };
 }
 
@@ -79,6 +81,7 @@ function mapInstagramConversation(c: {
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count?: number;
+  reply_mode?: 'ai' | 'manual';
 }): ChatListItem {
   const title = c.customer_ig_username
     ? `@${c.customer_ig_username}`
@@ -94,6 +97,7 @@ function mapInstagramConversation(c: {
     online: false,
     phone: c.customer_ig_id,
     initials: initialsFromLabel(title, "IG"),
+    replyMode: c.reply_mode ?? 'ai',
   };
 }
 
@@ -364,7 +368,13 @@ export default function MessagesListScreen() {
           }
           renderItem={({ item }) => (
             <ConversationRow
-              conversation={item}
+              conversation={{
+                ...item,
+                aiHandling:
+                  hasPremiumAccess(store) &&
+                  store?.ai_auto_reply_enabled === true &&
+                  item.replyMode === 'ai',
+              }}
               onPress={() =>
                 router.push({
                   pathname: `/(store)/chats/${item.id}`,
@@ -373,6 +383,7 @@ export default function MessagesListScreen() {
                     channel: item.channel,
                     displayName: item.title,
                     unread: String(item.unread),
+                    replyMode: item.replyMode ?? 'ai',
                   },
                 } as unknown as Href)
               }

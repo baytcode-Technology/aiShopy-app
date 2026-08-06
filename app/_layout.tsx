@@ -70,6 +70,7 @@ export default function RootLayout() {
             <Stack.Screen name="whatsapp-oauth" options={{ animation: 'none' }} />
             <Stack.Screen name="admin-dashboard" />
             <Stack.Screen name="instagram-connect" />
+            <Stack.Screen name="instagram-oauth" options={{ animation: 'none' }} />
             <Stack.Screen name="chat-boat" />
             <Stack.Screen name="platform-support-inbox" />
             <Stack.Screen name="platform-support" />

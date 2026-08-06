@@ -1,8 +1,16 @@
-import { authenticatedFetch } from '@src/api/client'
+import { ApiHttpError, authenticatedFetch, getValidAccessToken } from '@src/api/client'
 
 import { endpoints } from '@src/api/endpoints'
 
-import type { ChatChannel } from '@src/types/chat'
+import { env } from '@src/config/env'
+
+import { buildWhatsAppMediaUrl } from '@src/lib/whatsapp-media'
+
+import { enrichMessageFromRawPayload } from '@src/lib/prepare-whatsapp-messages'
+
+import { prepareWhatsAppMediaUpload } from '@src/lib/prepare-whatsapp-media-upload'
+
+import type { ChatChannel, ChatMessage } from '@src/types/chat'
 
 
 
@@ -13,6 +21,8 @@ export type ApiConversation = {
   store_id: number
 
   customer_wa_number: string
+
+  customer_name?: string | null
 
   last_message_at: string | null
 
@@ -68,9 +78,17 @@ export type ApiMessage = {
 
   text_body: string | null
 
+  media_id?: string | null
+
+  mime_type?: string | null
+
+  caption?: string | null
+
   status?: string
 
   timestamp: string | null
+
+  raw_payload?: unknown
 
 }
 
@@ -198,6 +216,168 @@ export type ApiInstagramMessage = {
 
   timestamp: string | null
 
+}
+
+export type UploadWhatsAppMediaResponse = {
+  success: boolean
+  message: string
+  data: { store_id: number; media_id: string; mime_type: string }
+}
+
+export type SendMediaMessageResponse = {
+  success: boolean
+  message: string
+  data: {
+    store_id: number
+    conversation_id: number
+    message: ApiMessage
+    meta_message_id: string
+  }
+}
+
+export type ForwardMessageResponse = SendMediaMessageResponse
+
+function parseUploadErrorBody(body: unknown, fallback: string): string {
+  if (typeof body === 'object' && body !== null) {
+    if ('error' in body) {
+      const message = (body as { error?: { message?: string } }).error?.message
+      if (message) return message
+    }
+    if ('message' in body && typeof (body as { message?: string }).message === 'string') {
+      return (body as { message: string }).message
+    }
+  }
+  return fallback
+}
+
+async function postWhatsAppMediaUpload(
+  uploadUrl: string,
+  prepared: { uri: string; name: string; type: string },
+  input: { kind: 'image' | 'audio' | 'video'; voice?: boolean },
+  token: string,
+): Promise<UploadWhatsAppMediaResponse> {
+  const formData = new FormData()
+  formData.append('file', {
+    uri: prepared.uri,
+    name: prepared.name,
+    type: prepared.type,
+  } as unknown as Blob)
+  formData.append('kind', input.kind)
+  if (input.voice) {
+    formData.append('voice', 'true')
+  }
+
+  let res: Response
+  try {
+    res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    })
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Network request failed while uploading media'
+    throw new ApiHttpError(message, 0, null)
+  }
+
+  const text = await res.text()
+  let body: unknown = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = text
+  }
+
+  if (!res.ok) {
+    throw new ApiHttpError(
+      parseUploadErrorBody(body, res.statusText || 'Upload failed'),
+      res.status,
+      body,
+    )
+  }
+
+  return body as UploadWhatsAppMediaResponse
+}
+
+export async function uploadWhatsAppMedia(input: {
+  storeId: number
+  kind: 'image' | 'audio' | 'video'
+  uri: string
+  name: string
+  type: string
+  voice?: boolean
+}): Promise<UploadWhatsAppMediaResponse> {
+  let prepared
+  try {
+    prepared = await prepareWhatsAppMediaUpload({
+      kind: input.kind,
+      uri: input.uri,
+      name: input.name,
+      type: input.type,
+    })
+  } catch (e: unknown) {
+    throw new ApiHttpError(
+      e instanceof Error ? e.message : 'Media file is missing or empty',
+      400,
+      null,
+    )
+  }
+
+  const qs = new URLSearchParams({
+    store_id: String(input.storeId),
+    kind: input.kind,
+    ...(input.voice ? { voice: 'true' } : {}),
+  }).toString()
+
+  const base = env.apiBaseUrl.replace(/\/$/, '')
+  const uploadUrl = `${base}${endpoints.whatsappMediaUpload}?${qs}`
+
+  const token = await getValidAccessToken()
+  return postWhatsAppMediaUpload(uploadUrl, prepared, input, token)
+}
+
+export async function sendWhatsAppMediaMessage(input: {
+  storeId: number
+  to: string
+  conversationId?: number
+  type: 'image' | 'audio' | 'video'
+  mediaId: string
+  mimeType?: string
+  caption?: string
+  voice?: boolean
+}): Promise<SendMediaMessageResponse> {
+  return authenticatedFetch<SendMediaMessageResponse>(endpoints.whatsappSendMedia, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      to: input.to,
+      conversationId: input.conversationId,
+      type: input.type,
+      mediaId: input.mediaId,
+      mimeType: input.mimeType,
+      caption: input.caption,
+      voice: input.voice,
+    }),
+  })
+}
+
+export async function forwardWhatsAppMessage(input: {
+  storeId: number
+  sourceMessageId: number
+  targetConversationId: number
+}): Promise<ForwardMessageResponse> {
+  return authenticatedFetch<ForwardMessageResponse>(endpoints.whatsappForward, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      sourceMessageId: input.sourceMessageId,
+      targetConversationId: input.targetConversationId,
+    }),
+  })
 }
 
 
@@ -394,125 +574,90 @@ export async function markChatRead(input: {
 
 
 
-export function mapApiMessageToChatMessage(m: ApiMessage) {
-
+function mapMessageFields(
+  m: {
+    id: number
+    meta_message_id?: string
+    direction: string
+    type: string
+    text_body: string | null
+    media_id?: string | null
+    mime_type?: string | null
+    caption?: string | null
+    raw_payload?: unknown
+    status?: string
+    timestamp: string | null
+  },
+  storeId?: number
+): ChatMessage {
   const time = m.timestamp
-
     ? new Date(m.timestamp).toLocaleTimeString([], {
-
         hour: '2-digit',
-
         minute: '2-digit',
-
       })
-
     : ''
 
+  const enriched = enrichMessageFromRawPayload({
+    type: m.type,
+    textBody: m.text_body,
+    mediaId: m.media_id,
+    mimeType: m.mime_type,
+    caption: m.caption,
+    rawPayload: m.raw_payload,
+  })
 
+  const mediaId = enriched.mediaId
+  const reactionEmoji =
+    m.type === 'reaction'
+      ? (enriched.reactionEmoji ??
+          enriched.textBody.replace(/^Reacted\s+/u, '').trim()) ||
+        undefined
+      : undefined
 
   return {
-
     id: m.id,
-
     metaMessageId: m.meta_message_id,
-
-    text: m.text_body ?? `[${m.type}]`,
-
+    type: m.type,
+    text: enriched.textBody,
     time,
-
     outgoing: m.direction === 'outbound',
-
-    status: m.status as
-
-      | 'pending'
-
-      | 'sent'
-
-      | 'delivered'
-
-      | 'read'
-
-      | 'failed'
-
-      | 'received'
-
-      | undefined,
-
+    status: m.status as ChatMessage['status'],
+    mediaId,
+    mimeType: enriched.mimeType,
+    caption: enriched.caption,
+    mediaUrl:
+      mediaId && storeId ? buildWhatsAppMediaUrl(mediaId, storeId) : undefined,
+    reactionEmoji,
+    reactionTargetId: enriched.reactionTargetId,
   }
-
 }
 
-
+export function mapApiMessageToChatMessage(m: ApiMessage, storeId: number) {
+  return mapMessageFields(m, storeId)
+}
 
 export function mapSocketMessageToChatMessage(
-
-  m: SendMessageResponse['data']['message'] | SocketMessageShape
-
+  m: SendMessageResponse['data']['message'] | SocketMessageShape,
+  storeId: number
 ) {
-
-  const time = m.timestamp
-
-    ? new Date(m.timestamp).toLocaleTimeString([], {
-
-        hour: '2-digit',
-
-        minute: '2-digit',
-
-      })
-
-    : ''
-
-
-
-  return {
-
-    id: m.id,
-
-    metaMessageId: 'meta_message_id' in m ? m.meta_message_id : undefined,
-
-    text: m.text_body ?? `[${m.type}]`,
-
-    time,
-
-    outgoing: m.direction === 'outbound',
-
-    status: m.status as
-
-      | 'pending'
-
-      | 'sent'
-
-      | 'delivered'
-
-      | 'read'
-
-      | 'failed'
-
-      | 'received'
-
-      | undefined,
-
-  }
-
+  return mapMessageFields(m, storeId)
 }
 
-
+export function messagePreviewText(m: { text_body: string | null; type: string }): string {
+  return m.text_body?.trim() || `[${m.type}]`
+}
 
 type SocketMessageShape = {
-
   id: number
-
   meta_message_id?: string
-
   direction: string
-
   type: string
-
   text_body: string | null
-
+  media_id?: string | null
+  mime_type?: string | null
+  caption?: string | null
+  raw_payload?: unknown
   status: string
-
   timestamp: string | null
-
 }
 

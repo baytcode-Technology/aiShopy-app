@@ -16,11 +16,16 @@ import {
   subscribeInstagramWebhooks,
   type InstagramConnectionStatus,
 } from '@src/api/instagram-connect'
+import { openInstagramAuthSession } from '@src/lib/instagram-auth-session'
 
-type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'polling' | 'connected' | 'error'
+WebBrowser.maybeCompleteAuthSession()
 
-const POLL_INTERVAL_MS = 4000
-const POLL_MAX_ATTEMPTS = 4
+type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'connected' | 'error'
+
+function formatInstagramHandle(username: string | null | undefined): string | null {
+  if (!username?.trim()) return null
+  return username.startsWith('@') ? username : `@${username}`
+}
 
 export default function InstagramConnectScreen() {
   const { store } = useStore()
@@ -36,63 +41,50 @@ export default function InstagramConnectScreen() {
     return res.data
   }, [store?.id])
 
-  const waitForConnection = useCallback(async (runId: number): Promise<boolean> => {
-    setPhase('polling')
-
-    for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
-      if (oauthRunRef.current !== runId) return false
-
-      const status = await refreshStatus()
-      if (status?.connected) {
-        setPhase('connected')
-        return true
-      }
-      if (attempt < POLL_MAX_ATTEMPTS - 1) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-      }
-    }
-
-    if (oauthRunRef.current !== runId) return false
-    setPhase('disconnected')
-    return false
-  }, [refreshStatus])
-
   const startOAuth = useCallback(async () => {
     if (!store?.id) return
     const runId = ++oauthRunRef.current
     setPhase('oauth')
     try {
       const res = await getInstagramConnectUrl(store.id)
-      const result = await WebBrowser.openBrowserAsync(res.data.url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      })
+      const authResult = await openInstagramAuthSession({ connectUrl: res.data.url })
 
       if (oauthRunRef.current !== runId) return
 
-      const status = await refreshStatus()
-      if (status?.connected) {
-        setPhase('connected')
-        return
-      }
+      if ('type' in authResult) {
+        if (authResult.type === 'cancelled') {
+          setPhase('disconnected')
+          return
+        }
 
-      if (result.type === 'cancel') {
+        if (authResult.type === 'dismissed') {
+          setPhase('disconnected')
+          showError(
+            'Connection not finished',
+            'Instagram did not return to the app. Tap Connect Instagram to try again.'
+          )
+          return
+        }
+
         setPhase('disconnected')
+        showError('Connect failed', authResult.message)
         return
       }
 
-      const connected = await waitForConnection(runId)
-      if (!connected && oauthRunRef.current === runId) {
-        showError(
-          'Connection not completed',
-          'Finish login in the browser or tap Connect Instagram to try again.'
-        )
-      }
+      const status = await refreshStatus()
+      setPhase('connected')
+
+      const handle =
+        formatInstagramHandle(authResult.username) ??
+        formatInstagramHandle(status?.ig_username) ??
+        'Your account'
+      showSuccess('Instagram connected', handle)
     } catch (e: unknown) {
       if (oauthRunRef.current !== runId) return
       setPhase('error')
       showError(e, 'Connect failed')
     }
-  }, [store?.id, refreshStatus, waitForConnection])
+  }, [store?.id, refreshStatus])
 
   useEffect(() => {
     let cancelled = false
@@ -139,7 +131,7 @@ export default function InstagramConnectScreen() {
       />
       <ScreenScrollBody contentContainerClassName="pt-10 gap-6">
         <View className="items-center justify-center gap-4">
-          {phase === 'loading' || phase === 'oauth' || phase === 'polling' ? (
+          {phase === 'loading' || phase === 'oauth' ? (
             <ActivityIndicator color={Colors.brand.primary} size="large" />
           ) : null}
 
@@ -164,16 +156,7 @@ export default function InstagramConnectScreen() {
           ) : null}
 
           {phase === 'oauth' ? (
-            <Muted className="text-center text-[15px]">Opening Instagram…</Muted>
-          ) : null}
-
-          {phase === 'polling' ? (
-            <>
-              <Heading className="text-center text-xl">Finishing connection</Heading>
-              <Muted className="text-center text-[15px] leading-6">
-                Complete login in the browser, then return here.
-              </Muted>
-            </>
+            <Muted className="text-center text-[15px]">Connecting to Instagram…</Muted>
           ) : null}
 
           {phase === 'connected' ? (
@@ -196,7 +179,13 @@ export default function InstagramConnectScreen() {
                   setSubscribing(true)
                   try {
                     await subscribeInstagramWebhooks(store.id)
-                    showSuccess('DMs enabled', 'Ask someone to DM @aishopy.io, then check Messages')
+                    const handle = formatInstagramHandle(connection?.ig_username)
+                    showSuccess(
+                      'DMs enabled',
+                      handle
+                        ? `Ask someone to DM ${handle}, then check Messages`
+                        : 'Ask someone to DM your business account, then check Messages'
+                    )
                   } catch (e: unknown) {
                     showError(e, 'Could not enable DMs')
                   } finally {

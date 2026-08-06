@@ -4,7 +4,13 @@ import { endpoints } from '@src/api/endpoints'
 export type WhatsAppConnectResponse = {
   success: boolean
   message: string
-  data: { url: string }
+  data: {
+    url: string
+    redirectUri: string | null
+    oauthRedirectUri?: string | null
+    signupUrlType?: string | null
+    metaDialogUrlType?: string | null
+  }
 }
 
 export type WhatsAppSyncJob = {
@@ -45,9 +51,40 @@ function qs(storeId: number) {
   return new URLSearchParams({ store_id: String(storeId) }).toString()
 }
 
+export type WhatsAppCompleteOnboardingResponse = {
+  success: boolean
+  message: string
+  data: {
+    storeId: number
+    phoneNumberId: string | null
+    wabaId: string | null
+    whatsappNumber: string | null
+    syncTriggered: boolean
+  }
+}
+
 export async function getWhatsAppConnectUrl(storeId: number): Promise<WhatsAppConnectResponse> {
   return authenticatedFetch<WhatsAppConnectResponse>(
     `${endpoints.whatsappConnect}?${qs(storeId)}`
+  )
+}
+
+export async function completeWhatsAppOnboarding(
+  storeId: number,
+  input: { code: string; state?: string | null; wabaId?: string | null; phoneNumberId?: string | null }
+): Promise<WhatsAppCompleteOnboardingResponse> {
+  return authenticatedFetch<WhatsAppCompleteOnboardingResponse>(
+    endpoints.whatsappCompleteOnboarding,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        storeId,
+        code: input.code,
+        state: input.state ?? undefined,
+        wabaId: input.wabaId ?? undefined,
+        phoneNumberId: input.phoneNumberId ?? undefined,
+      }),
+    }
   )
 }
 
@@ -57,6 +94,28 @@ export async function fetchWhatsAppConnectionStatus(
   return authenticatedFetch<WhatsAppConnectionStatusResponse>(
     `${endpoints.whatsappConnectionStatus}?${qs(storeId)}`
   )
+}
+
+export type WhatsAppOffboardResponse = {
+  success: boolean
+  message: string
+  data: {
+    storeId: number
+    wabaId: string | null
+    phoneNumberId: string | null
+    metaUnsubscribed: boolean
+    metaUnsubscribeError: string | null
+    localCredentialsCleared: boolean
+    syncJobsCleared: boolean
+    merchantSteps: string[]
+  }
+}
+
+export async function offboardWhatsApp(storeId: number): Promise<WhatsAppOffboardResponse> {
+  return authenticatedFetch<WhatsAppOffboardResponse>(endpoints.whatsappOffboard, {
+    method: 'POST',
+    body: JSON.stringify({ storeId }),
+  })
 }
 
 export async function triggerWhatsAppSync(storeId: number): Promise<WhatsAppTriggerSyncResponse> {

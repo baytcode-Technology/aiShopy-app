@@ -22,6 +22,10 @@ export type SocketMessagePayload = {
     direction: string
     type: string
     text_body: string | null
+    media_id?: string | null
+    mime_type?: string | null
+    caption?: string | null
+    raw_payload?: unknown
     status: string
     timestamp: string | null
     from_number: string

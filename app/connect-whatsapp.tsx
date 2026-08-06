@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, View } from 'react-native'
-import * as WebBrowser from 'expo-web-browser'
 import { router } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
@@ -11,17 +10,18 @@ import Colors from '@src/theme/colors'
 import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
+  completeWhatsAppOnboarding,
   fetchWhatsAppConnectionStatus,
   getWhatsAppConnectUrl,
+  offboardWhatsApp,
   triggerWhatsAppSync,
   type WhatsAppConnectionStatus,
   type WhatsAppSyncJob,
 } from '@src/api/whatsapp-connect'
+import { WHATSAPP_APP_AUTH_REDIRECT_URI } from '@src/lib/whatsapp-embedded-signup'
+import { openWhatsAppEmbeddedSignupAuthSession } from '@src/lib/whatsapp-auth-session'
 
-type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'polling' | 'connected' | 'error'
-
-const POLL_INTERVAL_MS = 4000
-const POLL_MAX_ATTEMPTS = 4
+type ScreenPhase = 'loading' | 'disconnected' | 'oauth' | 'connected' | 'error'
 
 function syncJobLabel(job: WhatsAppSyncJob): string {
   const type =
@@ -66,6 +66,7 @@ export default function ConnectWhatsAppScreen() {
   const [phase, setPhase] = useState<ScreenPhase>('loading')
   const [connection, setConnection] = useState<WhatsAppConnectionStatus | null>(null)
   const [retryingSync, setRetryingSync] = useState(false)
+  const [offboarding, setOffboarding] = useState(false)
   const oauthRunRef = useRef(0)
 
   const refreshStatus = useCallback(async () => {
@@ -75,52 +76,59 @@ export default function ConnectWhatsAppScreen() {
     return res.data
   }, [store?.id])
 
-  const waitForConnection = useCallback(async (runId: number): Promise<boolean> => {
-    setPhase('polling')
-
-    for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
-      if (oauthRunRef.current !== runId) return false
-
-      const status = await refreshStatus()
-      if (status?.connected) {
-        setPhase('connected')
-        return true
-      }
-      if (attempt < POLL_MAX_ATTEMPTS - 1) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-      }
-    }
-
-    if (oauthRunRef.current !== runId) return false
-    setPhase('disconnected')
-    return false
-  }, [refreshStatus])
-
   const startOAuth = useCallback(async () => {
     if (!store?.id) return
     const runId = ++oauthRunRef.current
     setPhase('oauth')
+
     try {
       const res = await getWhatsAppConnectUrl(store.id)
-      const result = await WebBrowser.openBrowserAsync(res.data.url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      if (oauthRunRef.current !== runId) return
+
+      if (res.data.signupUrlType === 'hosted-embedded-signup') {
+        setPhase('error')
+        showError(
+          'Connect misconfigured',
+          'Server returned a Hosted ES URL which cannot complete in the mobile app.'
+        )
+        return
+      }
+
+      const authResult = await openWhatsAppEmbeddedSignupAuthSession({
+        signupUrl: res.data.url,
+        redirectUri: res.data.redirectUri ?? WHATSAPP_APP_AUTH_REDIRECT_URI,
       })
 
       if (oauthRunRef.current !== runId) return
 
+      if ('type' in authResult) {
+        if (authResult.type === 'cancelled' || authResult.type === 'dismissed') {
+          setPhase('disconnected')
+          if (authResult.type === 'dismissed') {
+            showError(
+              'Connection not finished',
+              'Meta did not return an authorization code. Close any leftover browser tab and tap Connect WhatsApp again.'
+            )
+          }
+          return
+        }
+        setPhase('error')
+        showError('Connect failed', authResult.message)
+        return
+      }
+
+      await completeWhatsAppOnboarding(store.id, {
+        code: authResult.code,
+        state: authResult.state,
+      })
+
       const status = await refreshStatus()
+
       if (status?.connected) {
         setPhase('connected')
-        return
-      }
-
-      if (result.type === 'cancel') {
+        showSuccess('WhatsApp connected', 'Your number is linked to AiShopy')
+      } else {
         setPhase('disconnected')
-        return
-      }
-
-      const connected = await waitForConnection(runId)
-      if (!connected && oauthRunRef.current === runId) {
         showError(
           'Connection not completed',
           'Finish signup in Meta or tap Connect WhatsApp to try again.'
@@ -131,7 +139,7 @@ export default function ConnectWhatsAppScreen() {
       setPhase('error')
       showError('Connect failed', e instanceof Error ? e.message : 'Unknown error')
     }
-  }, [store?.id, refreshStatus, waitForConnection])
+  }, [refreshStatus, store?.id])
 
   useEffect(() => {
     let cancelled = false
@@ -141,11 +149,7 @@ export default function ConnectWhatsAppScreen() {
       try {
         const status = await refreshStatus()
         if (cancelled) return
-        if (status?.connected) {
-          setPhase('connected')
-        } else {
-          setPhase('disconnected')
-        }
+        setPhase(status?.connected ? 'connected' : 'disconnected')
       } catch (e: unknown) {
         if (!cancelled) {
           setPhase('error')
@@ -162,6 +166,25 @@ export default function ConnectWhatsAppScreen() {
       oauthRunRef.current += 1
     }
   }, [store?.id, refreshStatus])
+
+  const handleOffboardAndReconnect = async () => {
+    if (!store?.id) return
+    setOffboarding(true)
+    try {
+      const result = await offboardWhatsApp(store.id)
+      setConnection(null)
+      setPhase('disconnected')
+      const steps = result.data.merchantSteps.join('\n\n')
+      showSuccess(
+        'Disconnected on server',
+        `Also disconnect in WhatsApp Business app, then tap Connect WhatsApp.\n\n${steps}`
+      )
+    } catch (e: unknown) {
+      showError('Offboard failed', e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setOffboarding(false)
+    }
+  }
 
   const handleRetrySync = async () => {
     if (!store?.id) return
@@ -194,7 +217,7 @@ export default function ConnectWhatsAppScreen() {
       />
       <ScreenScrollBody contentContainerClassName="pt-10 gap-6">
         <View className="items-center justify-center gap-4">
-          {phase === 'loading' || phase === 'oauth' || phase === 'polling' ? (
+          {phase === 'loading' || phase === 'oauth' ? (
             <ActivityIndicator color={Colors.brand.primary} size="large" />
           ) : null}
 
@@ -221,22 +244,6 @@ export default function ConnectWhatsAppScreen() {
 
           {phase === 'oauth' ? (
             <Muted className="text-center text-[15px]">Opening Meta connection…</Muted>
-          ) : null}
-
-          {phase === 'polling' ? (
-            <>
-              <Heading className="text-center text-xl">Finishing connection</Heading>
-              <Muted className="text-center text-[15px] leading-6">
-                Complete signup in the browser, then return here.{'\n'}
-                Sync may take up to 24 hours after connect.
-              </Muted>
-              {connection ? <SyncProgress status={connection} /> : null}
-              <Button
-                label="Try connect again"
-                variant="outline"
-                onPress={() => void startOAuth()}
-              />
-            </>
           ) : null}
 
           {phase === 'connected' ? (
@@ -270,6 +277,15 @@ export default function ConnectWhatsAppScreen() {
             variant="outline"
             disabled={retryingSync}
             onPress={handleRetrySync}
+          />
+        ) : null}
+
+        {phase !== 'loading' && phase !== 'oauth' ? (
+          <Button
+            label={offboarding ? 'Disconnecting…' : 'Disconnect & reconnect from scratch'}
+            variant="outline"
+            disabled={offboarding}
+            onPress={() => void handleOffboardAndReconnect()}
           />
         ) : null}
       </ScreenScrollBody>

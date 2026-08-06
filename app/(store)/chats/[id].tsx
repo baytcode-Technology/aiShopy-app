@@ -1,5 +1,6 @@
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
+import { ChatProductSendModal } from "@/components/chat/ChatProductSendModal";
 import { ChatMessageActionsSheet } from "@/components/chat/ChatMessageActionsSheet";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
 import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
@@ -107,6 +108,7 @@ export default function ChatDetailScreen() {
   const [actionsVisible, setActionsVisible] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
   const [forwardVisible, setForwardVisible] = useState(false);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -486,6 +488,73 @@ export default function ChatDetailScreen() {
     }
   };
 
+  const sendTextMessage = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed || !store?.id || isSending) return;
+
+      const tempId = -Date.now();
+      const clientKey = `client-${tempId}`;
+      const now = new Date();
+      const time = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      setMessages((prev) => [
+        {
+          id: tempId,
+          clientKey,
+          text: trimmed,
+          time,
+          outgoing: true,
+          status: "pending",
+          pending: true,
+        },
+        ...prev,
+      ]);
+      triggerAutoScroll();
+      setIsSending(true);
+
+      try {
+        const res = await sendChatMessage({
+          storeId: store.id,
+          to: customerPhone,
+          message: trimmed,
+          conversationId,
+          channel,
+        });
+
+        const serverMessage = mapApiMessageToChatMessage(
+          res.data.message,
+          store.id,
+        );
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.clientKey === clientKey
+              ? patchOutgoingWithServer(m, serverMessage)
+              : m,
+          ),
+        );
+      } catch (e: unknown) {
+        setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
+        showError(e, "Failed to send");
+        throw e;
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [
+      store?.id,
+      isSending,
+      customerPhone,
+      conversationId,
+      channel,
+      triggerAutoScroll,
+    ],
+  );
+
   if (!Number.isFinite(conversationId)) {
     return (
       <SafeAreaView className="flex-1 bg-gray-100 items-center">
@@ -501,56 +570,12 @@ export default function ChatDetailScreen() {
 
   const sendMessage = async () => {
     const text = draft.trim();
-    if (!text || !store?.id || isSending) return;
-
-    const tempId = -Date.now();
-    const clientKey = `client-${tempId}`;
-    const now = new Date();
-    const time = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    setMessages((prev) => [
-      {
-        id: tempId,
-        clientKey,
-        text,
-        time,
-        outgoing: true,
-        status: "pending",
-        pending: true,
-      },
-      ...prev,
-    ]);
-    triggerAutoScroll();
+    if (!text) return;
     setDraft("");
-    setIsSending(true);
-
     try {
-      const res = await sendChatMessage({
-        storeId: store.id,
-        to: customerPhone,
-        message: text,
-        conversationId,
-        channel,
-      });
-
-      const serverMessage = mapApiMessageToChatMessage(res.data.message, store.id);
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.clientKey === clientKey
-            ? patchOutgoingWithServer(m, serverMessage)
-            : m,
-        ),
-      );
-    } catch (e: unknown) {
-      setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
+      await sendTextMessage(text);
+    } catch {
       setDraft(text);
-      showError(e, "Failed to send");
-    } finally {
-      setIsSending(false);
     }
   };
 
@@ -605,6 +630,11 @@ export default function ChatDetailScreen() {
             onChangeDraft={setDraft}
             onSendText={() => void sendMessage()}
             onSendMedia={sendMediaMessage}
+            onOpenProductPicker={
+              channel === "whatsapp" && store?.slug
+                ? () => setProductPickerOpen(true)
+                : undefined
+            }
             disabled={isSending}
             channel={channel}
           />
@@ -689,6 +719,17 @@ export default function ChatDetailScreen() {
               targetConversationId,
             });
           }}
+        />
+      ) : null}
+
+      {store?.id && store.slug ? (
+        <ChatProductSendModal
+          visible={productPickerOpen}
+          storeId={store.id}
+          storeSlug={store.slug}
+          currency={store.currency}
+          onClose={() => setProductPickerOpen(false)}
+          onSend={(text) => void sendTextMessage(text)}
         />
       ) : null}
     </SafeAreaView>

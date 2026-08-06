@@ -27,6 +27,7 @@ type Props = {
   onChangeDraft: (value: string) => void
   onSendText: () => void
   onSendMedia: (payload: OutboundMediaPayload | OutboundMediaPayload[]) => Promise<void>
+  onOpenProductPicker?: () => void
   disabled?: boolean
   channel: ChatChannel
 }
@@ -79,6 +80,7 @@ export function ChatComposer({
   onChangeDraft,
   onSendText,
   onSendMedia,
+  onOpenProductPicker,
   disabled = false,
   channel,
 }: Props) {
@@ -342,6 +344,15 @@ export function ChatComposer({
             >
               <FontAwesome name="paperclip" size={18} color={Colors.brand.primary} />
             </IconButton>
+            {onOpenProductPicker ? (
+              <IconButton
+                className="bg-gray-100 border border-gray-200 w-11 h-11"
+                onPress={onOpenProductPicker}
+                disabled={disabled || busy}
+              >
+                <FontAwesome name="shopping-bag" size={17} color={Colors.brand.primary} />
+              </IconButton>
+            ) : null}
             <IconButton
               className="bg-gray-100 border border-gray-200 w-11 h-11"
               onPress={() => void startRecording()}

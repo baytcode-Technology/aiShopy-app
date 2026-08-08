@@ -132,7 +132,11 @@ export default function ChatBoatScreen() {
             </View>
 
             <View className="gap-2">
-              <Label>Reply language</Label>
+              <Label>Default reply language</Label>
+              <Muted className="text-xs">
+                Chat Boat replies in whatever language the customer types (English, Hindi,
+                Malayalam, etc.). This setting is only used when detection is unsure.
+              </Muted>
               <View className="flex-row flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map((lang) => (
                   <Button
@@ -150,7 +154,7 @@ export default function ChatBoatScreen() {
               label="Custom instructions (optional)"
               value={customPrompt}
               onChangeText={setCustomPrompt}
-              placeholder="Fashion store. We sell shirts and pants in sizes S, M, L, XL. Help customers find products by color, size, or SKU. Be friendly and concise."
+              placeholder="Fashion store. We sell shirts and pants in sizes S, M, L, XL. Help customers find products by color, size, or SKU. Be friendly and casual."
               multiline
               numberOfLines={4}
               className="min-h-[100px]"

@@ -150,7 +150,7 @@ export default function ChatBoatScreen() {
               label="Custom instructions (optional)"
               value={customPrompt}
               onChangeText={setCustomPrompt}
-              placeholder="e.g. We sell Indian ethnic wear. Be friendly and helpful."
+              placeholder="Fashion store. We sell shirts and pants in sizes S, M, L, XL. Help customers find products by color, size, or SKU. Be friendly and concise."
               multiline
               numberOfLines={4}
               className="min-h-[100px]"

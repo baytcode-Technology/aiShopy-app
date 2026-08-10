@@ -134,8 +134,8 @@ export default function ChatBoatScreen() {
             <View className="gap-2">
               <Label>Default reply language</Label>
               <Muted className="text-xs">
-                Chat Boat replies in whatever language the customer types (English, Hindi,
-                Malayalam, etc.). This setting is only used when detection is unsure.
+                Chat Boat replies in whatever language the customer types (English, Malayalam,
+                mixed, etc.). This setting is only used when detection is unsure.
               </Muted>
               <View className="flex-row flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map((lang) => (
@@ -154,16 +154,16 @@ export default function ChatBoatScreen() {
               label="Custom instructions (optional)"
               value={customPrompt}
               onChangeText={setCustomPrompt}
-              placeholder="Fashion store. We sell shirts and pants in sizes S, M, L, XL. Help customers find products by color, size, or SKU. Be friendly and casual."
+              placeholder="We sell shirts and pants. Reply like a friendly shop owner — casual, short, sales-focused. Match the customer's language. If we don't have something, say so and share our store link."
               multiline
               numberOfLines={4}
               className="min-h-[100px]"
             />
 
             <Muted className="text-xs">
-              Chat Boat shares product links from your storefront. It will not share code,
-              passwords, or reply to explicit messages. You can take over any chat manually
-              from the inbox.
+              Custom instructions actively shape how Chat Boat replies. It shares product links
+              from your storefront, ignores off-topic questions, and will not share code or
+              passwords. You can take over any chat manually from the inbox.
             </Muted>
 
             <Button label="Save settings" loading={saving} onPress={() => void handleSave()} />

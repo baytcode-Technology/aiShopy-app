@@ -24,6 +24,7 @@ export type ChatMessage = {
   type?: string
   text: string
   time: string
+  timestamp: string | null
   outgoing: boolean
   status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'received'
   pending?: boolean

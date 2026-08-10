@@ -1,3 +1,4 @@
+import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
 import { ChatProductSendModal } from "@/components/chat/ChatProductSendModal";
@@ -19,6 +20,11 @@ import {
 } from "@src/api/chats";
 import { setChatReplyMode } from "@src/api/inbox-ai";
 import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
+import {
+  injectChatDateSeparators,
+  isDateSeparatorItem,
+  type ChatListItem,
+} from "@src/lib/chat-date-separators";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
 import { useStore } from "@src/contexts/store-context";
@@ -78,6 +84,7 @@ function patchOutgoingWithServer(
     type: server.type ?? existing.type,
     text: server.text,
     time: server.time || existing.time,
+    timestamp: server.timestamp ?? existing.timestamp,
     status: server.status ?? "sent",
     pending: false,
     mediaId: server.mediaId ?? existing.mediaId,
@@ -119,7 +126,7 @@ export default function ChatDetailScreen() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const listRef = useRef<FlatList<ChatMessage>>(null);
+  const listRef = useRef<FlatList<ChatListItem>>(null);
   const stickToBottomRef = useRef(true);
   const shouldAutoScrollRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
@@ -455,6 +462,7 @@ export default function ChatDetailScreen() {
         text: previewForMediaType(payload.type, payload.caption),
         caption: payload.caption,
         time,
+        timestamp: now.toISOString(),
         outgoing: true,
         status: "pending",
         pending: true,
@@ -537,6 +545,7 @@ export default function ChatDetailScreen() {
           clientKey,
           text: trimmed,
           time,
+          timestamp: now.toISOString(),
           outgoing: true,
           status: "pending",
           pending: true,
@@ -583,6 +592,11 @@ export default function ChatDetailScreen() {
       channel,
       triggerAutoScroll,
     ],
+  );
+
+  const listItems = useMemo(
+    () => injectChatDateSeparators(messages),
+    [messages],
   );
 
   if (!Number.isFinite(conversationId)) {
@@ -711,24 +725,32 @@ export default function ChatDetailScreen() {
           <FlatList
             ref={listRef}
             inverted
-            data={messages}
-            keyExtractor={(item) => item.clientKey ?? String(item.id)}
-            renderItem={({ item }) => (
-              <MessageBubble
-                message={item}
-                storeId={store?.id}
-                onLongPress={(message) => {
-                  if (channel !== "whatsapp") return;
-                  setActionsMessage(message);
-                  setActionsVisible(true);
-                }}
-                onForward={(message) => {
-                  if (channel !== "whatsapp") return;
-                  setForwardMessage(message);
-                  setForwardVisible(true);
-                }}
-              />
-            )}
+            data={listItems}
+            keyExtractor={(item) =>
+              isDateSeparatorItem(item)
+                ? item.id
+                : item.clientKey ?? String(item.id)
+            }
+            renderItem={({ item }) =>
+              isDateSeparatorItem(item) ? (
+                <ChatDateSeparator label={item.label} />
+              ) : (
+                <MessageBubble
+                  message={item}
+                  storeId={store?.id}
+                  onLongPress={(message) => {
+                    if (channel !== "whatsapp") return;
+                    setActionsMessage(message);
+                    setActionsVisible(true);
+                  }}
+                  onForward={(message) => {
+                    if (channel !== "whatsapp") return;
+                    setForwardMessage(message);
+                    setForwardVisible(true);
+                  }}
+                />
+              )
+            }
             contentContainerStyle={{
               paddingTop: 12,
               paddingHorizontal: 16,

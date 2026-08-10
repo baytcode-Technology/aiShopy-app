@@ -27,6 +27,7 @@ import {
   stickyDateLabelFromViewableItems,
   type ChatListItem,
 } from "@src/lib/chat-date-separators";
+import { useChatVoiceRecording } from "@src/contexts/chat-voice-recording-context";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
 import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
 import { useStore } from "@src/contexts/store-context";
@@ -104,6 +105,7 @@ export default function ChatDetailScreen() {
   const { store } = useStore();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
+  const { pauseRecording } = useChatVoiceRecording();
   const { id, phone, channel: channelParam, displayName, unread, replyMode: replyModeParam } = useLocalSearchParams<{
     id: string;
     phone?: string;
@@ -345,13 +347,14 @@ export default function ChatDetailScreen() {
       setActiveChat({ conversationId, channel });
       void markChatRead(conversationId, channel);
       return () => {
+        void pauseRecording(conversationId);
         setActiveChat(null);
         if (markReadTimerRef.current) {
           clearTimeout(markReadTimerRef.current);
           markReadTimerRef.current = null;
         }
       };
-    }, [conversationId, channel, markChatRead, setActiveChat]),
+    }, [conversationId, channel, markChatRead, setActiveChat, pauseRecording]),
   );
 
   useEffect(() => {
@@ -720,6 +723,7 @@ export default function ChatDetailScreen() {
         onKeyboardShow={() => scrollToBottom(true)}
         composer={
           <ChatComposer
+            conversationId={conversationId}
             draft={draft}
             onChangeDraft={setDraft}
             onSendText={() => void sendMessage()}

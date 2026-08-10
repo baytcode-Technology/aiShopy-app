@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { InteractionManager, Pressable, Text, TextInput, View } from 'react-native'
-import { Audio } from 'expo-av'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { ChatAttachSheet } from '@/components/chat/ChatAttachSheet'
 import { ChatMediaComposeBar } from '@/components/chat/ChatMediaComposeBar'
 import { IconButton } from '@/components/ui/IconButton'
+import { useChatVoiceRecording } from '@src/contexts/chat-voice-recording-context'
 import { showError } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { ChatChannel } from '@src/types/chat'
@@ -23,6 +23,7 @@ export type OutboundMediaPayload = {
 }
 
 type Props = {
+  conversationId: number
   draft: string
   onChangeDraft: (value: string) => void
   onSendText: () => void
@@ -55,7 +56,8 @@ function assetToPayload(
   asset: ImagePicker.ImagePickerAsset,
   index: number,
 ): OutboundMediaPayload {
-  const isVideo = asset.type === 'video' || asset.mimeType?.startsWith('video/')
+  const isVideo =
+    asset.type === 'video' || (asset.mimeType?.startsWith('video/') ?? false)
   const type = isVideo ? 'video' : 'image'
   const ext = isVideo ? 'mp4' : 'jpg'
   const mimeType = asset.mimeType?.trim() || inferMimeType(asset.uri, isVideo)
@@ -76,6 +78,7 @@ function mergePendingMedia(
 }
 
 export function ChatComposer({
+  conversationId,
   draft,
   onChangeDraft,
   onSendText,
@@ -84,21 +87,20 @@ export function ChatComposer({
   disabled = false,
   channel,
 }: Props) {
-  const recordingRef = useRef<Audio.Recording | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordSeconds, setRecordSeconds] = useState(0)
+  const {
+    session,
+    startRecording,
+    resumeRecording,
+    cancelRecording,
+    finishRecording,
+  } = useChatVoiceRecording()
   const [busy, setBusy] = useState(false)
   const [attachOpen, setAttachOpen] = useState(false)
   const [pendingMedia, setPendingMedia] = useState<OutboundMediaPayload[]>([])
   const [mediaCaption, setMediaCaption] = useState('')
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-      void recordingRef.current?.stopAndUnloadAsync()
-    }
-  }, [])
+  const activeSession =
+    session?.conversationId === conversationId ? session : null
 
   const runAfterAttachSheetCloses = useCallback((action: () => void | Promise<void>) => {
     setAttachOpen(false)
@@ -204,64 +206,23 @@ export function ChatComposer({
     setAttachOpen(true)
   }, [busy, channel, disabled])
 
-  const startRecording = useCallback(async () => {
+  const handleStartRecording = useCallback(async () => {
     if (disabled || busy || channel !== 'whatsapp') return
     try {
-      const permission = await Audio.requestPermissionsAsync()
-      if (!permission.granted) {
-        showError('Permission required', 'Allow microphone access to send voice messages')
-        return
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      })
-
-      const recording = new Audio.Recording()
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY)
-      await recording.startAsync()
-      recordingRef.current = recording
-      setRecordSeconds(0)
-      setIsRecording(true)
-      timerRef.current = setInterval(() => {
-        setRecordSeconds((s) => s + 1)
-      }, 1000)
+      await startRecording(conversationId)
     } catch (e: unknown) {
       showError('Could not start recording', e instanceof Error ? e.message : 'Unknown error')
     }
-  }, [busy, channel, disabled])
+  }, [busy, channel, conversationId, disabled, startRecording])
 
-  const cancelRecording = useCallback(async () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-    setIsRecording(false)
-    setRecordSeconds(0)
-    try {
-      await recordingRef.current?.stopAndUnloadAsync()
-    } catch {
-      // ignore
-    }
-    recordingRef.current = null
-  }, [])
+  const handleCancelRecording = useCallback(async () => {
+    await cancelRecording(conversationId)
+  }, [cancelRecording, conversationId])
 
-  const finishRecording = useCallback(async () => {
-    if (!recordingRef.current) return
+  const handleFinishRecording = useCallback(async () => {
     setBusy(true)
     try {
-      const recording = recordingRef.current
-      const uri = recording.getURI()
-      await recording.stopAndUnloadAsync()
-      recordingRef.current = null
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-        timerRef.current = null
-      }
-      setIsRecording(false)
-      setRecordSeconds(0)
-
+      const uri = await finishRecording(conversationId)
       if (!uri) throw new Error('Recording file missing')
 
       await onSendMedia({
@@ -276,27 +237,67 @@ export function ChatComposer({
     } finally {
       setBusy(false)
     }
-  }, [onSendMedia])
+  }, [conversationId, finishRecording, onSendMedia])
 
-  if (isRecording) {
+  const handleResumeRecording = useCallback(async () => {
+    try {
+      await resumeRecording(conversationId)
+    } catch (e: unknown) {
+      showError('Could not resume recording', e instanceof Error ? e.message : 'Unknown error')
+    }
+  }, [conversationId, resumeRecording])
+
+  if (activeSession?.status === 'recording') {
     return (
       <View className="px-3 py-2.5 bg-surface border-t border-gray-200 gap-2">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
             <View className="w-2.5 h-2.5 rounded-full bg-red-500" />
             <Text className="text-red-600 font-semibold tabular-nums">
-              {formatRecordingTime(recordSeconds)}
+              {formatRecordingTime(activeSession.seconds)}
             </Text>
           </View>
           <Text className="text-gray-500 text-sm">Recording voice message</Text>
         </View>
         <View className="flex-row items-center justify-end gap-3">
-          <Pressable onPress={() => void cancelRecording()} className="px-3 py-2">
+          <Pressable onPress={() => void handleCancelRecording()} className="px-3 py-2">
             <Text className="text-gray-600 font-semibold">Cancel</Text>
           </Pressable>
           <IconButton
             className="bg-brand-primary border-0 w-11 h-11"
-            onPress={() => void finishRecording()}
+            onPress={() => void handleFinishRecording()}
+            disabled={busy}
+          >
+            <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
+          </IconButton>
+        </View>
+      </View>
+    )
+  }
+
+  if (activeSession?.status === 'paused') {
+    return (
+      <View className="px-3 py-2.5 bg-surface border-t border-gray-200 gap-2">
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2">
+            <View className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            <Text className="text-amber-700 font-semibold tabular-nums">
+              {formatRecordingTime(activeSession.seconds)}
+            </Text>
+          </View>
+          <Text className="text-gray-500 text-sm">Voice message paused</Text>
+        </View>
+        <View className="flex-row items-center justify-end gap-3">
+          <Pressable onPress={() => void handleCancelRecording()} className="px-3 py-2">
+            <Text className="text-gray-600 font-semibold">Cancel</Text>
+          </Pressable>
+          <Pressable onPress={() => void handleResumeRecording()} className="px-3 py-2">
+            <Text className="text-brand-primary font-semibold">Resume</Text>
+          </Pressable>
+          <IconButton
+            className="bg-brand-primary border-0 w-11 h-11"
+            onPress={() => void handleFinishRecording()}
+            disabled={busy}
           >
             <FontAwesome name="send" size={16} color={Colors.brand.onPrimary} />
           </IconButton>
@@ -355,7 +356,7 @@ export function ChatComposer({
             ) : null}
             <IconButton
               className="bg-gray-100 border border-gray-200 w-11 h-11"
-              onPress={() => void startRecording()}
+              onPress={() => void handleStartRecording()}
               disabled={disabled || busy}
             >
               <FontAwesome name="microphone" size={18} color={Colors.brand.primary} />

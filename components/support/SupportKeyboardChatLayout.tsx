@@ -1,12 +1,21 @@
-import { ReactNode, useEffect, useState } from "react";
-import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  type FlatList,
-} from "react-native";
+import { ReactNode, useEffect } from "react";
+import { Keyboard, Platform, View, type FlatList } from "react-native";
+import Animated, {
+  useAnimatedKeyboard,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+function closedComposerPadding(insetsBottom: number): number {
+  if (Platform.OS !== "android") {
+    return Math.max(insetsBottom, 8);
+  }
+  // Gesture nav usually reports a bottom inset; 3-button nav often reports 0.
+  if (insetsBottom > 0) {
+    return Math.max(insetsBottom, 12);
+  }
+  return 48;
+}
 
 type Props<T = unknown> = {
   listRef?: React.RefObject<FlatList<T> | null>;
@@ -16,23 +25,6 @@ type Props<T = unknown> = {
   footer?: ReactNode;
 };
 
-function ComposerBar({
-  composer,
-  paddingBottom,
-}: {
-  composer: ReactNode;
-  paddingBottom: number;
-}) {
-  return (
-    <View
-      className="bg-surface border-t border-gray-200"
-      style={{ paddingBottom }}
-    >
-      {composer}
-    </View>
-  );
-}
-
 export function SupportKeyboardChatLayout<T = unknown>({
   listRef,
   onKeyboardShow,
@@ -41,16 +33,29 @@ export function SupportKeyboardChatLayout<T = unknown>({
   footer,
 }: Props<T>) {
   const insets = useSafeAreaInsets();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const closedPadding = closedComposerPadding(insets.bottom);
+  const keyboard = useAnimatedKeyboard({
+    isStatusBarTranslucentAndroid: true,
+    isNavigationBarTranslucentAndroid: true,
+  });
+
+  const composerStyle = useAnimatedStyle(() => {
+    const kbHeight = keyboard.height.value;
+    const isKeyboardOpen = kbHeight > 0;
+
+    return {
+      // Only lift with the keyboard while it is open — leave open behavior as-is.
+      transform: [{ translateY: isKeyboardOpen ? -kbHeight : 0 }],
+      // When the keyboard is closed, pad above the system nav bar (3-button or gesture).
+      paddingBottom: isKeyboardOpen ? 0 : closedPadding,
+    };
+  });
 
   useEffect(() => {
     const showEvent =
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent =
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
+    const showSub = Keyboard.addListener(showEvent, () => {
       requestAnimationFrame(() => {
         if (onKeyboardShow) {
           onKeyboardShow();
@@ -59,46 +64,22 @@ export function SupportKeyboardChatLayout<T = unknown>({
         }
       });
     });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
 
     return () => {
       showSub.remove();
-      hideSub.remove();
     };
   }, [listRef, onKeyboardShow]);
 
-  const composerPaddingBottom =
-    Platform.OS === "android" && keyboardHeight > 0
-      ? Math.max(keyboardHeight - insets.bottom, 0) + 26
-      : Math.max(insets.bottom, 26);
-
-  if (Platform.OS === "android") {
-    return (
-      <View className="flex-1">
-        <View className="flex-1">{children}</View>
-        {footer}
-        <ComposerBar
-          composer={composer}
-          paddingBottom={composerPaddingBottom}
-        />
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView
-      className="flex-1"
-      behavior="padding"
-      keyboardVerticalOffset={insets.top}
-    >
+    <View className="flex-1">
       <View className="flex-1">{children}</View>
       {footer}
-      <ComposerBar
-        composer={composer}
-        paddingBottom={Math.max(insets.bottom, 26)}
-      />
-    </KeyboardAvoidingView>
+      <Animated.View
+        style={composerStyle}
+        className="bg-surface border-t border-gray-200"
+      >
+        {composer}
+      </Animated.View>
+    </View>
   );
 }

@@ -20,6 +20,7 @@ import {
 import { setChatReplyMode } from "@src/api/inbox-ai";
 import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
+import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
@@ -614,6 +615,7 @@ export default function ChatDetailScreen() {
   );
 
   return (
+    <ChatVoicePlayerProvider>
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
       <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
         <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
@@ -793,5 +795,6 @@ export default function ChatDetailScreen() {
         />
       ) : null}
     </SafeAreaView>
+    </ChatVoicePlayerProvider>
   );
 }

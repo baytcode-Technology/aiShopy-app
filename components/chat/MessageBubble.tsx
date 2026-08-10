@@ -167,7 +167,11 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
         ) : showMedia && type === 'audio' ? (
           <>
             <View className="px-2.5 pt-1.5">
-              <ChatVoiceBubble uri={mediaUrl!} outgoing={outgoing} />
+              <ChatVoiceBubble
+                messageId={String(message.clientKey ?? message.id)}
+                uri={mediaUrl!}
+                outgoing={outgoing}
+              />
             </View>
             <View className="px-2.5 pb-1">
               <BubbleMeta message={message} outgoing={outgoing} />

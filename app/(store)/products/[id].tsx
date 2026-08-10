@@ -7,6 +7,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 
 import { EditProductModal } from "@/components/store/EditProductModal";
+import { ManageVariantOptionsModal } from "@/components/store/ManageVariantOptionsModal";
 
 import { ProductCategoryRow } from "@/components/store/ProductCategoryRow";
 
@@ -69,6 +70,8 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
 
   const [editOpen, setEditOpen] = useState(false);
+
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const [savingStatus, setSavingStatus] = useState(false);
 
@@ -201,6 +204,7 @@ export default function ProductDetailScreen() {
                 product={product}
                 variants={variants}
                 currencySymbol={symbol}
+                onManageOptions={() => setOptionsOpen(true)}
                 onVariantUpdated={(updated) => {
                   setVariants((prev) =>
                     prev.map((item) =>
@@ -225,6 +229,14 @@ export default function ProductDetailScreen() {
         variants={variants}
         categories={categories}
         onClose={() => setEditOpen(false)}
+        onSaved={load}
+      />
+
+      <ManageVariantOptionsModal
+        visible={optionsOpen}
+        product={product}
+        variants={variants}
+        onClose={() => setOptionsOpen(false)}
         onSaved={load}
       />
     </Screen>

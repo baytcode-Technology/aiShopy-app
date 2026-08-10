@@ -30,6 +30,8 @@ export type ApiConversation = {
 
   unread_count?: number
 
+  reply_mode?: 'ai' | 'manual'
+
 }
 
 
@@ -49,6 +51,8 @@ export type ApiInstagramConversation = {
   last_message_preview: string | null
 
   unread_count?: number
+
+  reply_mode?: 'ai' | 'manual'
 
 }
 
@@ -620,6 +624,7 @@ function mapMessageFields(
     type: m.type,
     text: enriched.textBody,
     time,
+    timestamp: m.timestamp ?? null,
     outgoing: m.direction === 'outbound',
     status: m.status as ChatMessage['status'],
     mediaId,

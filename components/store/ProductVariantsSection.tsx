@@ -1,5 +1,6 @@
 import { DetailSection } from "@/components/store/detail/DetailSection";
 import { VariantEditableCard } from "@/components/store/VariantEditableCard";
+import { Button } from "@/components/ui/Button";
 import { Muted, SectionTitle } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Colors from "@src/theme/colors";
@@ -13,6 +14,7 @@ type Props = {
   currencySymbol: string;
   onVariantUpdated: (variant: ProductVariant) => void;
   onVariantDeleted: (variantId: number) => void;
+  onManageOptions?: () => void;
 };
 
 export function ProductVariantsSection({
@@ -21,6 +23,7 @@ export function ProductVariantsSection({
   currencySymbol,
   onVariantUpdated,
   onVariantDeleted,
+  onManageOptions,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
@@ -50,6 +53,16 @@ export function ProductVariantsSection({
           color={Colors.brand.primary}
         />
       </Pressable>
+
+      {onManageOptions ? (
+        <View className="px-3.5 pb-2">
+          <Button
+            label="Manage options"
+            variant="outline"
+            onPress={onManageOptions}
+          />
+        </View>
+      ) : null}
 
       {expanded ? (
         <View className="px-3.5 pb-3 bg-gray-100 border-t border-gray-200">

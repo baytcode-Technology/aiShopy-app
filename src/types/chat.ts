@@ -11,6 +11,9 @@ export type ChatListItem = {
   online: boolean
   phone: string
   initials: string
+  replyMode?: 'ai' | 'manual'
+  /** Chat Boat is auto-replying in this thread */
+  aiHandling?: boolean
 }
 
 export type ChatMessage = {
@@ -21,6 +24,7 @@ export type ChatMessage = {
   type?: string
   text: string
   time: string
+  timestamp: string | null
   outgoing: boolean
   status?: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'received'
   pending?: boolean

@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { Audio } from 'expo-av'
 import * as FileSystem from 'expo-file-system/legacy'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { useChatVoicePlayer } from '@src/contexts/chat-voice-player-context'
 import { cn } from '@src/lib/cn'
 import { showError } from '@src/lib/toast'
 import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
@@ -18,6 +19,13 @@ function formatMs(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+const RATES = [1, 1.5, 2] as const
+type PlaybackRate = (typeof RATES)[number]
+
+function formatRate(rate: number): string {
+  return rate === 1 ? '1x' : `${rate}x`
+}
+
 function extFromUri(uri: string): string {
   const lower = uri.toLowerCase()
   if (lower.includes('.ogg')) return 'ogg'
@@ -27,15 +35,18 @@ function extFromUri(uri: string): string {
 }
 
 type Props = {
+  messageId: string
   uri: string
   outgoing: boolean
 }
 
-export function ChatVoiceBubble({ uri, outgoing }: Props) {
+export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
+  const { requestPlay, release } = useChatVoicePlayer()
   const soundRef = useRef<Audio.Sound | null>(null)
   const cachedUriRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState<PlaybackRate>(1)
   const [positionMs, setPositionMs] = useState(0)
   const [durationMs, setDurationMs] = useState(0)
 
@@ -52,19 +63,33 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
     }
   }, [])
 
+  const pauseSelf = useCallback(async () => {
+    if (soundRef.current) {
+      await soundRef.current.pauseAsync()
+    }
+    setIsPlaying(false)
+  }, [])
+
   useEffect(() => {
     cachedUriRef.current = null
     void unload()
     setIsPlaying(false)
     setPositionMs(0)
     setDurationMs(0)
-  }, [uri, unload])
+    release(messageId)
+  }, [uri, unload, messageId, release])
 
   useEffect(() => {
     return () => {
+      release(messageId)
       void unload()
     }
-  }, [unload])
+  }, [unload, messageId, release])
+
+  useEffect(() => {
+    if (!soundRef.current) return
+    void soundRef.current.setRateAsync(playbackRate, true)
+  }, [playbackRate])
 
   const resolvePlayableUri = useCallback(async (): Promise<string> => {
     if (cachedUriRef.current) return cachedUriRef.current
@@ -79,6 +104,10 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
     return result.uri
   }, [uri])
 
+  const applyRate = useCallback(async (sound: Audio.Sound) => {
+    await sound.setRateAsync(playbackRate, true)
+  }, [playbackRate])
+
   const togglePlay = useCallback(async () => {
     if (loading) return
     setLoading(true)
@@ -86,17 +115,24 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
       if (isPlaying && soundRef.current) {
         await soundRef.current.pauseAsync()
         setIsPlaying(false)
+        release(messageId)
         return
       }
 
+      await requestPlay(messageId, pauseSelf)
+
       if (soundRef.current) {
+        await applyRate(soundRef.current)
         await soundRef.current.playAsync()
         setIsPlaying(true)
         return
       }
 
       const playableUri = await resolvePlayableUri()
-      const { sound } = await Audio.Sound.createAsync({ uri: playableUri })
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: playableUri },
+        { rate: playbackRate, shouldCorrectPitch: true },
+      )
       soundRef.current = sound
       sound.setOnPlaybackStatusUpdate((status) => {
         if (!status.isLoaded) return
@@ -105,6 +141,7 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
         if (status.didJustFinish) {
           setIsPlaying(false)
           setPositionMs(0)
+          release(messageId)
           void unload()
         }
       })
@@ -115,7 +152,18 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [isPlaying, loading, resolvePlayableUri, unload])
+  }, [
+    applyRate,
+    isPlaying,
+    loading,
+    messageId,
+    pauseSelf,
+    playbackRate,
+    release,
+    requestPlay,
+    resolvePlayableUri,
+    unload,
+  ])
 
   const seekToRatio = useCallback(
     async (ratio: number) => {
@@ -127,8 +175,39 @@ export function ChatVoiceBubble({ uri, outgoing }: Props) {
     [durationMs],
   )
 
+  const handleCycleSpeed = useCallback(() => {
+    setPlaybackRate((prev) => {
+      const idx = RATES.indexOf(prev)
+      const next = RATES[(idx + 1) % RATES.length]
+      if (soundRef.current) {
+        void soundRef.current.setRateAsync(next, true)
+      }
+      return next
+    })
+  }, [])
+
   return (
-    <View className="flex-row items-center gap-2.5 min-w-[240px] py-1">
+    <View className={cn('flex-row items-center gap-2 py-1', isPlaying ? 'min-w-[268px]' : 'min-w-[240px]')}>
+      {isPlaying ? (
+        <Pressable
+          onPress={handleCycleSpeed}
+          className={cn(
+            'w-8 h-8 rounded-full items-center justify-center',
+            outgoing ? 'bg-black/20' : 'bg-gray-200',
+          )}
+          accessibilityLabel={`Playback speed ${formatRate(playbackRate)}`}
+        >
+          <Text
+            className={cn(
+              'text-[11px] font-bold',
+              outgoing ? 'text-brand-on-primary' : 'text-ink',
+            )}
+          >
+            {formatRate(playbackRate)}
+          </Text>
+        </Pressable>
+      ) : null}
+
       <Pressable
         onPress={() => void togglePlay()}
         className={cn(

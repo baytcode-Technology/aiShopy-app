@@ -1,4 +1,4 @@
-import type { CreateProductVariantPayload } from '@src/types/product'
+import type { CreateProductVariantPayload, ProductVariant } from '@src/types/product'
 
 export type VariantOption = {
   id: string
@@ -18,6 +18,114 @@ export type GeneratedVariant = {
   imageUri?: string | null
   imageName?: string
   imageType?: string
+  isActive?: boolean
+}
+
+export function isPersistedVariantId(id: string): boolean {
+  return /^\d+$/.test(id)
+}
+
+function normalizeOptions(options: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(options).map(([k, v]) => [k, String(v ?? '').trim()]).filter(([, v]) => v)
+  )
+}
+
+function optionsKey(options: Record<string, string>): string {
+  return JSON.stringify(options)
+}
+
+export function extractVariantOptions(variants: ProductVariant[]): VariantOption[] {
+  if (variants.length === 0) return []
+
+  const firstKeys = Object.keys(variants[0].options ?? {})
+  const allKeys = new Set<string>(firstKeys)
+  for (const v of variants) {
+    for (const k of Object.keys(v.options ?? {})) allKeys.add(k)
+  }
+
+  const orderedNames = [
+    ...firstKeys,
+    ...[...allKeys].filter((k) => !firstKeys.includes(k)),
+  ]
+
+  return orderedNames.map((name, index) => {
+    const values = new Set<string>()
+    for (const v of variants) {
+      const raw = v.options?.[name]
+      if (raw != null && String(raw).trim()) values.add(String(raw).trim())
+    }
+    return {
+      id: `opt-${name}-${index}`,
+      name,
+      values: [...values],
+    }
+  })
+}
+
+export function variantsToGenerated(variants: ProductVariant[]): GeneratedVariant[] {
+  return variants.map((v) => ({
+    id: String(v.id),
+    name: v.name,
+    options: normalizeOptions(v.options ?? {}),
+    priceDelta: String(v.price_delta),
+    compareAtPrice: v.compare_at_price != null ? String(v.compare_at_price) : '',
+    stockQty: String(v.stock_qty),
+    sku: v.sku ?? '',
+    imageUri: v.image_url ?? null,
+    isActive: v.is_active,
+  }))
+}
+
+export function hydrateVariantEditorState(variants: ProductVariant[]): {
+  options: VariantOption[]
+  generated: GeneratedVariant[]
+} {
+  if (variants.length === 0) {
+    return { options: [], generated: [] }
+  }
+  const options = extractVariantOptions(variants)
+  const generated = generateVariantsFromOptions(options, variantsToGenerated(variants))
+  return { options, generated }
+}
+
+export type VariantDiff = {
+  toCreate: GeneratedVariant[]
+  toUpdate: GeneratedVariant[]
+  toDelete: ProductVariant[]
+}
+
+export function diffVariants(
+  generated: GeneratedVariant[],
+  existingVariants: ProductVariant[]
+): VariantDiff {
+  const existingByKey = new Map<string, ProductVariant>()
+  for (const v of existingVariants) {
+    existingByKey.set(optionsKey(normalizeOptions(v.options ?? {})), v)
+  }
+
+  const generatedKeys = new Set<string>()
+  const toCreate: GeneratedVariant[] = []
+  const toUpdate: GeneratedVariant[] = []
+
+  for (const g of generated) {
+    const key = optionsKey(g.options)
+    generatedKeys.add(key)
+    const existing = existingByKey.get(key)
+
+    if (existing) {
+      toUpdate.push({ ...g, id: String(existing.id) })
+    } else {
+      toCreate.push(g)
+    }
+  }
+
+  const toDelete = existingVariants.filter((v) => {
+    const key = optionsKey(normalizeOptions(v.options ?? {}))
+    return !generatedKeys.has(key)
+  })
+
+  return { toCreate, toUpdate, toDelete }
 }
 
 function cartesian(options: VariantOption[]): Record<string, string>[] {

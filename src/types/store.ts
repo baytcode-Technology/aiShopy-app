@@ -50,6 +50,7 @@ export type Store = {
   theme_config?: ThemeConfig | null;
   ai_system_prompt: string | null;
   ai_language: string | null;
+  ai_auto_reply_enabled?: boolean;
   industry: string | null;
   is_active: boolean;
   subscription_plan?: "starter" | "business" | "enterprise";

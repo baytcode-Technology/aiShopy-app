@@ -31,6 +31,32 @@ export function formatChatDateLabel(date: Date, now = new Date()): string {
   return `${day}/${month}/${year}`
 }
 
+export function dateLabelFromTimestamp(timestamp: string | null, now = new Date()): string | null {
+  if (!timestamp) return null
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return null
+  return formatChatDateLabel(date, now)
+}
+
+/** Pick sticky label from inverted-list viewable items (highest index = top of screen). */
+export function stickyDateLabelFromViewableItems(
+  viewableItems: { index: number | null; item: ChatListItem }[],
+  now = new Date(),
+): string | null {
+  if (viewableItems.length === 0) return null
+
+  const sorted = [...viewableItems].sort((a, b) => (b.index ?? 0) - (a.index ?? 0))
+
+  for (const entry of sorted) {
+    const item = entry.item
+    if (isDateSeparatorItem(item)) return item.label
+    const label = dateLabelFromTimestamp(item.timestamp, now)
+    if (label) return label
+  }
+
+  return null
+}
+
 function dayKeyFromTimestamp(timestamp: string | null): string | null {
   if (!timestamp) return null
   const date = new Date(timestamp)

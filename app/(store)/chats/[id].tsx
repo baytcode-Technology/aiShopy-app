@@ -21,8 +21,10 @@ import {
 import { setChatReplyMode } from "@src/api/inbox-ai";
 import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import {
+  dateLabelFromTimestamp,
   injectChatDateSeparators,
   isDateSeparatorItem,
+  stickyDateLabelFromViewableItems,
   type ChatListItem,
 } from "@src/lib/chat-date-separators";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
@@ -126,6 +128,7 @@ export default function ChatDetailScreen() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [stickyDateLabel, setStickyDateLabel] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatListItem>>(null);
   const stickToBottomRef = useRef(true);
   const shouldAutoScrollRef = useRef(false);
@@ -599,6 +602,21 @@ export default function ChatDetailScreen() {
     [messages],
   );
 
+  useEffect(() => {
+    setStickyDateLabel(dateLabelFromTimestamp(messages[0]?.timestamp ?? null));
+  }, [messages]);
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { index: number | null; item: ChatListItem }[] }) => {
+      const label = stickyDateLabelFromViewableItems(viewableItems);
+      if (label) setStickyDateLabel(label);
+    },
+  ).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 5,
+  }).current;
+
   if (!Number.isFinite(conversationId)) {
     return (
       <SafeAreaView className="flex-1 bg-gray-100 items-center">
@@ -717,6 +735,15 @@ export default function ChatDetailScreen() {
         }
       >
         <View className="flex-1 relative">
+          {stickyDateLabel ? (
+            <View
+              className="absolute top-0 left-0 right-0 z-20 items-center pt-2 pointer-events-none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              <ChatDateSeparator label={stickyDateLabel} variant="sticky" />
+            </View>
+          ) : null}
           {loadingMore ? (
             <View className="absolute top-0 left-0 right-0 z-10 py-2 items-center">
               <ActivityIndicator color={Colors.brand.primary} size="small" />
@@ -754,12 +781,14 @@ export default function ChatDetailScreen() {
             contentContainerStyle={{
               paddingTop: 12,
               paddingHorizontal: 16,
-              paddingBottom: 8,
+              paddingBottom: stickyDateLabel ? 40 : 8,
             }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
             onScroll={handleListScroll}
             scrollEventThrottle={16}
+            onViewableItemsChanged={onViewableItemsChanged}
+            viewabilityConfig={viewabilityConfig}
             onEndReached={() => void loadOlderMessages()}
             onEndReachedThreshold={0.2}
             onContentSizeChange={() => {

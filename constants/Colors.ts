@@ -2,30 +2,36 @@
  * App colors + legacy Expo template shape (`light` / `dark`).
  * Prefer `@src/theme/colors` or Tailwind classes in new code.
  */
-import Colors, { theme } from '@src/theme/colors'
+import Colors, { getColors, theme } from '@src/theme/colors'
 
-/** Maps semantic tokens for Themed.tsx and starter screens */
-const legacyThemes = {
-  light: {
-    text: Colors.text.primary,
-    background: Colors.bg.primary,
-    tint: Colors.brand.primary,
-    tabIconDefault: Colors.text.muted,
-    tabIconSelected: Colors.brand.primary,
-  },
-  dark: {
-    text: Colors.text.inverse,
-    background: Colors.bg.inverse,
-    tint: Colors.brand.primary,
-    tabIconDefault: Colors.text.muted,
-    tabIconSelected: Colors.brand.primary,
-  },
-} as const
+function buildLegacyThemes() {
+  const c = getColors()
+  return {
+    light: {
+      text: c.text.primary,
+      background: c.bg.primary,
+      tint: c.brand.primary,
+      tabIconDefault: c.text.muted,
+      tabIconSelected: c.brand.primary,
+    },
+    dark: {
+      text: c.text.inverse,
+      background: c.bg.inverse,
+      tint: c.brand.primary,
+      tabIconDefault: c.text.muted,
+      tabIconSelected: c.brand.primary,
+    },
+  } as const
+}
 
 const AppColors = {
   ...Colors,
-  light: legacyThemes.light,
-  dark: legacyThemes.dark,
+  get light() {
+    return buildLegacyThemes().light
+  },
+  get dark() {
+    return buildLegacyThemes().dark
+  },
 }
 
 export default AppColors

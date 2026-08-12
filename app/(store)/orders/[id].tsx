@@ -132,7 +132,7 @@ export default function OrderDetailScreen() {
       ) : (
         <View className="flex-1">
           {saving ? (
-            <View className="absolute inset-0 z-30 items-center justify-center bg-white/50">
+            <View className="absolute inset-0 z-30 items-center justify-center bg-surface/50">
               <ActivityIndicator color={Colors.brand.primary} />
             </View>
           ) : null}

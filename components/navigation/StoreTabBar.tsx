@@ -4,10 +4,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { UnreadCountBadge } from '@/components/ui/UnreadCountBadge'
 import { useStoreUnread } from '@src/contexts/store-unread-context'
+import { useAppTheme } from '@src/contexts/theme-context'
 import { cn } from '@src/lib/cn'
-import Colors from '@src/theme/colors'
-import { palette } from '@src/theme/palette'
-import { shadows } from '@src/lib/shadows'
+import { getShadows } from '@src/lib/shadows'
 
 const icons: Record<string, React.ComponentProps<typeof FontAwesome>['name']> = {
   chats: 'comments',
@@ -44,6 +43,8 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
   const insets = useSafeAreaInsets()
   const bottom = Math.max(insets.bottom, 10)
   const { ordersUnreadCount, chatsUnreadCount } = useStoreUnread()
+  const { colors } = useAppTheme()
+  const cardShadow = getShadows(colors).card
 
   const tabBadgeCount: Record<string, number> = {
     orders: ordersUnreadCount,
@@ -58,7 +59,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
     <View className="px-5 pt-2" style={{ paddingBottom: bottom }}>
       <View
         className="flex-row items-center justify-between rounded-[26px] bg-surface px-2 py-2 border border-gray-200"
-        style={shadows.card}
+        style={cardShadow}
       >
         {state.routes
           .filter((route) => VISIBLE_TAB_ROUTES.has(route.name))
@@ -106,7 +107,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
                   <View
                     style={[
                       styles.tabPill,
-                      focused && styles.tabPillSelected,
+                      focused && { backgroundColor: colors.bg.muted },
                       pressed && !focused && styles.tabPillPressed,
                     ]}
                   >
@@ -114,7 +115,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
                       <FontAwesome
                         name={iconName}
                         size={20}
-                        color={focused ? Colors.brand.primary : Colors.text.muted}
+                        color={focused ? colors.brand.primary : colors.text.muted}
                       />
                       {badgeCount > 0 ? (
                         <View style={styles.tabBadge}>
@@ -125,7 +126,7 @@ export function StoreTabBar({ state, descriptors, navigation }: BottomTabBarProp
                     <Text
                       className={cn(
                         'text-[10px] font-bold mt-1 tracking-wide',
-                        focused ? 'text-ink' : 'text-gray-400'
+                        focused ? 'text-ink' : 'text-gray-400',
                       )}
                       numberOfLines={1}
                     >
@@ -157,9 +158,6 @@ const styles = StyleSheet.create({
     minWidth: 56,
     overflow: 'hidden',
     backgroundColor: 'transparent',
-  },
-  tabPillSelected: {
-    backgroundColor: palette.gray100,
   },
   tabPillPressed: {
     opacity: 0.8,

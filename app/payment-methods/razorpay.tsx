@@ -468,13 +468,13 @@ export default function RazorpayPaymentScreen() {
         <View className="flex-row flex-wrap gap-2">
           <Pressable
             onPress={() => openDashboard('/app/keys')}
-            className="px-3 py-2 rounded-full border border-gray-200 bg-white"
+            className="px-3 py-2 rounded-full border border-gray-200 bg-surface"
           >
             <Text className="text-[13px] font-semibold text-blue-600">Open API Keys</Text>
           </Pressable>
           <Pressable
             onPress={() => openDashboard('/app/webhooks')}
-            className="px-3 py-2 rounded-full border border-gray-200 bg-white"
+            className="px-3 py-2 rounded-full border border-gray-200 bg-surface"
           >
             <Text className="text-[13px] font-semibold text-blue-600">Open Webhooks</Text>
           </Pressable>
@@ -488,7 +488,7 @@ export default function RazorpayPaymentScreen() {
             </Text>
             <Pressable
               onPress={() => void copyWebhookUrl()}
-              className="w-9 h-9 rounded-full border border-gray-200 bg-white items-center justify-center"
+              className="w-9 h-9 rounded-full border border-gray-200 bg-surface items-center justify-center"
               accessibilityLabel="Copy webhook URL"
             >
               <FontAwesome name="copy" size={14} color={Colors.brand.primary} />

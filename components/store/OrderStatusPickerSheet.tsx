@@ -47,7 +47,7 @@ export function OrderStatusPickerSheet({
         </Pressable>
 
         <View
-          className="mx-5 bg-white rounded-2xl px-5 py-4 shadow-lg"
+          className="mx-5 bg-surface rounded-2xl px-5 py-4 shadow-lg"
           style={{ marginBottom: insets.bottom + 16 }}
         >
           <View className="flex-row items-center justify-between mb-2">

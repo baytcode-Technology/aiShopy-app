@@ -6,3 +6,6 @@ export const APP_ICON = require('@/assets/images/app_logo.jpg') as number
 
 /** In-app wordmark line (old DisplayBrand slot). */
 export const APP_WORDMARK = require('@/assets/images/aishopy_logo.png') as number
+
+/** In-app wordmark line for dark UI mode. */
+export const APP_WORDMARK_DARK = require('@/assets/images/aishopy_logo_dark.png') as number

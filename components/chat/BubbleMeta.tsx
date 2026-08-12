@@ -1,6 +1,7 @@
 import { Caption } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
 import type { ChatMessage } from '@src/types/chat'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 type Props = {
   message: ChatMessage
@@ -17,12 +18,19 @@ function statusLabel(message: ChatMessage): string | null {
 
 export function BubbleMeta({ message, outgoing, overlay }: Props) {
   const status = outgoing ? statusLabel(message) : null
+  const { isDark } = useAppTheme()
 
   return (
     <Caption
       className={cn(
         'self-end',
-        overlay ? 'text-white/90' : outgoing ? 'text-gray-400' : 'text-gray-400',
+        overlay
+          ? 'text-white/90'
+          : outgoing
+            ? isDark
+              ? 'text-white/90'
+              : 'text-gray-400'
+            : 'text-gray-400',
       )}
     >
       {message.time}

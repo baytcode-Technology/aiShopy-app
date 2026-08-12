@@ -4,7 +4,7 @@ import { Redirect, Tabs } from 'expo-router'
 import { ActivityIndicator, View } from 'react-native'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import Colors from '@src/theme/colors'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name']
@@ -16,6 +16,7 @@ function TabBarIcon(props: {
 export default function TabLayout() {
   const { isLoading, isAuthenticated } = useAuth()
   const { store, isLoading: storeLoading } = useStore()
+  const { colors } = useAppTheme()
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -26,7 +27,7 @@ export default function TabLayout() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={Colors.brand.primary} />
+        <ActivityIndicator color={colors.brand.primary} />
       </View>
     )
   }
@@ -38,7 +39,7 @@ export default function TabLayout() {
   if (storeLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator color={Colors.brand.primary} />
+        <ActivityIndicator color={colors.brand.primary} />
       </View>
     )
   }
@@ -50,14 +51,14 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.brand.primary,
-        tabBarInactiveTintColor: Colors.text.muted,
+        tabBarActiveTintColor: colors.brand.primary,
+        tabBarInactiveTintColor: colors.text.muted,
         tabBarStyle: {
-          backgroundColor: Colors.bg.primary,
-          borderTopColor: Colors.border.default,
+          backgroundColor: colors.bg.primary,
+          borderTopColor: colors.border.default,
         },
-        headerStyle: { backgroundColor: Colors.bg.primary },
-        headerTintColor: Colors.text.primary,
+        headerStyle: { backgroundColor: colors.bg.primary },
+        headerTintColor: colors.text.primary,
         headerTitleStyle: { fontWeight: '600' },
       }}
     >

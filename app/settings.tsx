@@ -3,6 +3,7 @@ import { EditStoreModal } from "@/components/store/EditStoreModal";
 import { StoreAvatar } from "@/components/store/StoreAvatar";
 import { StoreLogoEditLink } from "@/components/store/StoreLogoPicker";
 import { StorefrontUrlActions } from "@/components/store/StorefrontUrlActions";
+import { ThemeToggleChip } from "@/components/ui/ThemeToggleChip";
 import { Button } from "@/components/ui/Button";
 import { MenuRow } from "@/components/ui/MenuRow";
 import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
@@ -14,8 +15,9 @@ import { env } from "@src/config/env";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
 import { getPlanLabel, getStorePlan } from "@src/lib/subscription";
-import { shadows } from "@src/lib/shadows";
+import { getShadows } from "@src/lib/shadows";
 import { buildSubdomainUrl } from "@src/lib/storefront";
+import { useAppTheme } from "@src/contexts/theme-context";
 import Colors from "@src/theme/colors";
 import type { Store } from "@src/types/store";
 import { router, type Href } from "expo-router";
@@ -40,6 +42,8 @@ export default function SettingsScreen() {
   const [logoOpen, setLogoOpen] = useState(false);
   const { isPlatformAdmin } = usePlatformAdmin();
   const { summary } = useSupportAdminSummary(isPlatformAdmin);
+  const { colors } = useAppTheme();
+  const cardShadow = getShadows(colors).card;
   const goBack = usePlatformAdminBack();
   const openTickets = summary.escalated_count;
   const unreadOnTickets = summary.unread_messages;
@@ -85,9 +89,12 @@ export default function SettingsScreen() {
             contentContainerClassName="px-5 pt-4 pb-32 gap-3"
           >
             <View
-              className="rounded-[28px] border border-gray-200 bg-surface px-6 py-5"
-              style={shadows.card}
+              className="rounded-[28px] border border-gray-200 bg-surface px-6 py-5 relative"
+              style={cardShadow}
             >
+              <View className="absolute top-5 right-5 flex-row items-center gap-2">
+                <ThemeToggleChip />
+              </View>
               <Caption className="text-[11px] text-gray-400 uppercase tracking-[0.2em] mb-2">
                 Admin account
               </Caption>
@@ -134,20 +141,23 @@ export default function SettingsScreen() {
         <View className="px-5 pt-2 pb-4">
           <View
             className="rounded-[28px] border border-gray-200 bg-surface px-6 py-3 relative"
-            style={shadows.card}
+            style={cardShadow}
           >
-            <Pressable
-              onPress={() => setEditOpen(true)}
-              className="absolute top-5 right-5 flex-row items-center gap-1.5 px-3 py-2 rounded-full border border-gray-200 bg-gray-50"
-              hitSlop={8}
-            >
-              <FontAwesome
-                name="pencil"
-                size={12}
-                color={Colors.brand.primary}
-              />
-              <Text className="text-xs font-bold text-ink">Edit</Text>
-            </Pressable>
+            <View className="absolute top-5 right-5 flex-row items-center gap-2">
+              <ThemeToggleChip />
+              <Pressable
+                onPress={() => setEditOpen(true)}
+                className="flex-row items-center gap-1.5 px-3 py-2 rounded-full border border-gray-200 bg-gray-50"
+                hitSlop={8}
+              >
+                <FontAwesome
+                  name="pencil"
+                  size={12}
+                  color={Colors.brand.primary}
+                />
+                <Text className="text-xs font-bold text-ink">Edit</Text>
+              </Pressable>
+            </View>
 
             <View className="items-start mb-4">
               <StoreAvatar store={store} />

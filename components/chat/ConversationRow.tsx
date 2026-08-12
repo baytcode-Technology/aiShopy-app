@@ -6,6 +6,7 @@ import { UnreadCountBadge } from '@/components/ui/UnreadCountBadge'
 import { Caption, Muted } from '@/components/ui/Typography'
 import Colors from '@src/theme/colors'
 import type { ChatChannel, ChatListItem } from '@src/types/chat'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 const CHANNEL_AVATAR: Record<
   ChatChannel,
@@ -22,6 +23,7 @@ type Props = {
 
 export function ConversationRow({ conversation, onPress }: Props) {
   const avatar = CHANNEL_AVATAR[conversation.channel]
+  const { isDark } = useAppTheme()
 
   return (
     <AppPressable
@@ -50,7 +52,9 @@ export function ConversationRow({ conversation, onPress }: Props) {
               <FontAwesome name="magic" size={12} color={Colors.brand.primary} accessibilityLabel="AI replying" />
             ) : null}
           </View>
-          <Caption>{conversation.time}</Caption>
+          <Caption className={isDark ? 'text-gray-400' : undefined}>
+            {conversation.time}
+          </Caption>
         </View>
         <View className="flex-row items-center gap-2">
           <Muted className="flex-1" numberOfLines={1}>

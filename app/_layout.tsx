@@ -1,5 +1,4 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { ThemeProvider, DefaultTheme } from '@react-navigation/native'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
@@ -13,22 +12,10 @@ import { AuthProvider } from '@src/contexts/auth-context'
 import { StoreProvider } from '@src/contexts/store-context'
 import { ChatSocketProvider } from '@src/contexts/chat-socket-context'
 import { StoreNotificationsProvider } from '@src/contexts/store-notifications-context'
+import { AppThemeProvider } from '@src/contexts/theme-context'
 import { toastConfig } from '@/components/ui/ToastConfig'
-import Colors from '@src/theme/colors'
 
 export { ErrorBoundary } from 'expo-router'
-
-const AppTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    primary: Colors.brand.primary,
-    background: Colors.bg.primary,
-    card: Colors.bg.primary,
-    text: Colors.text.primary,
-    border: Colors.border.default,
-  },
-}
 
 SplashScreen.preventAutoHideAsync()
 
@@ -54,45 +41,45 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-    <AuthProvider>
-      <StoreProvider>
-        <ChatSocketProvider>
-          <StoreNotificationsProvider>
-        <ThemeProvider value={AppTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="store-check" />
-            <Stack.Screen name="select-store" />
-            <Stack.Screen name="create-store" />
-            <Stack.Screen name="(store)" />
-            <Stack.Screen name="connect-whatsapp" />
-            <Stack.Screen name="whatsapp-oauth" options={{ animation: 'none' }} />
-            <Stack.Screen name="admin-dashboard" />
-            <Stack.Screen name="instagram-connect" />
-            <Stack.Screen name="instagram-oauth" options={{ animation: 'none' }} />
-            <Stack.Screen name="chat-boat" />
-            <Stack.Screen name="platform-support-inbox" />
-            <Stack.Screen name="platform-support" />
-            <Stack.Screen name="platform-admin" />
-            <Stack.Screen name="settings" />
-            <Stack.Screen name="storefront" />
-            <Stack.Screen name="website-customize" />
-            <Stack.Screen name="template-preview" />
-            <Stack.Screen name="payment-methods" />
-            <Stack.Screen name="notifications" />
-            <Stack.Screen name="account-coming-soon" />
-            <Stack.Screen name="subscription" />
-            <Stack.Screen name="subscription-success" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-          </Stack>
-          <Toast config={toastConfig} />
-        </ThemeProvider>
-          </StoreNotificationsProvider>
-        </ChatSocketProvider>
-      </StoreProvider>
-    </AuthProvider>
+      <AppThemeProvider>
+        <AuthProvider>
+          <StoreProvider>
+            <ChatSocketProvider>
+              <StoreNotificationsProvider>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="store-check" />
+                  <Stack.Screen name="select-store" />
+                  <Stack.Screen name="create-store" />
+                  <Stack.Screen name="(store)" />
+                  <Stack.Screen name="connect-whatsapp" />
+                  <Stack.Screen name="whatsapp-oauth" options={{ animation: 'none' }} />
+                  <Stack.Screen name="admin-dashboard" />
+                  <Stack.Screen name="instagram-connect" />
+                  <Stack.Screen name="instagram-oauth" options={{ animation: 'none' }} />
+                  <Stack.Screen name="chat-boat" />
+                  <Stack.Screen name="platform-support-inbox" />
+                  <Stack.Screen name="platform-support" />
+                  <Stack.Screen name="platform-admin" />
+                  <Stack.Screen name="settings" />
+                  <Stack.Screen name="storefront" />
+                  <Stack.Screen name="website-customize" />
+                  <Stack.Screen name="template-preview" />
+                  <Stack.Screen name="payment-methods" />
+                  <Stack.Screen name="notifications" />
+                  <Stack.Screen name="account-coming-soon" />
+                  <Stack.Screen name="subscription" />
+                  <Stack.Screen name="subscription-success" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                </Stack>
+                <Toast config={toastConfig} />
+              </StoreNotificationsProvider>
+            </ChatSocketProvider>
+          </StoreProvider>
+        </AuthProvider>
+      </AppThemeProvider>
     </SafeAreaProvider>
   )
 }

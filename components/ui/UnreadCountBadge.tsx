@@ -1,4 +1,5 @@
 import { Text, View, type ViewStyle } from 'react-native'
+import { useAppTheme } from '@src/contexts/theme-context'
 import Colors from '@src/theme/colors'
 
 type Props = {
@@ -13,6 +14,7 @@ function formatCount(count: number): string {
 }
 
 export function UnreadCountBadge({ count, style, className }: Props) {
+  const { isDark } = useAppTheme()
   if (count <= 0) return null
 
   const label = formatCount(count)
@@ -27,7 +29,7 @@ export function UnreadCountBadge({ count, style, className }: Props) {
           height: 18,
           paddingHorizontal: isWide ? 5 : 0,
           borderRadius: 9,
-          backgroundColor: Colors.status.danger,
+          backgroundColor: isDark ? Colors.brand.green : Colors.status.danger,
           alignItems: 'center',
           justifyContent: 'center',
         },

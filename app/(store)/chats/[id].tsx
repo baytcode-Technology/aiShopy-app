@@ -50,16 +50,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function initialsFromLabel(label: string, fallback: string) {
-  const cleaned = label.replace(/^@/, "").trim();
-  if (!cleaned) return fallback;
-  const parts = cleaned.split(/\s+/);
-  if (parts.length >= 2) {
-    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-  }
-  return (cleaned.slice(0, 2) || fallback).toUpperCase();
-}
-
 function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   const seen = new Set<string>();
   const out: ChatMessage[] = [];
@@ -644,11 +634,6 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const initials = initialsFromLabel(
-    customerPhone,
-    channel === "instagram" ? "IG" : "WA",
-  );
-
   return (
     <ChatVoicePlayerProvider>
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
@@ -660,14 +645,17 @@ export default function ChatDetailScreen() {
             color={Colors.brand.onPrimary}
           />
         </Pressable>
-        <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
-          {channel === "instagram" ? (
-            <FontAwesome name="instagram" size={18} color={Colors.brand.onPrimary} />
-          ) : (
-            <Text className="text-brand-on-primary font-bold text-sm">
-              {initials}
-            </Text>
-          )}
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: channel === "instagram" ? "#E1306C" : "#25D366",
+          }}
+        >
+          <FontAwesome
+            name={channel === "instagram" ? "instagram" : "whatsapp"}
+            size={18}
+            color="#FFFFFF"
+          />
         </View>
         <View className="flex-1 min-w-0">
           <Text

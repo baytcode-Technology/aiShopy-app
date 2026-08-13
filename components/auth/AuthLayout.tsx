@@ -30,6 +30,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { AuthKeyboardContext } from "./auth-keyboard-context";
+import { useAppTheme } from "@src/contexts/theme-context";
 
 const KEYBOARD_ANIM_MS = 280;
 
@@ -61,6 +62,7 @@ type Props = {
 };
 
 export function AuthLayout({ title, subtitle, children, footer }: Props) {
+  const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [cardHeight, setCardHeight] = useState(0);
@@ -182,7 +184,12 @@ export function AuthLayout({ title, subtitle, children, footer }: Props) {
         >
           <Animated.View
             onLayout={onCardLayout}
-            style={[animatedCardStyle, cardShadow, styles.card]}
+            style={[
+              animatedCardStyle,
+              cardShadow,
+              styles.card,
+              { backgroundColor: colors.bg.primary, borderColor: colors.border.default },
+            ]}
           >
             <View
               className="w-full items-center"

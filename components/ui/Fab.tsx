@@ -1,8 +1,8 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
+import { useAppTheme } from "@src/contexts/theme-context";
 import { cn } from "@src/lib/cn";
-import { shadows } from "@src/lib/shadows";
-import Colors from "@src/theme/colors";
+import { getShadows } from "@src/lib/shadows";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View, type PressableProps } from "react-native";
 
@@ -25,6 +25,7 @@ export function Fab({
   badgeCount,
   ...props
 }: Props) {
+  const { colors } = useAppTheme();
   const isBrand = variant === "brand";
 
   return (
@@ -43,7 +44,7 @@ export function Fab({
                   : "bg-brand-primary border-brand-primary",
               )}
               style={[
-                shadows.lg,
+                getShadows(colors).lg,
                 pressed
                   ? { opacity: 0.92, transform: [{ scale: 0.96 }] }
                   : undefined,
@@ -53,7 +54,7 @@ export function Fab({
                 <FontAwesome
                   name="plus"
                   size={iconSize}
-                  color={Colors.brand.onPrimary}
+                  color={colors.brand.onPrimary}
                 />
               )}
             </View>

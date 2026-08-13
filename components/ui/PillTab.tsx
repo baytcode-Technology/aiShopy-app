@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native'
-import { palette } from '@src/theme/palette'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 type Props = {
   selected: boolean
@@ -23,10 +23,13 @@ export function PillTab({
   onPress,
   children,
   radius = 8,
-  selectedColor = palette.gray200,
+  selectedColor,
   style,
   accessibilityLabel,
 }: Props) {
+  const { colors } = useAppTheme()
+  const resolvedSelectedColor = selectedColor ?? colors.border.default
+
   return (
     <Pressable
       onPress={onPress}
@@ -38,7 +41,7 @@ export function PillTab({
         style={[
           styles.pill,
           { borderRadius: radius },
-          selected && { backgroundColor: selectedColor },
+          selected && { backgroundColor: resolvedSelectedColor },
           style,
         ]}
       >

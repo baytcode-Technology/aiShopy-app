@@ -17,6 +17,7 @@ import { Label, Muted, SectionTitle } from '@/components/ui/Typography'
 import { updateMyStore } from '@src/api/stores'
 import { env } from '@src/config/env'
 import { useStore } from '@src/contexts/store-context'
+import { useAppTheme } from '@src/contexts/theme-context'
 import { shadows } from '@src/lib/shadows'
 import { buildSubdomainUrl } from '@src/lib/storefront'
 import { showError, showSuccess } from '@src/lib/toast'
@@ -87,14 +88,26 @@ function DummyImage({ size = 28, tint }: { size?: number; tint?: string }) {
 function TemplateMockPreview({
   variant,
   accent,
+  isDark,
 }: {
   variant: ThemeTemplate
   accent: string
+  isDark: boolean
 }) {
   if (variant === 'boutique') {
     return (
-      <View className="w-full overflow-hidden rounded-t-2xl bg-[#F3F4F6]">
-        <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-3 py-2.5">
+      <View
+        className={cn(
+          'w-full overflow-hidden rounded-t-2xl',
+          isDark ? 'bg-gray-100' : 'bg-[#F3F4F6]'
+        )}
+      >
+        <View
+          className={cn(
+            'flex-row items-center justify-between border-b border-gray-200 px-3 py-2.5',
+            isDark ? 'bg-surface' : 'bg-white',
+          )}
+        >
           <View className="flex-row items-center gap-2">
             <View className="h-6 w-6 rounded-full" style={{ backgroundColor: accent }} />
             <View className="h-2.5 w-16 rounded-full bg-gray-300" />
@@ -112,7 +125,10 @@ function TemplateMockPreview({
             {[0, 1, 2, 3].map((i) => (
               <View
                 key={i}
-                className="w-[47%] items-center rounded-xl border border-gray-200 bg-white py-3"
+                className={cn(
+                  'w-[47%] items-center rounded-xl border border-gray-200 py-3',
+                  isDark ? 'bg-surface' : 'bg-white'
+                )}
               >
                 <DummyImage size={28} tint={accent} />
                 <View className="mt-1.5 h-1.5 w-10 rounded-full bg-gray-300" />
@@ -126,12 +142,24 @@ function TemplateMockPreview({
 
   if (variant === 'modern') {
     return (
-      <View className="w-full overflow-hidden rounded-t-2xl bg-[#F3F4F6]">
-        <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-3 py-2.5">
+      <View
+        className={cn(
+          'w-full overflow-hidden rounded-t-2xl',
+          isDark ? 'bg-gray-100' : 'bg-[#F3F4F6]'
+        )}
+      >
+        <View
+          className={cn(
+            'flex-row items-center justify-between border-b border-gray-200 px-3 py-2.5',
+            isDark ? 'bg-surface' : 'bg-white',
+          )}
+        >
           <View className="h-2.5 w-20 rounded-full bg-gray-800" />
           <FontAwesome name="shopping-cart" size={14} color={accent} />
         </View>
-        <View className="flex-row gap-2 border-b border-gray-100 bg-white px-3 py-2.5">
+        <View
+          className={cn('flex-row gap-2 border-b border-gray-100 px-3 py-2.5', isDark ? 'bg-surface' : 'bg-white')}
+        >
           <View className="h-7 rounded-full px-3 items-center justify-center" style={{ backgroundColor: accent }}>
             <View className="h-1.5 w-8 rounded-full bg-white/90" />
           </View>
@@ -146,7 +174,10 @@ function TemplateMockPreview({
           {[0, 1, 2].map((i) => (
             <View
               key={i}
-              className="flex-1 items-center rounded-xl border border-gray-200 bg-white py-3"
+              className={cn(
+                'flex-1 items-center rounded-xl border border-gray-200 py-3',
+                isDark ? 'bg-surface' : 'bg-white'
+              )}
             >
               <DummyImage size={32} tint={accent} />
               <View className="mt-2 h-1.5 w-10 rounded-full bg-gray-300" />
@@ -160,8 +191,13 @@ function TemplateMockPreview({
 
   // classic — search + filter button, no persistent sidebar
   return (
-    <View className="w-full overflow-hidden rounded-t-2xl bg-[#F3F4F6]">
-      <View className="flex-row items-center justify-between border-b border-gray-200 bg-white px-3 py-2.5">
+    <View
+      className={cn(
+        'w-full overflow-hidden rounded-t-2xl',
+        isDark ? 'bg-gray-100' : 'bg-[#F3F4F6]'
+      )}
+    >
+      <View className="flex-row items-center justify-between border-b border-gray-200 px-3 py-2.5" style={{ backgroundColor: isDark ? '#141416' : undefined }}>
         <View className="flex-row items-center gap-2">
           <View className="h-6 w-6 rounded-full" style={{ backgroundColor: accent }} />
           <View className="h-2.5 w-16 rounded-full bg-gray-300" />
@@ -169,14 +205,17 @@ function TemplateMockPreview({
         <FontAwesome name="shopping-cart" size={14} color={accent} />
       </View>
       <View className="mx-3 mt-3 flex-row items-center gap-2">
-        <View className="h-9 w-9 rounded-lg border border-gray-200 bg-white" />
-        <View className="h-9 flex-1 rounded-full bg-white border border-gray-200" />
+        <View className={cn('h-9 w-9 rounded-lg border border-gray-200', isDark ? 'bg-surface' : 'bg-white')} />
+        <View className={cn('h-9 flex-1 rounded-full border border-gray-200', isDark ? 'bg-surface' : 'bg-white')} />
       </View>
       <View className="flex-row flex-wrap gap-2 px-3 py-3 pb-4">
         {[0, 1, 2, 3].map((i) => (
           <View
             key={i}
-            className="w-[47%] items-center rounded-xl border border-gray-200 bg-white py-3"
+            className={cn(
+              'w-[47%] items-center rounded-xl border border-gray-200 py-3',
+              isDark ? 'bg-surface' : 'bg-white'
+            )}
           >
             <DummyImage size={28} tint={accent} />
             <View className="mt-1.5 h-1.5 w-10 rounded-full bg-gray-300" />
@@ -195,6 +234,7 @@ function TemplateCard({
   variant,
   onSelect,
   onPreview,
+  isDark,
 }: {
   name: string
   tagline: string
@@ -203,11 +243,13 @@ function TemplateCard({
   variant: ThemeTemplate
   onSelect: () => void
   onPreview: () => void
+  isDark: boolean
 }) {
   return (
     <View
       className={cn(
-        'w-full overflow-hidden rounded-2xl border-2 bg-white',
+        'w-full overflow-hidden rounded-2xl border-2',
+        isDark ? 'bg-surface' : 'bg-white',
         selected ? undefined : 'border-gray-200'
       )}
       style={[
@@ -222,10 +264,15 @@ function TemplateCard({
         accessibilityLabel={`Select ${name} template`}
         style={{ width: undefined, alignSelf: 'stretch' }}
       >
-        <TemplateMockPreview variant={variant} accent={accent} />
+        <TemplateMockPreview variant={variant} accent={accent} isDark={isDark} />
       </AppPressable>
 
-      <View className="flex-row items-center justify-between gap-3 border-t border-gray-100 bg-white px-4 py-3.5">
+      <View
+        className={cn(
+          'flex-row items-center justify-between gap-3 border-t border-gray-100 px-4 py-3.5',
+          isDark ? 'bg-surface' : 'bg-white'
+        )}
+      >
         <AppPressable
           onPress={onSelect}
           style={{ flex: 1, width: undefined, alignSelf: 'auto' }}
@@ -247,7 +294,12 @@ function TemplateCard({
           accessibilityLabel={`Preview ${name} demo`}
           style={{ width: undefined, alignSelf: 'auto' }}
         >
-          <View className="rounded-xl border border-gray-300 bg-white px-4 py-2.5">
+          <View
+            className={cn(
+              'rounded-xl border border-gray-300 px-4 py-2.5',
+              isDark ? 'bg-surface' : 'bg-white'
+            )}
+          >
             <Text className="text-[14px] font-semibold text-ink">Preview</Text>
           </View>
         </AppPressable>
@@ -284,11 +336,13 @@ function ColorCombinationCard({
   mode,
   selected,
   onSelect,
+  isDark,
 }: {
   preset: ThemePreset
   mode: ThemeMode
   selected: boolean
   onSelect: () => void
+  isDark: boolean
 }) {
   const surface = getSurfaceColors(mode)
 
@@ -330,7 +384,13 @@ function ColorCombinationCard({
         <View
           className={cn(
             'flex-row items-center justify-between border-t px-3 py-2.5',
-            selected ? 'border-ink/10 bg-gray-50' : 'border-gray-100 bg-white',
+            selected
+              ? isDark
+                ? 'border-gray-200 bg-gray-50'
+                : 'border-ink/10 bg-gray-50'
+              : isDark
+                ? 'border-gray-200 bg-surface'
+                : 'border-gray-100 bg-white',
           )}
         >
           <View className="flex-1 pr-2">
@@ -354,9 +414,11 @@ function ColorCombinationCard({
 function ModeToggle({
   mode,
   onChange,
+  isDark,
 }: {
   mode: ThemeMode
   onChange: (next: ThemeMode) => void
+  isDark: boolean
 }) {
   return (
     <View className="flex-row gap-3">
@@ -426,7 +488,11 @@ function ModeToggle({
                 <Text
                   className={cn(
                     'text-[13px] font-bold',
-                    selected ? 'text-white' : 'text-gray-600'
+                    selected
+                      ? isDark
+                        ? 'text-charcoal'
+                        : 'text-white'
+                      : 'text-gray-600'
                   )}
                 >
                   {opt.label}
@@ -442,6 +508,7 @@ function ModeToggle({
 
 export default function WebsiteCustomizeScreen() {
   const { store, role, subdomainUrl, activateStoreSession, refreshStore } = useStore()
+  const { isDark } = useAppTheme()
 
   const [template, setTemplate] = useState<ThemeTemplate>('classic')
   const [primary, setPrimary] = useState(DEFAULT_PRIMARY)
@@ -550,6 +617,7 @@ export default function WebsiteCustomizeScreen() {
                   setTemplate(item.id)
                 }}
                 onPreview={() => openPreview(item.id)}
+                isDark={isDark}
               />
             ))}
           </View>
@@ -561,7 +629,7 @@ export default function WebsiteCustomizeScreen() {
         >
           <View className="gap-2">
             <Label>Background & text</Label>
-            <ModeToggle mode={mode} onChange={handleModeChange} />
+            <ModeToggle mode={mode} onChange={handleModeChange} isDark={isDark} />
           </View>
 
           <View className="gap-2">
@@ -581,6 +649,7 @@ export default function WebsiteCustomizeScreen() {
                     mode={mode}
                     selected={selected}
                     onSelect={() => selectSwatch(preset.primary)}
+                    isDark={isDark}
                   />
                 )
               })}

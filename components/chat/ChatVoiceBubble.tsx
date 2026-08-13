@@ -7,6 +7,7 @@ import { useChatVoicePlayer } from '@src/contexts/chat-voice-player-context'
 import { cn } from '@src/lib/cn'
 import { showError } from '@src/lib/toast'
 import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { useAppTheme } from '@src/contexts/theme-context'
 import Colors from '@src/theme/colors'
 
 const BAR_COUNT = 28
@@ -41,8 +42,11 @@ type Props = {
 }
 
 export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
+  const { isDark } = useAppTheme()
   const { requestPlay, release } = useChatVoicePlayer()
   const soundRef = useRef<Audio.Sound | null>(null)
+  const darkOutgoing = isDark && outgoing
+  const outgoingFg = darkOutgoing ? '#FFFFFF' : Colors.brand.onPrimary
   const cachedUriRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -193,14 +197,18 @@ export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
           onPress={handleCycleSpeed}
           className={cn(
             'w-8 h-8 rounded-full items-center justify-center',
-            outgoing ? 'bg-black/20' : 'bg-gray-200',
+            outgoing ? (darkOutgoing ? 'bg-white/20' : 'bg-black/20') : 'bg-gray-200',
           )}
           accessibilityLabel={`Playback speed ${formatRate(playbackRate)}`}
         >
           <Text
             className={cn(
               'text-[11px] font-bold',
-              outgoing ? 'text-brand-on-primary' : 'text-ink',
+              outgoing
+                ? darkOutgoing
+                  ? 'text-white'
+                  : 'text-brand-on-primary'
+                : 'text-ink',
             )}
           >
             {formatRate(playbackRate)}
@@ -212,16 +220,23 @@ export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
         onPress={() => void togglePlay()}
         className={cn(
           'w-10 h-10 rounded-full items-center justify-center',
-          outgoing ? 'bg-brand-on-primary/20' : 'bg-brand-primary/15',
+          outgoing
+            ? darkOutgoing
+              ? 'bg-white/20'
+              : 'bg-brand-on-primary/20'
+            : 'bg-brand-primary/15',
         )}
       >
         {loading ? (
-          <ActivityIndicator size="small" color={outgoing ? Colors.brand.onPrimary : Colors.brand.primary} />
+          <ActivityIndicator
+            size="small"
+            color={outgoing ? outgoingFg : Colors.brand.primary}
+          />
         ) : (
           <FontAwesome
             name={isPlaying ? 'pause' : 'play'}
             size={16}
-            color={outgoing ? Colors.brand.onPrimary : Colors.brand.primary}
+            color={outgoing ? outgoingFg : Colors.brand.primary}
             style={{ marginLeft: isPlaying ? 0 : 2 }}
           />
         )}
@@ -241,10 +256,14 @@ export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
             className={cn(
               i < activeBars
                 ? outgoing
-                  ? 'bg-brand-on-primary'
+                  ? darkOutgoing
+                    ? 'bg-white'
+                    : 'bg-brand-on-primary'
                   : 'bg-brand-primary'
                 : outgoing
-                  ? 'bg-brand-on-primary/35'
+                  ? darkOutgoing
+                    ? 'bg-white/45'
+                    : 'bg-brand-on-primary/35'
                   : 'bg-gray-300',
             )}
           />
@@ -255,12 +274,16 @@ export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
         <FontAwesome
           name="microphone"
           size={12}
-          color={outgoing ? Colors.brand.onPrimary : Colors.text.muted}
+          color={outgoing ? outgoingFg : Colors.text.muted}
         />
         <Text
           className={cn(
             'text-xs tabular-nums min-w-[36px]',
-            outgoing ? 'text-brand-on-primary/90' : 'text-gray-500',
+            outgoing
+              ? darkOutgoing
+                ? 'text-white/90'
+                : 'text-brand-on-primary/90'
+              : 'text-gray-500',
           )}
         >
           {durationMs > 0 ? formatMs(isPlaying ? positionMs : durationMs) : '0:00'}

@@ -14,6 +14,7 @@ import { showError } from '@src/lib/toast'
 import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
 import type { ChatMessage } from '@src/types/chat'
 import Colors from '@src/theme/colors'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 type Props = {
   message: ChatMessage
@@ -54,10 +55,23 @@ function WhatsAppDocumentBubble({ uri, label }: { uri: string; label: string }) 
   )
 }
 
-function TextBubbleContent({ message, outgoing }: { message: ChatMessage; outgoing: boolean }) {
+function TextBubbleContent({
+  message,
+  outgoing,
+  isDark,
+}: {
+  message: ChatMessage
+  outgoing: boolean
+  isDark: boolean
+}) {
   if (outgoing) {
     return (
-      <Text className={cn('text-[15px] leading-[21px]', 'text-brand-on-primary')}>
+      <Text
+        className={cn(
+          'text-[15px] leading-[21px]',
+          isDark ? 'text-white' : 'text-brand-on-primary',
+        )}
+      >
         {message.text}
       </Text>
     )
@@ -98,6 +112,7 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
   const type = message.type ?? 'text'
   const mediaUrl = message.mediaUrl
   const showMedia = Boolean(mediaUrl && storeId)
+  const { isDark } = useAppTheme()
   const isMediaMessage =
     showMedia && ['image', 'sticker', 'video', 'audio', 'document'].includes(type)
   const hasReactions = Boolean(message.reactions?.length)
@@ -113,7 +128,11 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
         className={cn(
           'rounded-2xl gap-1.5 overflow-hidden',
           isMediaMessage ? 'p-1' : 'px-3.5 py-2.5',
-          outgoing ? 'bg-brand-primary' : 'bg-surface border border-gray-200',
+          outgoing
+            ? isDark
+              ? 'bg-brand-green'
+              : 'bg-brand-primary'
+            : 'bg-surface border border-gray-200',
         )}
       >
         {showMedia && (type === 'image' || type === 'sticker') ? (
@@ -127,7 +146,12 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
             {message.caption ? (
               <View className="px-2.5 pt-1.5 pb-1">
                 {outgoing ? (
-                  <Text className="text-[15px] leading-[21px] text-brand-on-primary">
+                  <Text
+                    className={cn(
+                      'text-[15px] leading-[21px]',
+                      isDark ? 'text-white' : 'text-brand-on-primary',
+                    )}
+                  >
                     {message.caption}
                   </Text>
                 ) : (
@@ -155,7 +179,11 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
                   text={message.caption}
                   className={cn(
                     'text-[15px] leading-[21px]',
-                    outgoing ? 'text-brand-on-primary' : 'text-ink',
+                    outgoing
+                      ? isDark
+                        ? 'text-white'
+                        : 'text-brand-on-primary'
+                      : 'text-ink',
                   )}
                 />
               </View>
@@ -188,7 +216,7 @@ export function MessageBubble({ message, storeId, onLongPress, onForward }: Prop
           </>
         ) : (
           <>
-            <TextBubbleContent message={message} outgoing={outgoing} />
+            <TextBubbleContent message={message} outgoing={outgoing} isDark={isDark} />
             <BubbleMeta message={message} outgoing={outgoing} />
           </>
         )}

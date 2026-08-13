@@ -35,6 +35,7 @@ import { useStoreUnread } from "@src/contexts/store-unread-context";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
+import { useAppTheme } from "@src/contexts/theme-context";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
 import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
 import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
@@ -49,16 +50,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-function initialsFromLabel(label: string, fallback: string) {
-  const cleaned = label.replace(/^@/, "").trim();
-  if (!cleaned) return fallback;
-  const parts = cleaned.split(/\s+/);
-  if (parts.length >= 2) {
-    return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-  }
-  return (cleaned.slice(0, 2) || fallback).toUpperCase();
-}
 
 function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   const seen = new Set<string>();
@@ -103,6 +94,7 @@ const MESSAGE_PAGE_SIZE = 25;
 
 export default function ChatDetailScreen() {
   const { store } = useStore();
+  const { isDark } = useAppTheme();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
   const { pauseRecording } = useChatVoiceRecording();
@@ -644,34 +636,34 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const initials = initialsFromLabel(
-    customerPhone,
-    channel === "instagram" ? "IG" : "WA",
-  );
-
   return (
     <ChatVoicePlayerProvider>
     <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
-      <View className="flex-row items-center px-3 py-3 bg-brand-primary gap-2.5">
+      <View
+        className={`flex-row items-center px-3 py-3 gap-2.5 ${isDark ? "bg-charcoal" : "bg-brand-primary"}`}
+      >
         <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
           <FontAwesome
             name="chevron-left"
             size={18}
-            color={Colors.brand.onPrimary}
+            color={isDark ? "#FFFFFF" : Colors.brand.onPrimary}
           />
         </Pressable>
-        <View className="w-10 h-10 rounded-full bg-gray-600 items-center justify-center">
-          {channel === "instagram" ? (
-            <FontAwesome name="instagram" size={18} color={Colors.brand.onPrimary} />
-          ) : (
-            <Text className="text-brand-on-primary font-bold text-sm">
-              {initials}
-            </Text>
-          )}
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center"
+          style={{
+            backgroundColor: channel === "instagram" ? "#E1306C" : "#25D366",
+          }}
+        >
+          <FontAwesome
+            name={channel === "instagram" ? "instagram" : "whatsapp"}
+            size={18}
+            color="#FFFFFF"
+          />
         </View>
         <View className="flex-1 min-w-0">
           <Text
-            className="text-brand-on-primary text-base font-bold"
+            className={isDark ? "text-white text-base font-bold" : "text-brand-on-primary text-base font-bold"}
             numberOfLines={1}
           >
             {title}
@@ -696,11 +688,19 @@ export default function ChatDetailScreen() {
             </Text>
           </View>
           <Pressable
-            className="px-3 py-1.5 rounded-full bg-white border border-emerald-200"
+            className="px-3 py-1.5 rounded-full bg-surface border border-emerald-200"
             disabled={replyModeBusy}
             onPress={() => void toggleReplyMode('manual')}
           >
-            <Text className="text-xs font-semibold text-emerald-800">Take over</Text>
+            <Text
+              className={
+                isDark
+                  ? "text-xs font-semibold text-emerald-50"
+                  : "text-xs font-semibold text-emerald-800"
+              }
+            >
+              Take over
+            </Text>
           </Pressable>
         </View>
       ) : null}

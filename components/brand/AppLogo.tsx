@@ -1,6 +1,8 @@
 import { Image, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native'
 import { cn } from '@src/lib/cn'
 import { APP_ICON, APP_NAME, APP_WORDMARK } from '@/constants/brand'
+import { APP_WORDMARK_DARK } from '@/constants/brand'
+import { useAppTheme } from '@src/contexts/theme-context'
 
 /** Matches `DisplayBrand` (text-xs wordmark line). */
 const WORDMARK_HEIGHT = 18
@@ -30,7 +32,8 @@ export function AppLogo({
   const isWordmark = variant === 'wordmark'
   const height = isWordmark ? WORDMARK_HEIGHT : 40
   const width = isWordmark ? WORDMARK_WIDTH : 40
-  const source = isWordmark ? APP_WORDMARK : APP_ICON
+  const { isDark } = useAppTheme()
+  const source = isWordmark ? (isDark ? APP_WORDMARK_DARK : APP_WORDMARK) : APP_ICON
 
   return (
     <View

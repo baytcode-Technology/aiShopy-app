@@ -29,7 +29,7 @@ export function VariantImageActionsModal({
       <Pressable className="flex-1 bg-black/45 justify-end px-5" onPress={onClose}>
         <Pressable
           onPress={(e) => e.stopPropagation()}
-          className="w-full bg-white rounded-2xl px-5 py-4 shadow-lg"
+          className="w-full bg-surface rounded-2xl px-5 py-4 shadow-lg"
           style={{ marginBottom: insets.bottom + 16 }}
         >
           <View className="flex-row items-center justify-between mb-1">

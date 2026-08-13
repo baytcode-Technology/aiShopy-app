@@ -11,7 +11,7 @@ export function ChatDateSeparator({ label, variant = 'inline' }: Props) {
     <View
       className={cn(
         'px-3 py-1.5 rounded-full border border-gray-200 shadow-sm',
-        variant === 'sticky' ? 'bg-white/95' : 'bg-white/90',
+        variant === 'sticky' ? 'bg-surface/95' : 'bg-surface/90',
       )}
     >
       <Text className="text-xs font-semibold text-gray-600">{label}</Text>

@@ -97,6 +97,34 @@ export function getDescendantIds(categoryId: number, categories: Category[]): Se
   return result
 }
 
+export function getAncestorIds(categoryId: number, categories: Category[]): Set<number> {
+  const byId = new Map(categories.map((c) => [c.id, c]))
+  const result = new Set<number>()
+  let current = byId.get(categoryId)?.parent_id ?? null
+  const seen = new Set<number>()
+  while (current != null && !seen.has(current)) {
+    seen.add(current)
+    result.add(current)
+    current = byId.get(current)?.parent_id ?? null
+  }
+  return result
+}
+
+/** Categories that can be nested under `parentId` without creating a cycle. */
+export function getAttachableCategories(
+  parentId: number,
+  categories: Category[]
+): Category[] {
+  const blocked = getDescendantIds(parentId, categories)
+  blocked.add(parentId)
+  for (const id of getAncestorIds(parentId, categories)) {
+    blocked.add(id)
+  }
+  return categories
+    .filter((c) => !blocked.has(c.id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export function filterCategoriesForTree(
   categories: Category[],
   options: {

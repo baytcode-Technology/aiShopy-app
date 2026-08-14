@@ -16,6 +16,7 @@ import {
   guessCountryCodeFromName,
   type CountryValue,
 } from '@src/lib/country-currency'
+import { getApiErrorCode } from '@src/lib/api-error'
 import { buildStoreUpdatePatch } from '@src/lib/store-patch'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Store } from '@src/types/store'
@@ -116,6 +117,12 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
       showSuccess('Store updated')
       handleClose()
     } catch (e) {
+      if (getApiErrorCode(e) === 'SLUG_EXISTS') {
+        showError(
+          'A store with this URL slug already exists. Choose a different store name.'
+        )
+        return
+      }
       showError(e)
     } finally {
       setLoading(false)

@@ -34,6 +34,8 @@ export type UpdateCategoryPayload = Partial<{
 
   description: string | null
 
+  parent_id: number | null
+
 }>
 
 

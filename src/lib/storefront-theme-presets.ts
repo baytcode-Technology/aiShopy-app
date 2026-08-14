@@ -1,4 +1,4 @@
-export type ThemeMode = 'light' | 'dark'
+export type ThemeMode = 'light' | 'dark' | 'extra-dark'
 
 export type ThemePreset = {
   id: string
@@ -9,6 +9,7 @@ export type ThemePreset = {
 
 export const LIGHT_SURFACE = { background: '#FFFFFF', text: '#1A1A1A' } as const
 export const DARK_SURFACE = { background: '#111111', text: '#FAFAFA' } as const
+export const EXTRA_DARK_SURFACE = { background: '#000000', text: '#FAFAFA' } as const
 
 export const DEFAULT_PRIMARY = '#2DB84C'
 
@@ -47,10 +48,11 @@ export function isValidThemeHex(value: string): boolean {
 }
 
 export function presetsForMode(mode: ThemeMode): ThemePreset[] {
-  return mode === 'dark' ? DARK_THEME_PRESETS : LIGHT_THEME_PRESETS
+  return mode === 'light' ? LIGHT_THEME_PRESETS : DARK_THEME_PRESETS
 }
 
 export function getSurfaceColors(mode: ThemeMode) {
+  if (mode === 'extra-dark') return EXTRA_DARK_SURFACE
   return mode === 'dark' ? DARK_SURFACE : LIGHT_SURFACE
 }
 
@@ -89,4 +91,14 @@ export function mapPrimaryAcrossModes(
 
 export function isDarkBackground(background?: string | null): boolean {
   return background?.toUpperCase() === DARK_SURFACE.background.toUpperCase()
+}
+
+export function isExtraDarkBackground(background?: string | null): boolean {
+  return background?.toUpperCase() === EXTRA_DARK_SURFACE.background.toUpperCase()
+}
+
+export function getThemeMode(background?: string | null): ThemeMode {
+  if (isExtraDarkBackground(background)) return 'extra-dark'
+  if (isDarkBackground(background)) return 'dark'
+  return 'light'
 }

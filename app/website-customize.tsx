@@ -25,8 +25,11 @@ import { cn } from '@src/lib/cn'
 import {
   DARK_SURFACE,
   DEFAULT_PRIMARY,
+  EXTRA_DARK_SURFACE,
   getSurfaceColors,
+  getThemeMode,
   isDarkBackground,
+  isExtraDarkBackground,
   isValidThemeHex,
   LIGHT_SURFACE,
   mapPrimaryAcrossModes,
@@ -56,8 +59,7 @@ function normalizeTheme(raw: Store['theme_config']): ThemeConfig {
     raw?.template === 'boutique' || raw?.template === 'modern'
       ? raw.template
       : 'classic'
-  const isDark = isDarkBackground(raw?.colors?.background)
-  const mode: ThemeMode = isDark ? 'dark' : 'light'
+  const mode = getThemeMode(raw?.colors?.background)
   const primaryRaw =
     raw?.colors?.primary && isValidThemeHex(raw.colors.primary)
       ? raw.colors.primary.toUpperCase()
@@ -65,7 +67,7 @@ function normalizeTheme(raw: Store['theme_config']): ThemeConfig {
   const primary = snapPrimaryToMode(primaryRaw, mode)
   return {
     template,
-    colors: { primary, ...(isDark ? DARK_SURFACE : LIGHT_SURFACE) },
+    colors: { primary, ...getSurfaceColors(mode) },
   }
 }
 
@@ -437,6 +439,13 @@ function ModeToggle({
             bg: DARK_SURFACE.background,
             fg: DARK_SURFACE.text,
             hint: 'Dark background',
+          },
+          {
+            key: 'extra-dark' as const,
+            label: 'Extra Dark',
+            bg: EXTRA_DARK_SURFACE.background,
+            fg: EXTRA_DARK_SURFACE.text,
+            hint: 'Pure black + glass',
           },
         ] as const
       ).map((opt) => {

@@ -1,4 +1,4 @@
-export type ThemeMode = 'light' | 'dark' | 'extra-dark'
+export type ThemeMode = 'light' | 'dark'
 
 export type ThemePreset = {
   id: string
@@ -8,8 +8,9 @@ export type ThemePreset = {
 }
 
 export const LIGHT_SURFACE = { background: '#FFFFFF', text: '#1A1A1A' } as const
-export const DARK_SURFACE = { background: '#111111', text: '#FAFAFA' } as const
-export const EXTRA_DARK_SURFACE = { background: '#000000', text: '#FAFAFA' } as const
+export const DARK_SURFACE = { background: '#000000', text: '#FAFAFA' } as const
+/** Old flat dark surface — treated as Dark for stores saved before the rename. */
+const LEGACY_FLAT_DARK_BACKGROUND = '#111111'
 
 export const DEFAULT_PRIMARY = '#2DB84C'
 
@@ -21,7 +22,7 @@ export const LIGHT_THEME_PRESETS: ThemePreset[] = [
   { id: 'violet', label: 'Violet', primary: '#7C3AED', hint: 'Purple on white' },
 ]
 
-/** Bright accents that stay readable on dark background + light text. */
+/** Bright accents that stay readable on Dark + light text. */
 export const DARK_THEME_PRESETS: ThemePreset[] = [
   { id: 'mint', label: 'Mint', primary: '#4ADE80', hint: 'Green on dark' },
   { id: 'sky', label: 'Sky', primary: '#60A5FA', hint: 'Blue on dark' },
@@ -52,7 +53,6 @@ export function presetsForMode(mode: ThemeMode): ThemePreset[] {
 }
 
 export function getSurfaceColors(mode: ThemeMode) {
-  if (mode === 'extra-dark') return EXTRA_DARK_SURFACE
   return mode === 'dark' ? DARK_SURFACE : LIGHT_SURFACE
 }
 
@@ -89,16 +89,13 @@ export function mapPrimaryAcrossModes(
   return targetPresets[0].primary
 }
 
-export function isDarkBackground(background?: string | null): boolean {
-  return background?.toUpperCase() === DARK_SURFACE.background.toUpperCase()
-}
-
-export function isExtraDarkBackground(background?: string | null): boolean {
-  return background?.toUpperCase() === EXTRA_DARK_SURFACE.background.toUpperCase()
-}
-
 export function getThemeMode(background?: string | null): ThemeMode {
-  if (isExtraDarkBackground(background)) return 'extra-dark'
-  if (isDarkBackground(background)) return 'dark'
+  const normalized = background?.toUpperCase()
+  if (
+    normalized === DARK_SURFACE.background.toUpperCase() ||
+    normalized === LEGACY_FLAT_DARK_BACKGROUND
+  ) {
+    return 'dark'
+  }
   return 'light'
 }

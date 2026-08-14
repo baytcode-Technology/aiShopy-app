@@ -35,7 +35,9 @@ export default function TemplatePreviewScreen() {
     typeof params.primary === 'string' && /^#[0-9A-Fa-f]{6}$/.test(params.primary)
       ? params.primary
       : DEFAULT_PRIMARY
-  const mode = params.mode === 'dark' ? 'dark' : 'light'
+  // Accept legacy preview URLs that still send mode=extra-dark.
+  const mode =
+    params.mode === 'dark' || params.mode === 'extra-dark' ? 'dark' : 'light'
 
   const previewUrl = useMemo(
     () => buildPreviewUrl(template, primary, mode),

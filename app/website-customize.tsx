@@ -26,7 +26,7 @@ import {
   DARK_SURFACE,
   DEFAULT_PRIMARY,
   getSurfaceColors,
-  isDarkBackground,
+  getThemeMode,
   isValidThemeHex,
   LIGHT_SURFACE,
   mapPrimaryAcrossModes,
@@ -56,8 +56,7 @@ function normalizeTheme(raw: Store['theme_config']): ThemeConfig {
     raw?.template === 'boutique' || raw?.template === 'modern'
       ? raw.template
       : 'classic'
-  const isDark = isDarkBackground(raw?.colors?.background)
-  const mode: ThemeMode = isDark ? 'dark' : 'light'
+  const mode = getThemeMode(raw?.colors?.background)
   const primaryRaw =
     raw?.colors?.primary && isValidThemeHex(raw.colors.primary)
       ? raw.colors.primary.toUpperCase()
@@ -65,7 +64,7 @@ function normalizeTheme(raw: Store['theme_config']): ThemeConfig {
   const primary = snapPrimaryToMode(primaryRaw, mode)
   return {
     template,
-    colors: { primary, ...(isDark ? DARK_SURFACE : LIGHT_SURFACE) },
+    colors: { primary, ...getSurfaceColors(mode) },
   }
 }
 
@@ -436,7 +435,7 @@ function ModeToggle({
             label: 'Dark',
             bg: DARK_SURFACE.background,
             fg: DARK_SURFACE.text,
-            hint: 'Dark background',
+            hint: 'Pure black + glass',
           },
         ] as const
       ).map((opt) => {
@@ -522,9 +521,7 @@ export default function WebsiteCustomizeScreen() {
     const normalized = normalizeTheme(store.theme_config)
     setTemplate(normalized.template)
     setPrimary(normalized.colors.primary)
-    setMode(
-      isDarkBackground(normalized.colors.background) ? 'dark' : 'light'
-    )
+    setMode(getThemeMode(normalized.colors.background))
     setInitialConfig(normalized)
     setInitializedStoreId(store.id)
   }, [store, initializedStoreId])
@@ -637,7 +634,7 @@ export default function WebsiteCustomizeScreen() {
             <Muted className="text-[12px] leading-5">
               {mode === 'light'
                 ? 'White page, dark text — pick one of four accents'
-                : 'Dark page, light text — two accents that stay readable'}
+                : 'Pure black glass page, light text — two readable accents'}
             </Muted>
             <View className="flex-row flex-wrap justify-between gap-y-3">
               {colorPresets.map((preset) => {

@@ -10,6 +10,7 @@ import { CategorySubcategoriesSection } from '@/components/store/CategorySubcate
 import { CategoryProductsSection } from '@/components/store/CategoryProductsSection'
 import { CreateCategoryModal } from '@/components/store/CreateCategoryModal'
 import { CategoryProductPickerModal } from '@/components/store/CategoryProductPickerModal'
+import { CategoryTreeModal } from '@/components/store/CategoryTreeModal'
 import { CreateProductModal } from '@/components/store/CreateProductModal'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -18,10 +19,14 @@ import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { IconButton } from '@/components/ui/IconButton'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
-import { deleteCategory, fetchCategories } from '@src/api/categories'
+import { deleteCategory, fetchCategories, updateCategory } from '@src/api/categories'
 import { fetchProducts } from '@src/api/products'
 import { useStore } from '@src/contexts/store-context'
-import { getCategoryBreadcrumb, getDirectChildren } from '@src/lib/category-tree'
+import {
+  getAttachableCategories,
+  getCategoryBreadcrumb,
+  getDirectChildren,
+} from '@src/lib/category-tree'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import type { Category } from '@src/types/category'
@@ -45,6 +50,8 @@ export default function CategoryDetailScreen() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [subcategoryModalOpen, setSubcategoryModalOpen] = useState(false)
+  const [attachExistingOpen, setAttachExistingOpen] = useState(false)
+  const [removingChildId, setRemovingChildId] = useState<number | null>(null)
 
   const loadData = useCallback(async () => {
     if (!store?.id || !Number.isFinite(categoryId)) return
@@ -97,6 +104,33 @@ export default function CategoryDetailScreen() {
       setDeleteLoading(false)
     }
   }
+
+  const attachExisting = async (childId: number | null) => {
+    if (!childId || childId === categoryId) return
+    try {
+      await updateCategory(childId, { parent_id: categoryId })
+      showSuccess('Subcategory added')
+      setAttachExistingOpen(false)
+      await loadData()
+    } catch (e) {
+      showError(e, 'Could not add subcategory')
+    }
+  }
+
+  const detachChild = async (childId: number) => {
+    setRemovingChildId(childId)
+    try {
+      await updateCategory(childId, { parent_id: null })
+      showSuccess('Removed from this category')
+      await loadData()
+    } catch (e) {
+      showError(e, 'Could not remove subcategory')
+    } finally {
+      setRemovingChildId(null)
+    }
+  }
+
+  const attachableCategories = getAttachableCategories(categoryId, categories)
 
   return (
     <Screen variant="canvas" edges={['top']}>
@@ -173,6 +207,9 @@ export default function CategoryDetailScreen() {
                   router.push(`/(store)/products/categories/${childId}` as Href)
                 }
                 onAddSubcategory={() => setSubcategoryModalOpen(true)}
+                onAddExisting={() => setAttachExistingOpen(true)}
+                onRemoveChild={detachChild}
+                removingChildId={removingChildId}
               />
 
               <CategoryProductsSection
@@ -202,6 +239,16 @@ export default function CategoryDetailScreen() {
             defaultParentId={categoryId}
             onClose={() => setSubcategoryModalOpen(false)}
             onCreated={loadData}
+          />
+          <CategoryTreeModal
+            isOpen={attachExistingOpen}
+            onClose={() => setAttachExistingOpen(false)}
+            categories={attachableCategories}
+            selectedId={null}
+            onSelect={attachExisting}
+            title="Add existing category"
+            subtitle="Nest another category under this one"
+            showNoneOption={false}
           />
           <EditCategoryModal
             visible={mainEditOpen}

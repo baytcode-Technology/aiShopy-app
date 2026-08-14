@@ -1,4 +1,5 @@
 import type { Store, UpdateStorePayload } from '@src/types/store'
+import { slugifyFromName } from '@src/validations/store.validation'
 
 export type StoreEditForm = {
   name: string
@@ -20,7 +21,13 @@ export function buildStoreUpdatePatch(
   const description = form.description.trim() || null
   const whatsapp = form.whatsapp_number.trim()
 
-  if (name !== store.name) patch.name = name
+  if (name !== store.name) {
+    patch.name = name
+    const nextSlug = slugifyFromName(name)
+    if (nextSlug && nextSlug !== store.slug) {
+      patch.slug = nextSlug
+    }
+  }
   if (industry !== (store.industry ?? null)) patch.industry = industry
   if (description !== (store.description ?? null)) patch.description = description
   if (whatsapp !== store.whatsapp_number) patch.whatsapp_number = whatsapp

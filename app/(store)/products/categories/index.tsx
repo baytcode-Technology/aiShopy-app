@@ -237,7 +237,12 @@ export default function CategoriesScreen() {
             storeId={store.id}
             categories={categories}
             onClose={() => setModalOpen(false)}
-            onCreated={() => loadData()}
+            onCreated={(created) => {
+              void loadData()
+              router.push(
+                `/(store)/products/categories/${created.id}` as Href,
+              )
+            }}
           />
         ) : null}
       </ScreenBody>

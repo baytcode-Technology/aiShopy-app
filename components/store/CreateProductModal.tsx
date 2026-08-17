@@ -144,7 +144,6 @@ export function CreateProductModal({
       scrollToField("images");
       return;
     }
-
     setNameError("");
     setPriceError("");
     setStockError("");

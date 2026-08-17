@@ -11,13 +11,16 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import Toast from 'react-native-toast-message'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '@/components/ui/Button'
+import { toastConfig } from '@/components/ui/ToastConfig'
 import {
   MAX_PRODUCT_IMAGES,
   mediaId,
   mimeFromUri,
   productImageLimitMessage,
+  remainingProductImageSlots,
   type ProductMediaItem,
 } from '@src/lib/product-media'
 import { showError, showWarning } from '@src/lib/toast'
@@ -104,12 +107,14 @@ export function ProductMediaGalleryModal({
       showError('Permission to access photos is required')
       return
     }
+    const remaining = remainingProductImageSlots(draft.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       allowsEditing: false,
       quality: 0.85,
-      selectionLimit: 0,
+      // Cap picks in the system gallery so users can't select past the 15 limit.
+      selectionLimit: remaining,
     })
     if (result.canceled || !result.assets.length) return
 
@@ -313,6 +318,7 @@ export function ProductMediaGalleryModal({
             <View style={{ paddingBottom: insets.bottom + 12 }} />
           )}
         </View>
+        <Toast config={toastConfig} />
       </Modal>
 
       <ProductImagePreviewModal

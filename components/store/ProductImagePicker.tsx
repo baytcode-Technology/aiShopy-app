@@ -7,6 +7,7 @@ import { cn } from '@src/lib/cn'
 import {
   MAX_PRODUCT_IMAGES,
   productImageLimitMessage,
+  remainingProductImageSlots,
 } from '@src/lib/product-media'
 import { showError, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
@@ -47,11 +48,12 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
       return
     }
 
+    const remaining = remainingProductImageSlots(images.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 0,
+      selectionLimit: remaining,
     })
 
     if (result.canceled || !result.assets.length) {

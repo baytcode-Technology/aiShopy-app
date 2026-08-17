@@ -8,6 +8,7 @@ import {
   mediaId,
   mimeFromUri,
   productImageLimitMessage,
+  remainingProductImageSlots,
   type ProductMediaItem,
 } from '@src/lib/product-media'
 import { showError, showWarning } from '@src/lib/toast'
@@ -34,11 +35,12 @@ export function ProductMediaEditor({ items, thumbnailId, onChange, error }: Prop
       return
     }
 
+    const remaining = remainingProductImageSlots(items.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 0,
+      selectionLimit: remaining,
     })
 
     if (result.canceled || !result.assets.length) return

@@ -11,11 +11,13 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import {
   initialWindowMetrics,
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context'
+import { toastConfig } from '@/components/ui/ToastConfig'
 import { cn } from '@src/lib/cn'
 import { Heading, Subtitle } from './Typography'
 import type { ScrollView as RNScrollView } from 'react-native'
@@ -57,6 +59,8 @@ export function SleekModal(props: Props) {
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <SleekModalSheet {...props} />
+        {/* Native Modal sits above the root Toast; mount one here so alerts are visible. */}
+        <Toast config={toastConfig} />
       </SafeAreaProvider>
     </RNModal>
   )

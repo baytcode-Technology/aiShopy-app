@@ -15,6 +15,7 @@ import {
   mimeFromUri,
   productImageLimitMessage,
   productToMediaItems,
+  remainingProductImageSlots,
   resolveProductMediaForSave,
   resolveThumbnailId,
   type ProductMediaItem,
@@ -89,11 +90,12 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
       showError('Permission to access photos is required')
       return
     }
+    const remaining = remainingProductImageSlots(items.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 0,
+      selectionLimit: remaining,
     })
     if (result.canceled || !result.assets.length) return
 

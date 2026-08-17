@@ -22,11 +22,12 @@ import Colors from "@src/theme/colors";
 import type { Store } from "@src/types/store";
 import { router, type Href } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 import { performSignOut } from "@src/lib/safe-sign-out";
+import { SUPPORT_EMAIL } from "@src/lib/support-contact";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -58,8 +59,15 @@ export default function SettingsScreen() {
     void performSignOut(clearStore, signOut);
   };
 
-  const handleComingSoon = (feature: string) => {
-    Alert.alert("Coming soon", `${feature} will be available soon.`);
+  const handleSendFeedback = () => {
+    const subject = encodeURIComponent("AiShopy feedback");
+    const body = encodeURIComponent(
+      `Hi,\n\nI'd like to share feedback.\n\nStore: ${store?.name ?? "—"}\nAccount: ${user?.email ?? "—"}\n\n`,
+    );
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
+    void Linking.openURL(url).catch(() => {
+      Alert.alert("Send feedback", `Email us at ${SUPPORT_EMAIL}`);
+    });
   };
 
   const storefrontHost = store?.slug
@@ -282,28 +290,28 @@ export default function SettingsScreen() {
                 value=""
                 icon="comment-o"
                 showChevron
-                onPress={() => handleComingSoon("Send feedback")}
+                onPress={handleSendFeedback}
               />
               <MenuRow
                 label="Help center"
                 value=""
                 icon="question-circle-o"
                 showChevron
-                onPress={() => handleComingSoon("Help center")}
+                onPress={() => router.push("/(store)/chats/support-ai" as Href)}
               />
               <MenuRow
                 label="Privacy policy"
                 value=""
                 icon="lock"
                 showChevron
-                onPress={() => handleComingSoon("Privacy policy")}
+                onPress={() => router.push("/privacy-policy" as Href)}
               />
               <MenuRow
                 label="Terms"
                 value=""
                 icon="file-text-o"
                 showChevron
-                onPress={() => handleComingSoon("Terms")}
+                onPress={() => router.push("/terms" as Href)}
               />
             </View>
           </View>

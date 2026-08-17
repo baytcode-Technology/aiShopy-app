@@ -63,6 +63,8 @@ export default function RootLayout() {
                   <Stack.Screen name="platform-support" />
                   <Stack.Screen name="platform-admin" />
                   <Stack.Screen name="settings" />
+                  <Stack.Screen name="privacy-policy" />
+                  <Stack.Screen name="terms" />
                   <Stack.Screen name="storefront" />
                   <Stack.Screen name="website-customize" />
                   <Stack.Screen name="template-preview" />

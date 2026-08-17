@@ -9,7 +9,11 @@ import {
   View,
 } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { getProductStockLabel, stockLabelToneClass } from '@src/lib/product-inventory'
+import {
+  getProductListStockLabel,
+  stockLabelToneClass,
+  variantStockSummary,
+} from '@src/lib/product-inventory'
 import { getProductStatus } from '@src/lib/product-status'
 import { formatMoney } from '@src/lib/format-money'
 import Colors from '@src/theme/colors'
@@ -17,6 +21,8 @@ import type { Product } from '@src/types/product'
 import { OrderSearchBar } from './OrderSearchBar'
 
 function variantCount(product: Product): number {
+  const summary = variantStockSummary(product)
+  if (summary) return summary.count
   const n = (product.metadata as { variant_count?: number } | undefined)?.variant_count
   return typeof n === 'number' && n > 0 ? n : 0
 }
@@ -64,8 +70,9 @@ export function OrderProductPickerBody({
           }
           renderItem={({ item: product }) => {
             const variants = variantCount(product)
-            const stockLabel = getProductStockLabel(product)
+            const stockLabel = getProductListStockLabel(product)
             const status = getProductStatus(product)
+            const statusLabel = status === 'active' ? 'Active' : status
 
             return (
               <Pressable
@@ -91,12 +98,17 @@ export function OrderProductPickerBody({
                   <Text className="text-[13px] text-gray-500 mt-0.5">
                     {variants > 0 ? (
                       <>
-                        {variants} variants · {status === 'active' ? 'Active' : status}
+                        {stockLabel ? (
+                          <Text className={stockLabelToneClass(stockLabel.tone)}>
+                            {stockLabel.text}
+                          </Text>
+                        ) : null}
+                        {stockLabel ? ' · ' : null}
+                        {variants} variants · {statusLabel}
                       </>
                     ) : (
                       <>
-                        {formatMoney(Number(product.base_price), currency)} ·{' '}
-                        {status === 'active' ? 'Active' : status}
+                        {formatMoney(Number(product.base_price), currency)} · {statusLabel}
                         {stockLabel ? (
                           <Text className={stockLabelToneClass(stockLabel.tone)}>
                             {` · ${stockLabel.text}`}

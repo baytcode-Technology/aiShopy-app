@@ -325,12 +325,15 @@ export function ProductMediaGalleryModal({
         visible={previewItem != null}
         item={previewItem}
         onClose={() => setPreviewItem(null)}
-        onUpdate={(updated) => {
-          setDraft((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-          setPreviewItem(updated)
-        }}
         onDelete={() => {
           if (!previewItem) return
+          if (draft.length <= 1) {
+            showWarning(
+              'At least one image required',
+              'Add another image before removing this one.'
+            )
+            return
+          }
           const next = draft.filter((i) => i.id !== previewItem.id)
           let thumb = draftThumb
           if (thumb === previewItem.id) thumb = next[0]?.id ?? null

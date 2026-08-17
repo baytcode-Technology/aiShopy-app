@@ -1,5 +1,14 @@
 export type ProductStatus = 'active' | 'draft' | 'unlisted'
 
+/** Aggregated variant stock returned by the products list API. */
+export type VariantStockSummary = {
+  count: number
+  non_inventory_count: number
+  sold_out_count: number
+  min_qty: number
+  max_qty: number
+}
+
 export type Product = {
   id: number
   store_id: number
@@ -19,6 +28,7 @@ export type Product = {
   is_active: boolean
   sort_order: number
   metadata: Record<string, unknown>
+  variant_summary?: VariantStockSummary | null
   created_at: string
   updated_at: string
 }

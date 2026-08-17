@@ -11,14 +11,19 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import Toast from 'react-native-toast-message'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '@/components/ui/Button'
+import { toastConfig } from '@/components/ui/ToastConfig'
 import {
+  MAX_PRODUCT_IMAGES,
   mediaId,
   mimeFromUri,
+  productImageLimitMessage,
+  remainingProductImageSlots,
   type ProductMediaItem,
 } from '@src/lib/product-media'
-import { showError } from '@src/lib/toast'
+import { showError, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
 import { ProductImagePreviewModal } from './ProductImagePreviewModal'
@@ -84,26 +89,40 @@ export function ProductMediaGalleryModal({
 
   const gridCells = useMemo((): GridCell[] => {
     const cells: GridCell[] = [...draft]
-    if (draft.length < 10) cells.push('add')
+    if (draft.length < MAX_PRODUCT_IMAGES) cells.push('add')
     return cells
   }, [draft])
 
   const gridRows = useMemo(() => chunkRows(gridCells), [gridCells])
 
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(draft.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
       return
     }
+    const remaining = remainingProductImageSlots(draft.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       allowsEditing: false,
       quality: 0.85,
-      selectionLimit: 10 - draft.length,
+      // Cap picks in the system gallery so users can't select past the 15 limit.
+      selectionLimit: remaining,
     })
     if (result.canceled || !result.assets.length) return
+
+    const limitMessage = productImageLimitMessage(draft.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
+      return
+    }
 
     const added: ProductMediaItem[] = result.assets.map((asset, index) => ({
       id: mediaId(),
@@ -113,7 +132,7 @@ export function ProductMediaGalleryModal({
         type: asset.mimeType ?? mimeFromUri(asset.uri),
       },
     }))
-    const merged = [...draft, ...added].slice(0, 10)
+    const merged = [...draft, ...added]
     setDraft(merged)
     if (!draftThumb && merged[0]) setDraftThumb(merged[0].id)
   }
@@ -299,18 +318,22 @@ export function ProductMediaGalleryModal({
             <View style={{ paddingBottom: insets.bottom + 12 }} />
           )}
         </View>
+        <Toast config={toastConfig} />
       </Modal>
 
       <ProductImagePreviewModal
         visible={previewItem != null}
         item={previewItem}
         onClose={() => setPreviewItem(null)}
-        onUpdate={(updated) => {
-          setDraft((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-          setPreviewItem(updated)
-        }}
         onDelete={() => {
           if (!previewItem) return
+          if (draft.length <= 1) {
+            showWarning(
+              'At least one image required',
+              'Add another image before removing this one.'
+            )
+            return
+          }
           const next = draft.filter((i) => i.id !== previewItem.id)
           let thumb = draftThumb
           if (thumb === previewItem.id) thumb = next[0]?.id ?? null

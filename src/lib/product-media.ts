@@ -2,6 +2,29 @@ import { Image } from 'react-native'
 import * as ImageManipulator from 'expo-image-manipulator'
 import type { Product } from '@src/types/product'
 
+export const MAX_PRODUCT_IMAGES = 15
+
+/** How many more gallery images can be added (0 when already at the cap). */
+export function remainingProductImageSlots(currentCount: number): number {
+  return Math.max(0, MAX_PRODUCT_IMAGES - currentCount)
+}
+
+export function productImageLimitMessage(
+  currentCount: number,
+  selectedCount: number
+): string | null {
+  const remaining = remainingProductImageSlots(currentCount)
+  if (remaining === 0) {
+    return `You can add up to ${MAX_PRODUCT_IMAGES} product images. Remove an image before adding another.`
+  }
+  if (selectedCount > remaining) {
+    return `You can add up to ${MAX_PRODUCT_IMAGES} product images. Only ${remaining} more ${
+      remaining === 1 ? 'image is' : 'images are'
+    } allowed.`
+  }
+  return null
+}
+
 export type ProductMediaItem = {
   id: string
   uri: string

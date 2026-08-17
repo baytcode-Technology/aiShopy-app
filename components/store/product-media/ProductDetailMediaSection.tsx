@@ -10,9 +10,12 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import {
+  MAX_PRODUCT_IMAGES,
   mediaId,
   mimeFromUri,
+  productImageLimitMessage,
   productToMediaItems,
+  remainingProductImageSlots,
   resolveProductMediaForSave,
   resolveThumbnailId,
   type ProductMediaItem,
@@ -20,7 +23,7 @@ import {
 import { CancelSaveRow } from '@/components/ui/CancelSaveRow'
 import { updateProduct } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
-import { showError, showSuccess } from '@src/lib/toast'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 import type { Product } from '@src/types/product'
 import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
@@ -28,6 +31,17 @@ import { ProductMediaGalleryModal } from './ProductMediaGalleryModal'
 import { ProductImagePreviewModal } from './ProductImagePreviewModal'
 
 const TILE = 88
+
+function mediaSnapshot(items: ProductMediaItem[], thumbnailId: string | null) {
+  return JSON.stringify({
+    items: items.map((i) => ({
+      id: i.id,
+      remoteUrl: i.remoteUrl ?? null,
+      pending: Boolean(i.pending),
+    })),
+    thumbnailId,
+  })
+}
 
 type Props = {
   product: Product
@@ -51,6 +65,18 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
   }, [product.id, product.updated_at, product.images.join('|'), product.thumbnail_url])
 
   const hasPending = useMemo(() => items.some((i) => i.pending), [items])
+
+  const baselineSnapshot = useMemo(() => {
+    const synced = productToMediaItems(product)
+    return mediaSnapshot(synced, resolveThumbnailId(synced, product.thumbnail_url))
+  }, [product.id, product.updated_at, product.images.join('|'), product.thumbnail_url])
+
+  const isDirty = useMemo(
+    () => mediaSnapshot(items, thumbnailId) !== baselineSnapshot,
+    [items, thumbnailId, baselineSnapshot]
+  )
+
+  const showSaveBar = hasPending || isDirty
 
   const persistMedia = useCallback(
     async (nextItems: ProductMediaItem[], nextThumbId: string | null) => {
@@ -76,18 +102,31 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
   )
 
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(items.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
       return
     }
+    const remaining = remainingProductImageSlots(items.length)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 10 - items.length,
+      selectionLimit: remaining,
     })
     if (result.canceled || !result.assets.length) return
+
+    const limitMessage = productImageLimitMessage(items.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
+      return
+    }
 
     const added: ProductMediaItem[] = result.assets.map((asset, index) => ({
       id: mediaId(),
@@ -97,7 +136,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
         type: asset.mimeType ?? mimeFromUri(asset.uri),
       },
     }))
-    const merged = [...items, ...added].slice(0, 10)
+    const merged = [...items, ...added]
     setItems(merged)
     if (!thumbnailId && merged[0]) setThumbnailId(merged[0].id)
   }
@@ -169,7 +208,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
                 </View>
               </Pressable>
             ))}
-            {items.length < 10 ? (
+            {items.length < MAX_PRODUCT_IMAGES ? (
               <Pressable onPress={pickImages} style={styles.addTile}>
                 <FontAwesome name="plus" size={24} color={Colors.text.muted} />
               </Pressable>
@@ -178,10 +217,10 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
         </ScrollView>
       </View>
 
-      {hasPending ? (
+      {showSaveBar ? (
         <View className="px-4 pb-4 pt-3 border-t border-gray-100 bg-gray-50">
           <Text className="text-[13px] font-medium text-gray-600 mb-3 text-center">
-            New images — save or discard
+            Unsaved media changes
           </Text>
           <CancelSaveRow onCancel={cancelPending} onSave={savePending} saving={saving} />
         </View>
@@ -206,12 +245,15 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
         visible={previewItem != null}
         item={previewItem}
         onClose={() => setPreviewItem(null)}
-        onUpdate={(updated) => {
-          setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
-          setPreviewItem(updated)
-        }}
         onDelete={() => {
           if (!previewItem) return
+          if (items.length <= 1) {
+            showWarning(
+              'At least one image required',
+              'Add another image before removing this one.'
+            )
+            return
+          }
           const next = items.filter((i) => i.id !== previewItem.id)
           let thumb = thumbnailId
           if (thumb === previewItem.id) thumb = next[0]?.id ?? null

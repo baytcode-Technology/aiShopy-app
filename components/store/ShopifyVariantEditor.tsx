@@ -23,6 +23,7 @@ type Props = {
   options: VariantOption[];
   variants: GeneratedVariant[];
   onChange: (options: VariantOption[], variants: GeneratedVariant[]) => void;
+  showVariantImages?: boolean;
 };
 
 const inputClass =
@@ -30,7 +31,12 @@ const inputClass =
 const miniInputClass =
   "border border-gray-200 rounded-md px-2 py-1.5 text-[13px] text-ink bg-gray-100";
 
-export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
+export function ShopifyVariantEditor({
+  options,
+  variants,
+  onChange,
+  showVariantImages = true,
+}: Props) {
   const [expanded, setExpanded] = useState(true);
 
   const addOption = () => {
@@ -109,6 +115,11 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
           <Muted className="text-xs leading-[18px]">
             Add options (Size, Color), then set price and stock per combination.
           </Muted>
+          {!showVariantImages ? (
+            <Muted className="text-xs leading-[18px]">
+              Variant images can be added from product details after the product is created.
+            </Muted>
+          ) : null}
 
           {options.map((opt, optIndex) => (
             <Card key={opt.id} className="gap-2">
@@ -186,27 +197,29 @@ export function ShopifyVariantEditor({ options, variants, onChange }: Props) {
               {variants.map((v) => (
                 <Card key={v.id} className="gap-2">
                   <View className="flex-row items-start gap-2.5">
-                    <VariantImageTile
-                      imageUri={v.imageUri}
-                      size={40}
-                      onPick={(file) =>
-                        updateVariant(v.id, {
-                          imageUri: file.uri,
-                          imageName: file.name,
-                          imageType: file.type,
-                        })
-                      }
-                      onRemove={
-                        v.imageUri
-                          ? () =>
-                              updateVariant(v.id, {
-                                imageUri: null,
-                                imageName: undefined,
-                                imageType: undefined,
-                              })
-                          : undefined
-                      }
-                    />
+                    {showVariantImages ? (
+                      <VariantImageTile
+                        imageUri={v.imageUri}
+                        size={40}
+                        onPick={(file) =>
+                          updateVariant(v.id, {
+                            imageUri: file.uri,
+                            imageName: file.name,
+                            imageType: file.type,
+                          })
+                        }
+                        onRemove={
+                          v.imageUri
+                            ? () =>
+                                updateVariant(v.id, {
+                                  imageUri: null,
+                                  imageName: undefined,
+                                  imageType: undefined,
+                                })
+                            : undefined
+                        }
+                      />
+                    ) : null}
                     <Text
                       className="flex-1 text-sm font-bold text-ink pt-0.5"
                       numberOfLines={2}

@@ -1,4 +1,4 @@
-import type { Product, ProductVariant } from '@src/types/product'
+import type { Product, ProductVariant, VariantStockSummary } from '@src/types/product'
 
 /** Product-level flags apply only to simple (no-variant) products. */
 export function isNonInventoryProduct(product: Product, hasVariants = false): boolean {
@@ -32,6 +32,7 @@ export function isMarkedSoldVariant(
 
 function toneClass(tone: ProductStockLabel['tone']): string {
   if (tone === 'danger') return 'text-[#991B1B]'
+  if (tone === 'success') return 'text-brand-green'
   if (tone === 'muted') return 'text-gray-400'
   return 'text-gray-500'
 }
@@ -60,7 +61,7 @@ export function effectiveVariantStockQty(product: Product, variant: ProductVaria
 
 export type ProductStockLabel = {
   text: string
-  tone: 'default' | 'danger' | 'muted'
+  tone: 'default' | 'danger' | 'muted' | 'success'
 }
 
 export function getProductStockLabel(product: Product): ProductStockLabel | null {
@@ -74,6 +75,36 @@ export function getProductStockLabel(product: Product): ProductStockLabel | null
   const qty = product.stock_qty
   const text = qty === 1 ? '1 available' : `${qty} available`
   return { text, tone: qty <= 0 ? 'danger' : 'default' }
+}
+
+export function variantStockSummary(product: Product): VariantStockSummary | null {
+  const summary = product.variant_summary
+  return summary && summary.count > 0 ? summary : null
+}
+
+/** List card availability — variant products ignore product-level stock_qty. */
+export function getProductListStockLabel(product: Product): ProductStockLabel | null {
+  const summary = variantStockSummary(product)
+  if (!summary) return getProductStockLabel(product)
+
+  if (summary.non_inventory_count === summary.count) {
+    return { text: 'Non inventory', tone: 'success' }
+  }
+  if (summary.sold_out_count === summary.count) {
+    return { text: 'Sold out', tone: 'danger' }
+  }
+  if (
+    summary.non_inventory_count === 0 &&
+    summary.sold_out_count === 0 &&
+    summary.min_qty === summary.max_qty
+  ) {
+    const qty = summary.min_qty
+    return {
+      text: qty === 1 ? '1 available' : `${qty} available`,
+      tone: qty <= 0 ? 'danger' : 'default',
+    }
+  }
+  return { text: 'Custom', tone: 'default' }
 }
 
 export function getVariantStockLabel(

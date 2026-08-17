@@ -2,12 +2,18 @@ import { Image, StyleSheet, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { ProductStatusBadge } from '@/components/store/ProductStatusBadge'
 import { PressableScale } from '@/components/ui/PressableScale'
-import { getProductStockLabel } from '@src/lib/product-inventory'
+import {
+  getProductListStockLabel,
+  stockLabelToneClass,
+  variantStockSummary,
+} from '@src/lib/product-inventory'
 import { getProductStatus } from '@src/lib/product-status'
 import Colors from '@src/theme/colors'
 import type { Product } from '@src/types/product'
 
 function variantCount(product: Product): number | null {
+  const summary = variantStockSummary(product)
+  if (summary) return summary.count
   const n = (product.metadata as { variant_count?: number } | undefined)?.variant_count
   return typeof n === 'number' && n > 0 ? n : null
 }
@@ -20,13 +26,8 @@ type Props = {
 export function ProductListRow({ product, onPress }: Props) {
   const status = getProductStatus(product)
   const variants = variantCount(product)
-  const stockLabel = getProductStockLabel(product)
-  const inventoryTone =
-    stockLabel?.tone === 'danger'
-      ? 'text-[#991B1B]'
-      : stockLabel?.tone === 'muted'
-        ? 'text-gray-400'
-        : 'text-gray-500'
+  const stockLabel = getProductListStockLabel(product)
+  const inventoryTone = stockLabel ? stockLabelToneClass(stockLabel.tone) : 'text-gray-500'
 
   return (
     <PressableScale onPress={onPress} disabled={!onPress}>

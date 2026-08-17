@@ -1,7 +1,7 @@
 import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
-import { ChatProductSendModal } from "@/components/chat/ChatProductSendModal";
+import { ChatProductSendModal, type ProductShareSendPayload } from "@/components/chat/ChatProductSendModal";
 import { ChatMessageActionsSheet } from "@/components/chat/ChatMessageActionsSheet";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
 import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
@@ -38,6 +38,7 @@ import Colors from "@src/theme/colors";
 import { useAppTheme } from "@src/contexts/theme-context";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
 import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
+import * as FileSystem from "expo-file-system/legacy";
 import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -65,6 +66,14 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   }
 
   return out;
+}
+
+function mimeFromImageUrl(url: string): { mimeType: string; ext: string } {
+  const lower = url.split("?")[0]?.toLowerCase() ?? "";
+  if (lower.endsWith(".png")) return { mimeType: "image/png", ext: "png" };
+  if (lower.endsWith(".webp")) return { mimeType: "image/webp", ext: "webp" };
+  if (lower.endsWith(".gif")) return { mimeType: "image/gif", ext: "gif" };
+  return { mimeType: "image/jpeg", ext: "jpg" };
 }
 
 function patchOutgoingWithServer(
@@ -592,6 +601,37 @@ export default function ChatDetailScreen() {
     ],
   );
 
+  const sendProductShare = async (payload: ProductShareSendPayload) => {
+    const { text, imageUrl } = payload;
+    if (!imageUrl?.trim()) {
+      await sendTextMessage(text);
+      return;
+    }
+
+    const cache = FileSystem.cacheDirectory;
+    if (!cache) {
+      showError("Could not prepare product image for send");
+      return;
+    }
+
+    const { mimeType, ext } = mimeFromImageUrl(imageUrl);
+    const dest = `${cache}product-share-${Date.now()}.${ext}`;
+
+    try {
+      const result = await FileSystem.downloadAsync(imageUrl.trim(), dest);
+      await sendMediaMessage({
+        type: "image",
+        uri: result.uri,
+        name: `product-share.${ext}`,
+        mimeType,
+        caption: text,
+      });
+    } catch (e: unknown) {
+      showError(e, "Failed to send product image");
+      throw e;
+    }
+  };
+
   const listItems = useMemo(
     () => injectChatDateSeparators(messages),
     [messages],
@@ -846,7 +886,7 @@ export default function ChatDetailScreen() {
           storeSlug={store.slug}
           currency={store.currency}
           onClose={() => setProductPickerOpen(false)}
-          onSend={(text) => void sendTextMessage(text)}
+          onSend={(payload) => void sendProductShare(payload)}
         />
       ) : null}
     </SafeAreaView>

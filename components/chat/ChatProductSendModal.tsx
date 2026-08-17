@@ -3,12 +3,20 @@ import { SleekModal } from '@/components/ui/Modal'
 import { OrderProductPickerBody } from '@/components/store/order-create/OrderProductPickerBody'
 import { OrderVariantPickerBody } from '@/components/store/order-create/OrderVariantPickerBody'
 import { fetchProduct, fetchProducts } from '@src/api/products'
-import { buildProductShareMessage } from '@src/lib/product-share-message'
+import {
+  buildProductShareMessage,
+  resolveProductShareImageUrl,
+} from '@src/lib/product-share-message'
 import { getProductStatus } from '@src/lib/product-status'
 import { showError } from '@src/lib/toast'
 import type { Product, ProductVariant } from '@src/types/product'
 
 type Step = 'products' | 'variants'
+
+export type ProductShareSendPayload = {
+  text: string
+  imageUrl: string | null
+}
 
 type Props = {
   visible: boolean
@@ -16,7 +24,7 @@ type Props = {
   storeSlug: string
   currency?: string
   onClose: () => void
-  onSend: (text: string) => void
+  onSend: (payload: ProductShareSendPayload) => void
 }
 
 export function ChatProductSendModal({
@@ -76,7 +84,10 @@ export function ChatProductSendModal({
       storeSlug,
     })
     reset()
-    onSend(text)
+    onSend({
+      text,
+      imageUrl: resolveProductShareImageUrl(product, variant),
+    })
     onClose()
   }
 
@@ -86,12 +97,14 @@ export function ChatProductSendModal({
     setVariantsLoading(true)
     try {
       const res = await fetchProduct(product.id, storeId)
+      const detailProduct = res.data.product
       const active = res.data.variants.filter((v) => v.is_active)
       if (active.length > 0) {
+        setPendingProduct(detailProduct)
         setPendingVariants(active)
         setStep('variants')
       } else {
-        sendProduct(product, null)
+        sendProduct(detailProduct, null)
       }
     } catch (e) {
       showError(e, 'Could not load product')

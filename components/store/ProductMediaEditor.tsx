@@ -3,8 +3,14 @@ import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Caption, Label, Muted } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
-import { mediaId, mimeFromUri, type ProductMediaItem } from '@src/lib/product-media'
-import { showError } from '@src/lib/toast'
+import {
+  MAX_PRODUCT_IMAGES,
+  mediaId,
+  mimeFromUri,
+  productImageLimitMessage,
+  type ProductMediaItem,
+} from '@src/lib/product-media'
+import { showError, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 
 type Props = {
@@ -16,6 +22,12 @@ type Props = {
 
 export function ProductMediaEditor({ items, thumbnailId, onChange, error }: Props) {
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(items.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
@@ -26,10 +38,16 @@ export function ProductMediaEditor({ items, thumbnailId, onChange, error }: Prop
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: Math.max(1, 10 - items.length),
+      selectionLimit: 0,
     })
 
     if (result.canceled || !result.assets.length) return
+
+    const limitMessage = productImageLimitMessage(items.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
+      return
+    }
 
     const added: ProductMediaItem[] = result.assets.map((asset, index) => ({
       id: mediaId(),
@@ -40,7 +58,7 @@ export function ProductMediaEditor({ items, thumbnailId, onChange, error }: Prop
       },
     }))
 
-    const merged = [...items, ...added].slice(0, 10)
+    const merged = [...items, ...added]
     const thumb = thumbnailId ?? merged[0]?.id ?? null
     onChange(merged, thumb)
   }
@@ -62,16 +80,18 @@ export function ProductMediaEditor({ items, thumbnailId, onChange, error }: Prop
     <View className="gap-2">
       <Label>Product images</Label>
       <Muted className="text-xs">
-        Add or remove images. Tap an image to set it as thumbnail.
+        Add up to {MAX_PRODUCT_IMAGES} images. Tap an image to set it as thumbnail.
       </Muted>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0">
-        <Pressable
-          className="w-[88px] h-[88px] rounded-xl border border-dashed border-ink items-center justify-center mr-2.5 gap-1"
-          onPress={pickImages}
-        >
-          <FontAwesome name="plus" size={24} color={Colors.brand.primary} />
-          <Text className="text-xs font-semibold text-ink">Add</Text>
-        </Pressable>
+        {items.length < MAX_PRODUCT_IMAGES ? (
+          <Pressable
+            className="w-[88px] h-[88px] rounded-xl border border-dashed border-ink items-center justify-center mr-2.5 gap-1"
+            onPress={pickImages}
+          >
+            <FontAwesome name="plus" size={24} color={Colors.brand.primary} />
+            <Text className="text-xs font-semibold text-ink">Add</Text>
+          </Pressable>
+        ) : null}
         {items.map((img) => {
           const isThumb = thumbnailId === img.id
           return (

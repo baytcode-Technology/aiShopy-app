@@ -14,11 +14,13 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Button } from '@/components/ui/Button'
 import {
+  MAX_PRODUCT_IMAGES,
   mediaId,
   mimeFromUri,
+  productImageLimitMessage,
   type ProductMediaItem,
 } from '@src/lib/product-media'
-import { showError } from '@src/lib/toast'
+import { showError, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
 import { ProductImagePreviewModal } from './ProductImagePreviewModal'
@@ -84,13 +86,19 @@ export function ProductMediaGalleryModal({
 
   const gridCells = useMemo((): GridCell[] => {
     const cells: GridCell[] = [...draft]
-    if (draft.length < 10) cells.push('add')
+    if (draft.length < MAX_PRODUCT_IMAGES) cells.push('add')
     return cells
   }, [draft])
 
   const gridRows = useMemo(() => chunkRows(gridCells), [gridCells])
 
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(draft.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
@@ -101,9 +109,15 @@ export function ProductMediaGalleryModal({
       allowsMultipleSelection: true,
       allowsEditing: false,
       quality: 0.85,
-      selectionLimit: 10 - draft.length,
+      selectionLimit: 0,
     })
     if (result.canceled || !result.assets.length) return
+
+    const limitMessage = productImageLimitMessage(draft.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
+      return
+    }
 
     const added: ProductMediaItem[] = result.assets.map((asset, index) => ({
       id: mediaId(),
@@ -113,7 +127,7 @@ export function ProductMediaGalleryModal({
         type: asset.mimeType ?? mimeFromUri(asset.uri),
       },
     }))
-    const merged = [...draft, ...added].slice(0, 10)
+    const merged = [...draft, ...added]
     setDraft(merged)
     if (!draftThumb && merged[0]) setDraftThumb(merged[0].id)
   }

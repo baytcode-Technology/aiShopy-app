@@ -4,7 +4,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { IconButton } from '@/components/ui/IconButton'
 import { Caption, Label, Muted } from '@/components/ui/Typography'
 import { cn } from '@src/lib/cn'
-import { showError } from '@src/lib/toast'
+import {
+  MAX_PRODUCT_IMAGES,
+  productImageLimitMessage,
+} from '@src/lib/product-media'
+import { showError, showWarning } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
 
 export type PickedImage = {
@@ -31,6 +35,12 @@ function mimeFromUri(uri: string): string {
 
 export function ProductImagePicker({ images, thumbnailId, onChange, error }: Props) {
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(images.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
@@ -41,10 +51,16 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 10,
+      selectionLimit: 0,
     })
 
     if (result.canceled || !result.assets.length) {
+      return
+    }
+
+    const limitMessage = productImageLimitMessage(images.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
       return
     }
 
@@ -59,7 +75,7 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
       }
     })
 
-    const merged = [...images, ...next].slice(0, 10)
+    const merged = [...images, ...next]
     const thumb = thumbnailId ?? merged[0]?.id ?? null
     onChange(merged, thumb)
   }
@@ -80,15 +96,19 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
   return (
     <View className="gap-2">
       <Label>Product images *</Label>
-      <Muted className="text-xs">Add at least one image. Tap an image to set it as thumbnail.</Muted>
+      <Muted className="text-xs">
+        Add up to {MAX_PRODUCT_IMAGES} images. Tap an image to set it as thumbnail.
+      </Muted>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0">
-        <Pressable
-          className="w-[88px] h-[88px] rounded-xl border border-dashed border-ink items-center justify-center mr-2.5 gap-1"
-          onPress={pickImages}
-        >
-          <FontAwesome name="plus" size={24} color={Colors.brand.primary} />
-          <Text className="text-xs font-semibold text-ink">Add</Text>
-        </Pressable>
+        {images.length < MAX_PRODUCT_IMAGES ? (
+          <Pressable
+            className="w-[88px] h-[88px] rounded-xl border border-dashed border-ink items-center justify-center mr-2.5 gap-1"
+            onPress={pickImages}
+          >
+            <FontAwesome name="plus" size={24} color={Colors.brand.primary} />
+            <Text className="text-xs font-semibold text-ink">Add</Text>
+          </Pressable>
+        ) : null}
         {images.map((img) => {
           const isThumb = thumbnailId === img.id
           return (

@@ -10,8 +10,10 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import {
+  MAX_PRODUCT_IMAGES,
   mediaId,
   mimeFromUri,
+  productImageLimitMessage,
   productToMediaItems,
   resolveProductMediaForSave,
   resolveThumbnailId,
@@ -20,7 +22,7 @@ import {
 import { CancelSaveRow } from '@/components/ui/CancelSaveRow'
 import { updateProduct } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
-import { showError, showSuccess } from '@src/lib/toast'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 import type { Product } from '@src/types/product'
 import Colors from '@src/theme/colors'
 import { palette } from '@src/theme/palette'
@@ -76,6 +78,12 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
   )
 
   const pickImages = async () => {
+    const fullMessage = productImageLimitMessage(items.length, 0)
+    if (fullMessage) {
+      showWarning('Image limit reached', fullMessage)
+      return
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (!permission.granted) {
       showError('Permission to access photos is required')
@@ -85,9 +93,15 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.85,
-      selectionLimit: 10 - items.length,
+      selectionLimit: 0,
     })
     if (result.canceled || !result.assets.length) return
+
+    const limitMessage = productImageLimitMessage(items.length, result.assets.length)
+    if (limitMessage) {
+      showWarning('Image limit reached', limitMessage)
+      return
+    }
 
     const added: ProductMediaItem[] = result.assets.map((asset, index) => ({
       id: mediaId(),
@@ -97,7 +111,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
         type: asset.mimeType ?? mimeFromUri(asset.uri),
       },
     }))
-    const merged = [...items, ...added].slice(0, 10)
+    const merged = [...items, ...added]
     setItems(merged)
     if (!thumbnailId && merged[0]) setThumbnailId(merged[0].id)
   }
@@ -169,7 +183,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
                 </View>
               </Pressable>
             ))}
-            {items.length < 10 ? (
+            {items.length < MAX_PRODUCT_IMAGES ? (
               <Pressable onPress={pickImages} style={styles.addTile}>
                 <FontAwesome name="plus" size={24} color={Colors.text.muted} />
               </Pressable>

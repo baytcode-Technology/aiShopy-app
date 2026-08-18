@@ -16,6 +16,7 @@ import {
   type SocketInstagramConversationPayload,
   type SocketInstagramMessagePayload,
   type SocketMessagePayload,
+  type SocketInboxAiTypingPayload,
   type SocketOrderNewPayload,
   type SocketStatusPayload,
 } from '@src/lib/socket'
@@ -34,6 +35,7 @@ type ChatSocketContextValue = {
     handler: (payload: SocketInstagramConversationPayload) => void
   ) => () => void
   onOrderNew: (handler: (payload: SocketOrderNewPayload) => void) => () => void
+  onInboxAiTyping: (handler: (payload: SocketInboxAiTypingPayload) => void) => () => void
 }
 
 const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
@@ -51,6 +53,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     new Set<(payload: SocketInstagramConversationPayload) => void>()
   )
   const orderHandlers = useRef(new Set<(payload: SocketOrderNewPayload) => void>())
+  const inboxAiTypingHandlers = useRef(new Set<(payload: SocketInboxAiTypingPayload) => void>())
 
   useEffect(() => {
     let cancelled = false
@@ -94,6 +97,9 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       socket.on(SOCKET_EVENTS.ORDER_NEW, (payload: SocketOrderNewPayload) => {
         orderHandlers.current.forEach((handler) => handler(payload))
       })
+      socket.on(SOCKET_EVENTS.INBOX_AI_TYPING, (payload: SocketInboxAiTypingPayload) => {
+        inboxAiTypingHandlers.current.forEach((handler) => handler(payload))
+      })
 
       detachSocketListeners = () => {
         socket.off('connect', handleConnect)
@@ -104,6 +110,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
         socket.off(SOCKET_EVENTS.INSTAGRAM_MESSAGE_NEW)
         socket.off(SOCKET_EVENTS.INSTAGRAM_CONVERSATION_UPDATED)
         socket.off(SOCKET_EVENTS.ORDER_NEW)
+        socket.off(SOCKET_EVENTS.INBOX_AI_TYPING)
       }
 
       if (socket.connected) handleConnect()
@@ -189,6 +196,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const onInboxAiTyping = useCallback((handler: (payload: SocketInboxAiTypingPayload) => void) => {
+    inboxAiTypingHandlers.current.add(handler)
+    return () => {
+      inboxAiTypingHandlers.current.delete(handler)
+    }
+  }, [])
+
   const value = useMemo(
     () => ({
       isConnected: isConnectedRef.current,
@@ -198,6 +212,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       onInstagramMessageNew,
       onInstagramConversationUpdated,
       onOrderNew,
+      onInboxAiTyping,
     }),
     [
       onMessageNew,
@@ -206,6 +221,7 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       onInstagramMessageNew,
       onInstagramConversationUpdated,
       onOrderNew,
+      onInboxAiTyping,
     ]
   )
 

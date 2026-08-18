@@ -18,7 +18,7 @@ import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
-import type { ChatListItem } from "@src/types/chat";
+import type { ChatChannel, ChatListItem } from "@src/types/chat";
 import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
@@ -109,6 +109,22 @@ function sortConversations(items: ChatListItem[]): ChatListItem[] {
   });
 }
 
+function findConversation(
+  items: ChatListItem[],
+  channel: ChatChannel,
+  id: number,
+): ChatListItem | undefined {
+  return items.find((item) => item.channel === channel && item.id === id);
+}
+
+function withoutConversation(
+  items: ChatListItem[],
+  channel: ChatChannel,
+  id: number,
+): ChatListItem[] {
+  return items.filter((item) => !(item.channel === channel && item.id === id));
+}
+
 type LoadChatsOptions = {
   refresh?: boolean;
   silent?: boolean;
@@ -122,7 +138,6 @@ export default function MessagesListScreen() {
   const { isPlatformAdmin } = usePlatformAdmin();
   const {
     syncChatsUnread,
-    onChatsInvalidate,
     isActiveChat,
     supportUnreadCount,
   } = useStoreUnread();
@@ -137,6 +152,7 @@ export default function MessagesListScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const itemsLengthRef = useRef(0);
+  const loadGenerationRef = useRef(0);
 
   const loadChats = useCallback(
     async (options?: boolean | LoadChatsOptions) => {
@@ -145,12 +161,15 @@ export default function MessagesListScreen() {
       const opts: LoadChatsOptions =
         typeof options === "boolean" ? { refresh: options } : (options ?? {});
       const { refresh = false, silent = false } = opts;
+      const generation = ++loadGenerationRef.current;
 
       if (refresh) setIsRefreshing(true);
       else if (!silent) setIsLoading(true);
 
       try {
         const { whatsapp, instagram } = await fetchAllChats(store.id);
+        if (generation !== loadGenerationRef.current) return;
+
         const merged = sortConversations([
           ...whatsapp.map(mapWhatsAppConversation),
           ...instagram.map(mapInstagramConversation),
@@ -164,8 +183,10 @@ export default function MessagesListScreen() {
           e instanceof Error ? e.message : "Unknown error",
         );
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (generation === loadGenerationRef.current) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     },
     [store?.id, isActiveChat],
@@ -186,28 +207,33 @@ export default function MessagesListScreen() {
   }, [items, syncChatsUnread]);
 
   useEffect(() => {
-    return onChatsInvalidate(() => {
-      void loadChats({ silent: true });
-    });
-  }, [onChatsInvalidate, loadChats]);
-
-  useEffect(() => {
     const unsubWaConversation = onConversationUpdated((payload) => {
       setItems((prev) => {
-        const next = mapWhatsAppConversation(payload.conversation);
-        if (isActiveChat(next.id)) {
-          next.unread = 0;
+        const existing = findConversation(prev, "whatsapp", payload.conversation.id);
+        if (!existing) {
+          void loadChats({ silent: true });
+          return prev;
         }
-        const without = prev.filter((item) => item.id !== next.id);
-        return sortConversations([next, ...without]);
+
+        const updated: ChatListItem = {
+          ...existing,
+          subtitle:
+            payload.conversation.last_message_preview ?? existing.subtitle,
+          time: formatTime(payload.conversation.last_message_at),
+          sortAt: payload.conversation.last_message_at,
+          unread: isActiveChat(payload.conversation.id)
+            ? 0
+            : (payload.conversation.unread_count ?? existing.unread),
+          phone: payload.conversation.customer_wa_number,
+        };
+
+        return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)]);
       });
     });
 
     const unsubWaMessage = onMessageNew((payload) => {
       setItems((prev) => {
-        const existing = prev.find(
-          (item) => item.id === payload.conversationId,
-        );
+        const existing = findConversation(prev, "whatsapp", payload.conversationId);
         if (!existing) {
           void loadChats({ silent: true });
           return prev;
@@ -228,29 +254,40 @@ export default function MessagesListScreen() {
             : existing.unread,
         };
 
-        return sortConversations([
-          updated,
-          ...prev.filter((item) => item.id !== updated.id),
-        ]);
+        return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)]);
       });
     });
 
     const unsubIgConversation = onInstagramConversationUpdated((payload) => {
       setItems((prev) => {
-        const next = mapInstagramConversation(payload.conversation);
-        if (isActiveChat(next.id)) {
-          next.unread = 0;
+        const existing = findConversation(prev, "instagram", payload.conversation.id);
+        if (!existing) {
+          void loadChats({ silent: true });
+          return prev;
         }
-        const without = prev.filter((item) => item.id !== next.id);
-        return sortConversations([next, ...without]);
+
+        const updated: ChatListItem = {
+          ...existing,
+          subtitle:
+            payload.conversation.last_message_preview ?? existing.subtitle,
+          time: formatTime(payload.conversation.last_message_at),
+          sortAt: payload.conversation.last_message_at,
+          unread: isActiveChat(payload.conversation.id)
+            ? 0
+            : (payload.conversation.unread_count ?? existing.unread),
+          phone: payload.conversation.customer_ig_id,
+          title: payload.conversation.customer_ig_username
+            ? `@${payload.conversation.customer_ig_username}`
+            : existing.title,
+        };
+
+        return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)]);
       });
     });
 
     const unsubIgMessage = onInstagramMessageNew((payload) => {
       setItems((prev) => {
-        const existing = prev.find(
-          (item) => item.id === payload.conversationId,
-        );
+        const existing = findConversation(prev, "instagram", payload.conversationId);
         if (!existing) {
           void loadChats({ silent: true });
           return prev;
@@ -271,10 +308,7 @@ export default function MessagesListScreen() {
             : existing.unread,
         };
 
-        return sortConversations([
-          updated,
-          ...prev.filter((item) => item.id !== updated.id),
-        ]);
+        return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)]);
       });
     });
 

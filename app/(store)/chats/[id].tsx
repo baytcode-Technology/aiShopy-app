@@ -68,6 +68,18 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
   return out;
 }
 
+function mergeMessageLists(
+  current: ChatMessage[],
+  fetched: ChatMessage[],
+): ChatMessage[] {
+  const merged = dedupeByIdAndMeta([...current, ...fetched]);
+  return merged.sort((a, b) => {
+    const ta = a.timestamp ? Date.parse(a.timestamp) : 0;
+    const tb = b.timestamp ? Date.parse(b.timestamp) : 0;
+    return tb - ta;
+  });
+}
+
 function mimeFromImageUrl(url: string): { mimeType: string; ext: string } {
   const lower = url.split("?")[0]?.toLowerCase() ?? "";
   if (lower.endsWith(".png")) return { mimeType: "image/png", ext: "png" };
@@ -104,7 +116,7 @@ const MESSAGE_PAGE_SIZE = 25;
 export default function ChatDetailScreen() {
   const { store } = useStore();
   const { isDark } = useAppTheme();
-  const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
+  const { markChatRead, setActiveChat } = useStoreUnread();
   const { onMessageNew, onMessageStatus, onInstagramMessageNew, onInboxAiTyping } = useChatSocket();
   const { pauseRecording } = useChatVoiceRecording();
   const { id, phone, channel: channelParam, displayName, unread, replyMode: replyModeParam } = useLocalSearchParams<{
@@ -138,6 +150,7 @@ export default function ChatDetailScreen() {
   const stickToBottomRef = useRef(true);
   const shouldAutoScrollRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
+  const loadGenerationRef = useRef(0);
 
   const unreadCount = useMemo(() => {
     const raw =
@@ -216,6 +229,7 @@ export default function ChatDetailScreen() {
       const silent = options?.silent ?? false;
       const isInitialLoad = !silent && !initialLoadDoneRef.current;
       const limit = isInitialLoad ? initialLimit : MESSAGE_PAGE_SIZE;
+      const generation = ++loadGenerationRef.current;
 
       if (!silent) {
         setIsLoading(true);
@@ -234,14 +248,17 @@ export default function ChatDetailScreen() {
                 conversationId,
                 limit,
               });
+        if (generation !== loadGenerationRef.current) return;
+
         const mapped = res.data.messages.map((m) =>
           mapApiMessageToChatMessage(m, store.id),
         );
-        setMessages(
-          channel === "whatsapp"
-            ? prepareWhatsAppMessagesForDisplay(mapped)
-            : mapped,
-        );
+        setMessages((prev) => {
+          const nextMessages = silent ? mergeMessageLists(prev, mapped) : mapped;
+          return channel === "whatsapp"
+            ? prepareWhatsAppMessagesForDisplay(nextMessages)
+            : nextMessages;
+        });
         setNextCursor(res.data.nextCursor);
         setHasMore(
           res.data.messages.length >= limit && Boolean(res.data.nextCursor),
@@ -257,7 +274,9 @@ export default function ChatDetailScreen() {
           );
         }
       } finally {
-        if (!silent) setIsLoading(false);
+        if (!silent && generation === loadGenerationRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [store?.id, conversationId, channel, initialLimit],
@@ -360,14 +379,6 @@ export default function ChatDetailScreen() {
       };
     }, [conversationId, channel, markChatRead, setActiveChat, pauseRecording]),
   );
-
-  useEffect(() => {
-    return onActiveChatMessage((id) => {
-      if (id === conversationId) {
-        void loadMessages({ silent: true });
-      }
-    });
-  }, [conversationId, onActiveChatMessage, loadMessages]);
 
   const handleListScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {

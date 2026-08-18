@@ -212,12 +212,10 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     (conversationId?: number) => {
       const active = activeChatRef.current
       if (conversationId && active?.conversationId === conversationId) {
-        notifyActiveChatMessage(conversationId)
         scheduleMarkChatRead(conversationId, active.channel)
         return
       }
 
-      invalidateChats()
       if (chatRefreshTimer.current) {
         clearTimeout(chatRefreshTimer.current)
       }
@@ -226,7 +224,7 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
         void refreshChatsUnread()
       }, CHAT_REFRESH_DEBOUNCE_MS)
     },
-    [invalidateChats, refreshChatsUnread, scheduleMarkChatRead, notifyActiveChatMessage]
+    [refreshChatsUnread, scheduleMarkChatRead]
   )
 
   const onOrderViewed = useCallback((handler: (orderId: number) => void) => {

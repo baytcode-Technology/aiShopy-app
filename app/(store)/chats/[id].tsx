@@ -105,7 +105,7 @@ export default function ChatDetailScreen() {
   const { store } = useStore();
   const { isDark } = useAppTheme();
   const { markChatRead, setActiveChat, onActiveChatMessage } = useStoreUnread();
-  const { onMessageNew, onMessageStatus, onInstagramMessageNew } = useChatSocket();
+  const { onMessageNew, onMessageStatus, onInstagramMessageNew, onInboxAiTyping } = useChatSocket();
   const { pauseRecording } = useChatVoiceRecording();
   const { id, phone, channel: channelParam, displayName, unread, replyMode: replyModeParam } = useLocalSearchParams<{
     id: string;
@@ -128,6 +128,8 @@ export default function ChatDetailScreen() {
     replyModeParam === 'manual' ? 'manual' : 'ai',
   );
   const [replyModeBusy, setReplyModeBusy] = useState(false);
+  const [aiPreparingReply, setAiPreparingReply] = useState(false);
+  const aiPreparingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -187,6 +189,7 @@ export default function ChatDetailScreen() {
         replyMode: mode,
       });
       setReplyMode(mode);
+      if (mode === "manual") setAiPreparingReply(false);
     } catch (e) {
       showError(e, "Could not update reply mode");
     } finally {
@@ -412,6 +415,9 @@ export default function ChatDetailScreen() {
       if (payload.message.direction === "inbound") {
         scheduleMarkReadRef.current();
       }
+      if (payload.message.direction === "outbound") {
+        setAiPreparingReply(false);
+      }
     };
 
     const unsubWa = onMessageNew(handleNew);
@@ -438,6 +444,37 @@ export default function ChatDetailScreen() {
       unsubStatus();
     };
   }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus, triggerAutoScroll]);
+
+  useEffect(() => {
+    if (!Number.isFinite(conversationId) || !store?.id) return;
+
+    const unsub = onInboxAiTyping((payload) => {
+      if (payload.storeId !== store.id) return;
+      if (payload.conversationId !== conversationId) return;
+      if (payload.channel !== channel) return;
+
+      if (aiPreparingTimeoutRef.current) {
+        clearTimeout(aiPreparingTimeoutRef.current);
+        aiPreparingTimeoutRef.current = null;
+      }
+
+      setAiPreparingReply(payload.typing);
+      if (payload.typing) {
+        aiPreparingTimeoutRef.current = setTimeout(() => {
+          setAiPreparingReply(false);
+          aiPreparingTimeoutRef.current = null;
+        }, 45_000);
+      }
+    });
+
+    return () => {
+      unsub();
+      if (aiPreparingTimeoutRef.current) {
+        clearTimeout(aiPreparingTimeoutRef.current);
+        aiPreparingTimeoutRef.current = null;
+      }
+    };
+  }, [channel, conversationId, onInboxAiTyping, store?.id]);
 
   const previewForMediaType = (
     type: OutboundMediaPayload["type"],
@@ -761,6 +798,14 @@ export default function ChatDetailScreen() {
       <SupportKeyboardChatLayout
         listRef={listRef}
         onKeyboardShow={() => scrollToBottom(true)}
+        footer={
+          chatBoatActive && aiPreparingReply ? (
+            <View className="flex-row items-center gap-2 px-4 py-2">
+              <ActivityIndicator size="small" color={Colors.brand.primary} />
+              <Muted className="text-[13px]">AI is preparing a reply…</Muted>
+            </View>
+          ) : null
+        }
         composer={
           <ChatComposer
             conversationId={conversationId}

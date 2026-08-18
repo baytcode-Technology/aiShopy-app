@@ -11,6 +11,7 @@ export const SOCKET_EVENTS = {
   INSTAGRAM_MESSAGE_NEW: 'instagram:message:new',
   INSTAGRAM_CONVERSATION_UPDATED: 'instagram:conversation:updated',
   ORDER_NEW: 'order:new',
+  INBOX_AI_TYPING: 'inbox-ai:typing',
 } as const
 
 export type SocketMessagePayload = {
@@ -90,6 +91,13 @@ export type SocketOrderNewPayload = {
     store_slug: string
     item_quantity?: number
   }
+}
+
+export type SocketInboxAiTypingPayload = {
+  storeId: number
+  conversationId: number
+  channel: 'whatsapp' | 'instagram'
+  typing: boolean
 }
 
 export function getChatSocket(): Socket | null {

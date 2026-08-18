@@ -2,7 +2,7 @@
   "expo": {
     "name": "AiShopy",
     "slug": "aishopy",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/app_logo.jpg",
     "scheme": "aishopyapp",
@@ -48,7 +48,7 @@
     "android": {
       "label": "AiShopy",
       "package": "com.aishopy.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"

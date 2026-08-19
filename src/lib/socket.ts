@@ -2,9 +2,27 @@ import { io, type Socket } from 'socket.io-client'
 import { env } from '@src/config/env'
 
 let socket: Socket | null = null
+let joinedStoreId: number | null = null
+let joinRetryTimer: ReturnType<typeof setTimeout> | null = null
+
+function clearJoinRetryTimer(): void {
+  if (joinRetryTimer) {
+    clearTimeout(joinRetryTimer)
+    joinRetryTimer = null
+  }
+}
+
+export function getJoinedStoreId(): number | null {
+  return joinedStoreId
+}
+
+export function isChatSocketConnected(): boolean {
+  return Boolean(socket?.connected)
+}
 
 export const SOCKET_EVENTS = {
   JOIN_STORE: 'store:join',
+  STORE_JOINED: 'store:joined',
   MESSAGE_NEW: 'whatsapp:message:new',
   MESSAGE_STATUS: 'whatsapp:message:status',
   CONVERSATION_UPDATED: 'whatsapp:conversation:updated',
@@ -105,7 +123,14 @@ export function getChatSocket(): Socket | null {
 }
 
 export function connectChatSocket(token: string): Socket {
-  socket?.disconnect()
+  clearJoinRetryTimer()
+  if (socket) {
+    socket.removeAllListeners()
+    socket.disconnect()
+    socket = null
+  }
+  joinedStoreId = null
+
   socket = io(env.apiBaseUrl.replace(/\/$/, ''), {
     transports: ['websocket', 'polling'],
     auth: { token },
@@ -122,11 +147,47 @@ export function reconnectChatSocket(token: string): Socket {
 }
 
 export function disconnectChatSocket(): void {
-  socket?.disconnect()
-  socket = null
+  clearJoinRetryTimer()
+  if (socket) {
+    socket.removeAllListeners()
+    socket.disconnect()
+    socket = null
+  }
+  joinedStoreId = null
 }
 
 export function joinStoreRoom(storeId: number): void {
   if (!socket?.connected) return
   socket.emit(SOCKET_EVENTS.JOIN_STORE, { storeId })
+}
+
+export function scheduleStoreRoomJoin(storeId: number, attempts = 8): void {
+  clearJoinRetryTimer()
+
+  const attemptJoin = (remaining: number) => {
+    if (!socket?.connected) return
+    if (joinedStoreId === storeId) return
+
+    joinStoreRoom(storeId)
+
+    if (remaining <= 1) return
+    joinRetryTimer = setTimeout(() => attemptJoin(remaining - 1), 400)
+  }
+
+  attemptJoin(attempts)
+}
+
+export function markStoreRoomJoined(storeId: number): void {
+  joinedStoreId = storeId
+  clearJoinRetryTimer()
+}
+
+export function ensureStoreRoomJoined(storeId: number): void {
+  if (!socket?.connected) return
+  if (joinedStoreId === storeId) return
+  scheduleStoreRoomJoin(storeId)
+}
+
+export function clearJoinedStoreRoom(): void {
+  joinedStoreId = null
 }

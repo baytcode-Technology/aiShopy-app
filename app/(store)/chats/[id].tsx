@@ -29,6 +29,7 @@ import {
 } from "@src/lib/chat-date-separators";
 import { useChatVoiceRecording } from "@src/contexts/chat-voice-recording-context";
 import { useChatSocket } from "@src/contexts/chat-socket-context";
+import { toSocketId } from "@src/lib/socket-normalize";
 import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
 import { useStore } from "@src/contexts/store-context";
 import { useStoreUnread } from "@src/contexts/store-unread-context";
@@ -368,7 +369,7 @@ export default function ChatDetailScreen() {
     useCallback(() => {
       if (!Number.isFinite(conversationId)) return;
       setActiveChat({ conversationId, channel });
-      void markChatRead(conversationId, channel);
+      scheduleMarkReadRef.current();
       return () => {
         void pauseRecording(conversationId);
         setActiveChat(null);
@@ -377,7 +378,7 @@ export default function ChatDetailScreen() {
           markReadTimerRef.current = null;
         }
       };
-    }, [conversationId, channel, markChatRead, setActiveChat, pauseRecording]),
+    }, [conversationId, channel, setActiveChat, pauseRecording]),
   );
 
   const handleListScroll = useCallback(
@@ -403,7 +404,7 @@ export default function ChatDetailScreen() {
         timestamp: string | null;
       };
     }) => {
-      if (payload.conversationId !== conversationId || !store?.id) return;
+      if (toSocketId(payload.conversationId) !== conversationId || !store?.id) return;
       setMessages((prev) => {
         const incoming = mapSocketMessageToChatMessage(payload.message, store.id);
         if (
@@ -435,7 +436,7 @@ export default function ChatDetailScreen() {
     const unsubIg = onInstagramMessageNew(handleNew);
 
     const unsubStatus = onMessageStatus((payload) => {
-      if (payload.conversationId !== conversationId) return;
+      if (toSocketId(payload.conversationId) !== conversationId) return;
       setMessages((prev) =>
         prev.map((m) =>
           m.metaMessageId === payload.metaMessageId
@@ -461,7 +462,7 @@ export default function ChatDetailScreen() {
 
     const unsub = onInboxAiTyping((payload) => {
       if (payload.storeId !== store.id) return;
-      if (payload.conversationId !== conversationId) return;
+      if (toSocketId(payload.conversationId) !== conversationId) return;
       if (payload.channel !== channel) return;
 
       if (aiPreparingTimeoutRef.current) {

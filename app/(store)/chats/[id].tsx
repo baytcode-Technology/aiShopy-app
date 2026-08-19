@@ -59,8 +59,17 @@ function dedupeByIdAndMeta(list: ChatMessage[]): ChatMessage[] {
 
   for (const m of list) {
     const key =
-      m.clientKey ??
-      (m.metaMessageId ? `meta:${m.metaMessageId}` : `id:${m.id}`);
+      // If we have metaMessageId, prefer it over clientKey/id.
+      // This prevents duplicates when:
+      // 1) we optimistically add a message with clientKey
+      // 2) socket emits the real server message before HTTP response patches it
+      // 3) after HTTP response, the optimistic message gets metaMessageId too
+      // 4) both entries share the same metaMessageId -> should be deduped.
+      m.metaMessageId
+        ? `meta:${m.metaMessageId}`
+        : m.clientKey
+          ? `client:${m.clientKey}`
+          : `id:${m.id}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(m);
@@ -407,6 +416,8 @@ export default function ChatDetailScreen() {
       if (toSocketId(payload.conversationId) !== conversationId || !store?.id) return;
       setMessages((prev) => {
         const incoming = mapSocketMessageToChatMessage(payload.message, store.id);
+
+        // Already have this exact server message? Skip.
         if (
           prev.some(
             (m) =>
@@ -418,6 +429,24 @@ export default function ChatDetailScreen() {
         ) {
           return prev;
         }
+
+        // If the socket delivers an outbound message, check for a matching
+        // optimistic (pending) entry and patch it in-place instead of
+        // appending a duplicate that briefly flickers before dedupe removes it.
+        if (incoming.outgoing) {
+          const pendingIdx = prev.findIndex(
+            (m) => m.pending && m.text === incoming.text && m.outgoing,
+          );
+          if (pendingIdx !== -1) {
+            const patched = patchOutgoingWithServer(prev[pendingIdx], incoming);
+            const next = [...prev];
+            next[pendingIdx] = patched;
+            return channel === 'whatsapp'
+              ? prepareWhatsAppMessagesForDisplay(next)
+              : next;
+          }
+        }
+
         const next = dedupeByIdAndMeta([incoming, ...prev]);
         return channel === "whatsapp"
           ? prepareWhatsAppMessagesForDisplay(next)
@@ -551,10 +580,12 @@ export default function ChatDetailScreen() {
       const serverMessage = mapApiMessageToChatMessage(res.data.message, store!.id);
 
       setMessages((prev) =>
-        prev.map((m) =>
-          m.clientKey === clientKey
-            ? patchOutgoingWithServer(m, serverMessage)
-            : m,
+        dedupeByIdAndMeta(
+          prev.map((m) =>
+            m.clientKey === clientKey
+              ? patchOutgoingWithServer(m, serverMessage)
+              : m,
+          ),
         ),
       );
     } catch (e: unknown) {
@@ -626,10 +657,12 @@ export default function ChatDetailScreen() {
         );
 
         setMessages((prev) =>
-          prev.map((m) =>
-            m.clientKey === clientKey
-              ? patchOutgoingWithServer(m, serverMessage)
-              : m,
+          dedupeByIdAndMeta(
+            prev.map((m) =>
+              m.clientKey === clientKey
+                ? patchOutgoingWithServer(m, serverMessage)
+                : m,
+            ),
           ),
         );
       } catch (e: unknown) {

@@ -7,9 +7,14 @@ import {
   useRef,
   type ReactNode,
 } from 'react'
+import { AppState, type AppStateStatus } from 'react-native'
 import {
+  clearJoinedStoreRoom,
   disconnectChatSocket,
-  joinStoreRoom,
+  ensureStoreRoomJoined,
+  isChatSocketConnected,
+  markStoreRoomJoined,
+  scheduleStoreRoomJoin,
   reconnectChatSocket,
   SOCKET_EVENTS,
   type SocketConversationPayload,
@@ -20,6 +25,15 @@ import {
   type SocketOrderNewPayload,
   type SocketStatusPayload,
 } from '@src/lib/socket'
+import {
+  normalizeConversationPayload,
+  normalizeInboxAiTypingPayload,
+  normalizeInstagramConversationPayload,
+  normalizeInstagramMessagePayload,
+  normalizeMessagePayload,
+  normalizeOrderPayload,
+  normalizeStatusPayload,
+} from '@src/lib/socket-normalize'
 import { ensureValidSession, onTokensRefreshed, SigningOutAbortError } from '@src/lib/session-manager'
 import { useStore } from '@src/contexts/store-context'
 
@@ -43,6 +57,8 @@ const ChatSocketContext = createContext<ChatSocketContextValue | null>(null)
 export function ChatSocketProvider({ children }: { children: ReactNode }) {
   const { store } = useStore()
   const isConnectedRef = useRef(false)
+  const storeIdRef = useRef<number | null>(null)
+  const connectWithTokenRef = useRef<(token: string) => Promise<void>>(async () => {})
   const messageHandlers = useRef(new Set<(payload: SocketMessagePayload) => void>())
   const statusHandlers = useRef(new Set<(payload: SocketStatusPayload) => void>())
   const conversationHandlers = useRef(new Set<(payload: SocketConversationPayload) => void>())
@@ -67,43 +83,91 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
 
       const handleConnect = () => {
         isConnectedRef.current = true
-        joinStoreRoom(store.id)
+        scheduleStoreRoomJoin(store.id)
+      }
+
+      const handleStoreJoined = (payload: { storeId?: number | string }) => {
+        const storeId = typeof payload?.storeId === 'number'
+          ? payload.storeId
+          : Number(payload?.storeId)
+        if (Number.isFinite(storeId) && storeId === store.id) {
+          markStoreRoomJoined(storeId)
+        }
       }
 
       const handleDisconnect = () => {
         isConnectedRef.current = false
+        clearJoinedStoreRoom()
+      }
+
+      const retryStoreJoin = () => {
+        if (!store?.id || !isChatSocketConnected()) return
+        ensureStoreRoomJoined(store.id)
+      }
+
+      const handleSocketError = () => {
+        void ensureValidSession()
+          .then((freshToken) => {
+            if (cancelled || !store?.id) return
+            if (isChatSocketConnected()) {
+              retryStoreJoin()
+              return
+            }
+            return connectWithToken(freshToken)
+          })
+          .catch((err) => {
+            if (err instanceof SigningOutAbortError) return
+          })
       }
 
       socket.on('connect', handleConnect)
       socket.on('disconnect', handleDisconnect)
+      socket.on('error', handleSocketError)
+      socket.on(SOCKET_EVENTS.STORE_JOINED, handleStoreJoined)
       socket.on(SOCKET_EVENTS.MESSAGE_NEW, (payload: SocketMessagePayload) => {
-        messageHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeMessagePayload(payload)
+        if (!normalized) return
+        messageHandlers.current.forEach((handler) => handler(normalized))
       })
       socket.on(SOCKET_EVENTS.MESSAGE_STATUS, (payload: SocketStatusPayload) => {
-        statusHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeStatusPayload(payload)
+        if (!normalized) return
+        statusHandlers.current.forEach((handler) => handler(normalized))
       })
       socket.on(SOCKET_EVENTS.CONVERSATION_UPDATED, (payload: SocketConversationPayload) => {
-        conversationHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeConversationPayload(payload)
+        if (!normalized) return
+        conversationHandlers.current.forEach((handler) => handler(normalized))
       })
       socket.on(SOCKET_EVENTS.INSTAGRAM_MESSAGE_NEW, (payload: SocketInstagramMessagePayload) => {
-        instagramMessageHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeInstagramMessagePayload(payload)
+        if (!normalized) return
+        instagramMessageHandlers.current.forEach((handler) => handler(normalized))
       })
       socket.on(
         SOCKET_EVENTS.INSTAGRAM_CONVERSATION_UPDATED,
         (payload: SocketInstagramConversationPayload) => {
-          instagramConversationHandlers.current.forEach((handler) => handler(payload))
+          const normalized = normalizeInstagramConversationPayload(payload)
+          if (!normalized) return
+          instagramConversationHandlers.current.forEach((handler) => handler(normalized))
         }
       )
       socket.on(SOCKET_EVENTS.ORDER_NEW, (payload: SocketOrderNewPayload) => {
-        orderHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeOrderPayload(payload)
+        if (!normalized) return
+        orderHandlers.current.forEach((handler) => handler(normalized))
       })
       socket.on(SOCKET_EVENTS.INBOX_AI_TYPING, (payload: SocketInboxAiTypingPayload) => {
-        inboxAiTypingHandlers.current.forEach((handler) => handler(payload))
+        const normalized = normalizeInboxAiTypingPayload(payload)
+        if (!normalized) return
+        inboxAiTypingHandlers.current.forEach((handler) => handler(normalized))
       })
 
       detachSocketListeners = () => {
         socket.off('connect', handleConnect)
         socket.off('disconnect', handleDisconnect)
+        socket.off('error', handleSocketError)
+        socket.off(SOCKET_EVENTS.STORE_JOINED, handleStoreJoined)
         socket.off(SOCKET_EVENTS.MESSAGE_NEW)
         socket.off(SOCKET_EVENTS.MESSAGE_STATUS)
         socket.off(SOCKET_EVENTS.CONVERSATION_UPDATED)
@@ -116,9 +180,13 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       if (socket.connected) handleConnect()
     }
 
+    connectWithTokenRef.current = connectWithToken
+    storeIdRef.current = store?.id ?? null
+
     if (!store?.id) {
       disconnectChatSocket()
       isConnectedRef.current = false
+      storeIdRef.current = null
       return () => {
         cancelled = true
       }
@@ -142,8 +210,31 @@ export function ChatSocketProvider({ children }: { children: ReactNode }) {
       detachSocketListeners?.()
       disconnectChatSocket()
       isConnectedRef.current = false
+      storeIdRef.current = null
     }
   }, [store?.id])
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: AppStateStatus) => {
+      if (nextState !== 'active') return
+      const storeId = storeIdRef.current
+      if (!storeId) return
+
+      if (isChatSocketConnected()) {
+        ensureStoreRoomJoined(storeId)
+        return
+      }
+
+      void ensureValidSession()
+        .then((token) => connectWithTokenRef.current(token))
+        .catch((err) => {
+          if (err instanceof SigningOutAbortError) return
+        })
+    }
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange)
+    return () => subscription.remove()
+  }, [])
 
   const onMessageNew = useCallback((handler: (payload: SocketMessagePayload) => void) => {
     messageHandlers.current.add(handler)

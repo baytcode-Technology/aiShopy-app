@@ -117,6 +117,147 @@ function findConversation(
   return items.find((item) => item.channel === channel && item.id === id);
 }
 
+function mergeChatLists(current: ChatListItem[], fetched: ChatListItem[]): ChatListItem[] {
+  const map = new Map<string, ChatListItem>()
+  for (const item of current) {
+    map.set(`${item.channel}:${item.id}`, item)
+  }
+  for (const item of fetched) {
+    const key = `${item.channel}:${item.id}`
+    const prev = map.get(key)
+    if (!prev) {
+      map.set(key, item)
+      continue
+    }
+    const prevTs = prev.sortAt ? Date.parse(prev.sortAt) : 0
+    const nextTs = item.sortAt ? Date.parse(item.sortAt) : 0
+    map.set(key, {
+      ...prev,
+      ...item,
+      title: item.title || prev.title,
+      replyMode: item.replyMode ?? prev.replyMode,
+      ...(prevTs > nextTs
+        ? { subtitle: prev.subtitle, time: prev.time, sortAt: prev.sortAt, unread: prev.unread }
+        : {}),
+    })
+  }
+  return sortConversations(Array.from(map.values()))
+}
+
+function upsertWhatsAppFromConversation(
+  prev: ChatListItem[],
+  payload: {
+    conversation: {
+      id: number
+      customer_wa_number: string
+      last_message_at: string | null
+      last_message_preview: string | null
+      unread_count: number
+    }
+  },
+  isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
+): ChatListItem[] {
+  const existing = findConversation(prev, "whatsapp", payload.conversation.id)
+  const title = existing?.title ?? formatWaPhone(payload.conversation.customer_wa_number)
+  const updated: ChatListItem = {
+    id: payload.conversation.id,
+    channel: "whatsapp",
+    title,
+    subtitle: payload.conversation.last_message_preview ?? existing?.subtitle ?? "—",
+    time: formatTime(payload.conversation.last_message_at),
+    sortAt: payload.conversation.last_message_at,
+    unread: isActiveChat(payload.conversation.id, "whatsapp")
+      ? 0
+      : (payload.conversation.unread_count ?? existing?.unread ?? 0),
+    online: existing?.online ?? false,
+    phone: payload.conversation.customer_wa_number,
+    initials: existing?.initials ?? initialsFromLabel(title, "WA"),
+    replyMode: existing?.replyMode ?? "ai",
+  }
+  return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)])
+}
+
+function upsertInstagramFromConversation(
+  prev: ChatListItem[],
+  payload: {
+    conversation: {
+      id: number
+      customer_ig_id: string
+      customer_ig_username: string | null
+      last_message_at: string | null
+      last_message_preview: string | null
+      unread_count: number
+    }
+  },
+  isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
+): ChatListItem[] {
+  const existing = findConversation(prev, "instagram", payload.conversation.id)
+  const title = payload.conversation.customer_ig_username
+    ? `@${payload.conversation.customer_ig_username}`
+    : existing?.title ?? payload.conversation.customer_ig_id
+  const updated: ChatListItem = {
+    id: payload.conversation.id,
+    channel: "instagram",
+    title,
+    subtitle: payload.conversation.last_message_preview ?? existing?.subtitle ?? "—",
+    time: formatTime(payload.conversation.last_message_at),
+    sortAt: payload.conversation.last_message_at,
+    unread: isActiveChat(payload.conversation.id, "instagram")
+      ? 0
+      : (payload.conversation.unread_count ?? existing?.unread ?? 0),
+    online: existing?.online ?? false,
+    phone: payload.conversation.customer_ig_id,
+    initials: existing?.initials ?? initialsFromLabel(title, "IG"),
+    replyMode: existing?.replyMode ?? "ai",
+  }
+  return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)])
+}
+
+function upsertWhatsAppFromMessage(
+  prev: ChatListItem[],
+  payload: {
+    conversationId: number
+    message: {
+      direction: string
+      timestamp: string | null
+      type: string
+      text_body: string | null
+      caption?: string | null
+    }
+  },
+  isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
+): ChatListItem[] {
+  const existing = findConversation(prev, "whatsapp", payload.conversationId)
+  const sortAt = payload.message.timestamp
+  const isInbound = payload.message.direction === "inbound"
+  const updated: ChatListItem = existing
+    ? {
+        ...existing,
+        subtitle: messagePreviewText(payload.message),
+        time: formatTime(sortAt),
+        sortAt,
+        unread: isInbound
+          ? isActiveChat(payload.conversationId, "whatsapp")
+            ? 0
+            : existing.unread + 1
+          : existing.unread,
+      }
+    : {
+        id: payload.conversationId,
+        channel: "whatsapp",
+        title: "WhatsApp",
+        subtitle: messagePreviewText(payload.message),
+        time: formatTime(sortAt),
+        sortAt,
+        unread: isInbound && !isActiveChat(payload.conversationId, "whatsapp") ? 1 : 0,
+        online: false,
+        phone: "",
+        initials: "WA",
+        replyMode: "ai",
+      }
+  return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)])
+}
+
 function withoutConversation(
   items: ChatListItem[],
   channel: ChatChannel,
@@ -170,13 +311,16 @@ export default function MessagesListScreen() {
         const { whatsapp, instagram } = await fetchAllChats(store.id);
         if (generation !== loadGenerationRef.current) return;
 
-        const merged = sortConversations([
+        const mergedFromApi = sortConversations([
           ...whatsapp.map(mapWhatsAppConversation),
           ...instagram.map(mapInstagramConversation),
-        ]).map((item) =>
-          isActiveChat(item.id) ? { ...item, unread: 0 } : item,
-        );
-        setItems(merged);
+        ])
+        setItems((prev) => {
+          const merged = silent ? mergeChatLists(prev, mergedFromApi) : mergedFromApi
+          return merged.map((item) =>
+            isActiveChat(item.id, item.channel) ? { ...item, unread: 0 } : item,
+          )
+        })
       } catch (e: unknown) {
         showError(
           "Failed to load chats",
@@ -208,122 +352,62 @@ export default function MessagesListScreen() {
 
   useEffect(() => {
     const unsubWaConversation = onConversationUpdated((payload) => {
-      setItems((prev) => {
-        const existing = findConversation(prev, "whatsapp", payload.conversation.id);
-        if (!existing) {
-          void loadChats({ silent: true });
-          return prev;
-        }
-
-        const updated: ChatListItem = {
-          ...existing,
-          subtitle:
-            payload.conversation.last_message_preview ?? existing.subtitle,
-          time: formatTime(payload.conversation.last_message_at),
-          sortAt: payload.conversation.last_message_at,
-          unread: isActiveChat(payload.conversation.id)
-            ? 0
-            : (payload.conversation.unread_count ?? existing.unread),
-          phone: payload.conversation.customer_wa_number,
-        };
-
-        return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)]);
-      });
-    });
+      setItems((prev) => upsertWhatsAppFromConversation(prev, payload, isActiveChat))
+    })
 
     const unsubWaMessage = onMessageNew((payload) => {
-      setItems((prev) => {
-        const existing = findConversation(prev, "whatsapp", payload.conversationId);
-        if (!existing) {
-          void loadChats({ silent: true });
-          return prev;
-        }
-
-        const sortAt = payload.message.timestamp;
-        const time = formatTime(sortAt);
-        const isInbound = payload.message.direction === "inbound";
-        const updated: ChatListItem = {
-          ...existing,
-          subtitle: messagePreviewText(payload.message),
-          time,
-          sortAt,
-          unread: isInbound
-            ? isActiveChat(payload.conversationId)
-              ? 0
-              : existing.unread + 1
-            : existing.unread,
-        };
-
-        return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)]);
-      });
-    });
+      setItems((prev) => upsertWhatsAppFromMessage(prev, payload, isActiveChat))
+    })
 
     const unsubIgConversation = onInstagramConversationUpdated((payload) => {
-      setItems((prev) => {
-        const existing = findConversation(prev, "instagram", payload.conversation.id);
-        if (!existing) {
-          void loadChats({ silent: true });
-          return prev;
-        }
-
-        const updated: ChatListItem = {
-          ...existing,
-          subtitle:
-            payload.conversation.last_message_preview ?? existing.subtitle,
-          time: formatTime(payload.conversation.last_message_at),
-          sortAt: payload.conversation.last_message_at,
-          unread: isActiveChat(payload.conversation.id)
-            ? 0
-            : (payload.conversation.unread_count ?? existing.unread),
-          phone: payload.conversation.customer_ig_id,
-          title: payload.conversation.customer_ig_username
-            ? `@${payload.conversation.customer_ig_username}`
-            : existing.title,
-        };
-
-        return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)]);
-      });
-    });
+      setItems((prev) => upsertInstagramFromConversation(prev, payload, isActiveChat))
+    })
 
     const unsubIgMessage = onInstagramMessageNew((payload) => {
       setItems((prev) => {
-        const existing = findConversation(prev, "instagram", payload.conversationId);
-        if (!existing) {
-          void loadChats({ silent: true });
-          return prev;
-        }
-
-        const sortAt = payload.message.timestamp;
-        const time = formatTime(sortAt);
-        const isInbound = payload.message.direction === "inbound";
-        const updated: ChatListItem = {
-          ...existing,
-          subtitle: messagePreviewText(payload.message),
-          time,
-          sortAt,
-          unread: isInbound
-            ? isActiveChat(payload.conversationId)
-              ? 0
-              : existing.unread + 1
-            : existing.unread,
-        };
-
-        return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)]);
-      });
-    });
+        const existing = findConversation(prev, "instagram", payload.conversationId)
+        const sortAt = payload.message.timestamp
+        const isInbound = payload.message.direction === "inbound"
+        const updated: ChatListItem = existing
+          ? {
+              ...existing,
+              subtitle: messagePreviewText(payload.message),
+              time: formatTime(sortAt),
+              sortAt,
+              unread: isInbound
+                ? isActiveChat(payload.conversationId, "instagram")
+                  ? 0
+                  : existing.unread + 1
+                : existing.unread,
+            }
+          : {
+              id: payload.conversationId,
+              channel: "instagram",
+              title: "Instagram",
+              subtitle: messagePreviewText(payload.message),
+              time: formatTime(sortAt),
+              sortAt,
+              unread: isInbound && !isActiveChat(payload.conversationId, "instagram") ? 1 : 0,
+              online: false,
+              phone: "",
+              initials: "IG",
+              replyMode: "ai",
+            }
+        return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)])
+      })
+    })
 
     return () => {
-      unsubWaConversation();
-      unsubWaMessage();
-      unsubIgConversation();
-      unsubIgMessage();
-    };
+      unsubWaConversation()
+      unsubWaMessage()
+      unsubIgConversation()
+      unsubIgMessage()
+    }
   }, [
     onConversationUpdated,
     onMessageNew,
     onInstagramConversationUpdated,
     onInstagramMessageNew,
-    loadChats,
     isActiveChat,
   ]);
 
@@ -393,6 +477,7 @@ export default function MessagesListScreen() {
 
         <FlatList
           data={conversations}
+          extraData={items}
           keyExtractor={(item) => `${item.channel}:${item.id}`}
           refreshControl={
             <RefreshControl

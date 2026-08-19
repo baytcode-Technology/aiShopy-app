@@ -43,7 +43,7 @@ type StoreUnreadContextValue = {
   onActiveChatMessage: (handler: (conversationId: number) => void) => () => void
   setActiveChat: (chat: ActiveChat | null) => void
   setActiveSupportChat: (conversationId: number | null) => void
-  isActiveChat: (conversationId: number) => boolean
+  isActiveChat: (conversationId: number, channel?: ChatChannel) => boolean
   markOrderViewed: (orderId: number) => Promise<void>
   markChatRead: (conversationId: number, channel: ChatChannel) => Promise<void>
   markSupportRead: (conversationId: number) => Promise<void>
@@ -61,8 +61,6 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     onOrderNew,
     onMessageNew,
     onInstagramMessageNew,
-    onConversationUpdated,
-    onInstagramConversationUpdated,
   } = useChatSocket()
   const [ordersUnreadCount, setOrdersUnreadCount] = useState(0)
   const [chatsUnreadCount, setChatsUnreadCount] = useState(0)
@@ -92,8 +90,12 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   )
 
   const syncChatsUnread = useCallback((items: ChatListItem[]) => {
-    const activeId = activeChatRef.current?.conversationId
-    const waIgCount = items.filter((c) => c.unread > 0 && c.id !== activeId).length
+    const active = activeChatRef.current
+    const waIgCount = items.filter(
+      (c) =>
+        c.unread > 0 &&
+        !(active?.conversationId === c.id && active.channel === c.channel),
+    ).length
     waIgUnreadRef.current = waIgCount
     setChatsUnreadCount(waIgCount + supportUnreadCount)
   }, [supportUnreadCount])
@@ -120,9 +122,14 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     if (!store?.id) return
     try {
       const { whatsapp, instagram } = await fetchAllChats(store.id)
-      const activeId = activeChatRef.current?.conversationId
-      const waIgCount = [...whatsapp, ...instagram].filter(
-        (c) => (c.unread_count ?? 0) > 0 && c.id !== activeId
+      const active = activeChatRef.current
+      const waIgCount = [
+        ...whatsapp.map((c) => ({ ...c, channel: 'whatsapp' as const })),
+        ...instagram.map((c) => ({ ...c, channel: 'instagram' as const })),
+      ].filter(
+        (c) =>
+          (c.unread_count ?? 0) > 0 &&
+          !(active?.conversationId === c.id && active.channel === c.channel),
       ).length
       waIgUnreadRef.current = waIgCount
       setChatsUnreadCount(waIgCount + supportUnreadCount)
@@ -154,8 +161,11 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
     }
   }, [applySupportUnread, refreshSupportUnread])
 
-  const isActiveChat = useCallback((conversationId: number) => {
-    return activeChatRef.current?.conversationId === conversationId
+  const isActiveChat = useCallback((conversationId: number, channel?: ChatChannel) => {
+    const active = activeChatRef.current
+    if (!active || active.conversationId !== conversationId) return false
+    if (channel == null) return true
+    return active.channel === channel
   }, [])
 
   const invalidateChats = useCallback(() => {
@@ -187,12 +197,11 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
       if (!store?.id) return
       try {
         await markChatReadApi({ storeId: store.id, conversationId, channel })
-        await refreshChatsUnread()
       } catch {
         // Socket update may still clear row unread.
       }
     },
-    [store?.id, refreshChatsUnread]
+    [store?.id]
   )
 
   const scheduleMarkChatRead = useCallback(
@@ -209,9 +218,14 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
   )
 
   const scheduleChatsRefresh = useCallback(
-    (conversationId?: number) => {
+    (conversationId?: number, channel?: ChatChannel, markRead = false) => {
       const active = activeChatRef.current
-      if (conversationId && active?.conversationId === conversationId) {
+      if (
+        markRead &&
+        conversationId &&
+        active?.conversationId === conversationId &&
+        (!channel || active.channel === channel)
+      ) {
         scheduleMarkChatRead(conversationId, active.channel)
         return
       }
@@ -284,29 +298,21 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubWaMessage = onMessageNew((payload) => {
-      scheduleChatsRefresh(payload.conversationId)
+      if (payload.message.direction !== 'inbound') return
+      scheduleChatsRefresh(payload.conversationId, 'whatsapp', true)
     })
     const unsubIgMessage = onInstagramMessageNew((payload) => {
-      scheduleChatsRefresh(payload.conversationId)
-    })
-    const unsubWaConversation = onConversationUpdated((payload) => {
-      scheduleChatsRefresh(payload.conversation.id)
-    })
-    const unsubIgConversation = onInstagramConversationUpdated((payload) => {
-      scheduleChatsRefresh(payload.conversation.id)
+      if (payload.message.direction !== 'inbound') return
+      scheduleChatsRefresh(payload.conversationId, 'instagram', true)
     })
 
     return () => {
       unsubWaMessage()
       unsubIgMessage()
-      unsubWaConversation()
-      unsubIgConversation()
     }
   }, [
     onMessageNew,
     onInstagramMessageNew,
-    onConversationUpdated,
-    onInstagramConversationUpdated,
     scheduleChatsRefresh,
   ])
 

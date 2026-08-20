@@ -36,6 +36,7 @@ import {
   isSigningOut,
 } from '@src/lib/session-manager'
 import { disconnectChatSocket } from '@src/lib/socket'
+import { unregisterDevicePushToken } from '@src/lib/unregister-push-token'
 import { withTransientNetworkRetry } from '@src/lib/ios-network-settle'
 import type { AuthSession, AuthUser } from '@src/types/auth'
 
@@ -132,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     disconnectChatSocket()
     setGoogleAuthInProgressGuarded(false)
     try {
+      await unregisterDevicePushToken()
       await clearNativeGoogleSignInSession()
       await clearTokens()
       setUser(null)

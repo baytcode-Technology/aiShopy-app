@@ -64,3 +64,11 @@ export type UpsertPushTokenPayload = {
 
 }
 
+
+
+export type DeletePushTokenPayload = {
+
+  expo_push_token: string
+
+}
+

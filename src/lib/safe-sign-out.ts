@@ -1,6 +1,7 @@
 import { router, type Href } from 'expo-router'
 import { disconnectChatSocket } from '@src/lib/socket'
 import { setSigningOut } from '@src/lib/session-manager'
+import { unregisterDevicePushToken } from '@src/lib/unregister-push-token'
 
 export async function performSignOut(
   clearStore: () => Promise<void>,
@@ -9,6 +10,7 @@ export async function performSignOut(
   setSigningOut(true)
   disconnectChatSocket()
   try {
+    await unregisterDevicePushToken()
     await clearStore()
     await signOut()
   } catch {

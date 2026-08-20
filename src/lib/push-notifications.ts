@@ -6,14 +6,35 @@ import Constants from 'expo-constants'
 /** Single Android channel — uses the phone default notification sound. */
 export const ALERTS_CHANNEL_ID = 'aishopy-alerts'
 
+let pushAlertsEnabled = false
+
+export function setPushAlertsEnabled(enabled: boolean): void {
+  pushAlertsEnabled = enabled
+}
+
+export function arePushAlertsEnabled(): boolean {
+  return pushAlertsEnabled
+}
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    if (!pushAlertsEnabled) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      }
+    }
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }
+  },
 })
 
 export async function ensureNotificationPermissions(): Promise<boolean> {
@@ -68,6 +89,8 @@ export async function presentLocalNotification(input: {
   body: string
   data?: Record<string, string>
 }): Promise<void> {
+  if (!pushAlertsEnabled) return
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: input.title,

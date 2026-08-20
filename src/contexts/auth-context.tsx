@@ -129,11 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signOut = useCallback(async () => {
-    setSigningOut(true)
     disconnectChatSocket()
     setGoogleAuthInProgressGuarded(false)
     try {
+      // Unregister while access token + store session are still available.
       await unregisterDevicePushToken()
+      setSigningOut(true)
       await clearNativeGoogleSignInSession()
       await clearTokens()
       setUser(null)

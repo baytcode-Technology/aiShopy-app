@@ -1,20 +1,34 @@
-import { unregisterPushToken } from '@src/api/notification-preferences'
-import { getExpoPushToken } from '@src/lib/push-notifications'
+import { apiFetch } from '@src/api/client'
+import { endpoints } from '@src/api/endpoints'
+import { storeIdQuery } from '@src/api/stores'
+import { getAccessToken } from '@src/lib/auth-storage'
+import { getExpoPushToken, setPushAlertsEnabled } from '@src/lib/push-notifications'
 import { getStoreSession } from '@src/lib/store-storage'
 
 /**
  * Best-effort removal of this device's push token from the backend.
- * Must run while auth tokens are still valid (before sign-out clears session).
+ * Uses apiFetch + stored access token so it still works after setSigningOut(true)
+ * (authenticatedFetch would abort with SigningOutAbortError).
+ * Must run before clearTokens() / clearStore().
  */
 export async function unregisterDevicePushToken(): Promise<void> {
+  setPushAlertsEnabled(false)
+
   try {
     const session = await getStoreSession()
     if (!session?.storeId) return
 
+    const accessToken = await getAccessToken()
+    if (!accessToken) return
+
     const token = await getExpoPushToken()
     if (!token) return
 
-    await unregisterPushToken(session.storeId, { expo_push_token: token })
+    await apiFetch(`${endpoints.pushToken}${storeIdQuery(session.storeId)}`, {
+      method: 'DELETE',
+      token: accessToken,
+      body: JSON.stringify({ expo_push_token: token }),
+    })
   } catch {
     // Sign-out must continue even if unregister fails (offline, expired token, etc.).
   }

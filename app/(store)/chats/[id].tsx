@@ -137,7 +137,7 @@ const MESSAGE_PAGE_SIZE = 25;
 export default function ChatDetailScreen() {
   const { store } = useStore();
   const { isDark } = useAppTheme();
-  const { markChatRead, setActiveChat } = useStoreUnread();
+  const { markChatRead, setActiveChat, isActiveChat } = useStoreUnread();
   const {
     onMessageNew,
     onMessageStatus,
@@ -397,14 +397,18 @@ export default function ChatDetailScreen() {
   const scheduleMarkReadRef = useRef<() => void>(() => {});
 
   const scheduleMarkRead = useCallback(() => {
+    // Only mark read while this chat is the focused/active screen.
+    // The detail screen can stay mounted in the stack after navigating back.
+    if (!isActiveChat(conversationId, channel)) return
     if (markReadTimerRef.current) {
       clearTimeout(markReadTimerRef.current);
     }
     markReadTimerRef.current = setTimeout(() => {
       markReadTimerRef.current = null;
+      if (!isActiveChat(conversationId, channel)) return
       void markChatRead(conversationId, channel);
     }, 500);
-  }, [conversationId, channel, markChatRead]);
+  }, [conversationId, channel, markChatRead, isActiveChat]);
 
   scheduleMarkReadRef.current = scheduleMarkRead;
 

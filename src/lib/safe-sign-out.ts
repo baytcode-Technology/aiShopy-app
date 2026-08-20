@@ -7,10 +7,11 @@ export async function performSignOut(
   clearStore: () => Promise<void>,
   signOut: () => Promise<void>
 ): Promise<void> {
-  setSigningOut(true)
   disconnectChatSocket()
   try {
+    // Unregister while access token + store session are still available.
     await unregisterDevicePushToken()
+    setSigningOut(true)
     await clearStore()
     await signOut()
   } catch {

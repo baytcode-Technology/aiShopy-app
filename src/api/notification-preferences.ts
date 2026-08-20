@@ -2,6 +2,7 @@ import { authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
 import { storeIdQuery } from '@src/api/stores'
 import type {
+  DeletePushTokenPayload,
   NotificationPreferencesResponse,
   UpdateNotificationPreferencesPayload,
   UpsertPushTokenPayload,
@@ -34,6 +35,16 @@ export async function registerPushToken(
 ): Promise<void> {
   await authenticatedFetch(`${endpoints.pushToken}${storeIdQuery(storeId)}`, {
     method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function unregisterPushToken(
+  storeId: number,
+  payload: DeletePushTokenPayload
+): Promise<void> {
+  await authenticatedFetch(`${endpoints.pushToken}${storeIdQuery(storeId)}`, {
+    method: 'DELETE',
     body: JSON.stringify(payload),
   })
 }

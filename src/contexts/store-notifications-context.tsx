@@ -21,6 +21,7 @@ import {
   ALERTS_CHANNEL_ID,
   addNotificationResponseListener,
   getExpoPushToken,
+  setPushAlertsEnabled,
   setupAndroidNotificationChannels,
 } from '@src/lib/push-notifications'
 import type { NotificationPreferences } from '@src/types/notification-preferences'
@@ -56,7 +57,11 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
   }, [store?.id])
 
   useEffect(() => {
-    if (!isAuthenticated || !store?.id) return
+    if (!isAuthenticated || !store?.id) {
+      setPushAlertsEnabled(false)
+      return
+    }
+    setPushAlertsEnabled(true)
     void refreshPreferences()
   }, [isAuthenticated, store?.id, refreshPreferences])
 

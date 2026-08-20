@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Video, ResizeMode } from 'expo-av'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { getWhatsAppMediaAuthHeaders, mediaUrlRequiresAuth } from '@src/lib/whatsapp-media'
 import Colors from '@src/theme/colors'
 
 const videoStyle = StyleSheet.create({
@@ -16,15 +16,19 @@ type Props = {
 }
 
 export function ChatVideoBubble({ uri, onPress, onLongPress }: Props) {
-  const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
+  const [source, setSource] = useState<{ uri: string; headers?: Record<string, string> } | null>(
     null,
   )
 
   useEffect(() => {
     let cancelled = false
     void (async () => {
-      const headers = await getWhatsAppMediaAuthHeaders()
-      if (!cancelled) setSource({ uri, headers })
+      if (mediaUrlRequiresAuth(uri)) {
+        const headers = await getWhatsAppMediaAuthHeaders()
+        if (!cancelled) setSource({ uri, headers })
+      } else if (!cancelled) {
+        setSource({ uri })
+      }
     })()
     return () => {
       cancelled = true

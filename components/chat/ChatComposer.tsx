@@ -121,9 +121,11 @@ export function ChatComposer({
     setMediaCaption('')
   }, [])
 
+  const supportsRichComposer = channel === 'whatsapp' || channel === 'instagram'
+
   const pickMedia = useCallback(
     async (kind: 'image' | 'video') => {
-      if (disabled || busy || channel !== 'whatsapp') return
+      if (disabled || busy || !supportsRichComposer) return
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
       if (!permission.granted) {
         showError('Permission required', 'Allow photo library access to send media')
@@ -148,11 +150,11 @@ export function ChatComposer({
 
       stageMedia(result.assets.map((asset, index) => assetToPayload(asset, index)))
     },
-    [busy, channel, disabled, pendingMedia.length, stageMedia],
+    [busy, disabled, pendingMedia.length, stageMedia, supportsRichComposer],
   )
 
   const captureFromCamera = useCallback(async () => {
-    if (disabled || busy || channel !== 'whatsapp') return
+    if (disabled || busy || !supportsRichComposer) return
 
     if (pendingMedia.length >= MAX_MEDIA_SELECTION) {
       showError('Limit reached', `You can send up to ${MAX_MEDIA_SELECTION} items at a time`)
@@ -174,7 +176,7 @@ export function ChatComposer({
     if (result.canceled || !result.assets[0]) return
 
     stageMedia([assetToPayload(result.assets[0], 0)])
-  }, [busy, channel, disabled, pendingMedia.length, stageMedia])
+  }, [busy, disabled, pendingMedia.length, stageMedia, supportsRichComposer])
 
   const sendPendingMedia = useCallback(async () => {
     if (!pendingMedia.length || disabled || busy) return
@@ -202,18 +204,18 @@ export function ChatComposer({
   }, [busy, clearPendingMedia, disabled, mediaCaption, onSendMedia, pendingMedia])
 
   const showAttachMenu = useCallback(() => {
-    if (channel !== 'whatsapp' || disabled || busy) return
+    if (!supportsRichComposer || disabled || busy) return
     setAttachOpen(true)
-  }, [busy, channel, disabled])
+  }, [busy, disabled, supportsRichComposer])
 
   const handleStartRecording = useCallback(async () => {
-    if (disabled || busy || channel !== 'whatsapp') return
+    if (disabled || busy || !supportsRichComposer) return
     try {
       await startRecording(conversationId)
     } catch (e: unknown) {
       showError('Could not start recording', e instanceof Error ? e.message : 'Unknown error')
     }
-  }, [busy, channel, conversationId, disabled, startRecording])
+  }, [busy, conversationId, disabled, startRecording, supportsRichComposer])
 
   const handleCancelRecording = useCallback(async () => {
     await cancelRecording(conversationId)
@@ -336,7 +338,7 @@ export function ChatComposer({
   return (
     <>
       <View className="flex-row items-end gap-2 px-3 py-2.5">
-        {channel === 'whatsapp' ? (
+        {supportsRichComposer ? (
           <>
             <IconButton
               className="bg-gray-100 border border-gray-200 w-11 h-11"

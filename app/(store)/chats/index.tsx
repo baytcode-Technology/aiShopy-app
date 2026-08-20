@@ -144,6 +144,20 @@ function mergeChatLists(current: ChatListItem[], fetched: ChatListItem[]): ChatL
   return sortConversations(Array.from(map.values()))
 }
 
+function resolveListUnread(input: {
+  isActive: boolean
+  payloadUnread: number | undefined
+  existingUnread: number | undefined
+}): number {
+  if (input.isActive) return 0
+  const payload = input.payloadUnread
+  const existing = input.existingUnread ?? 0
+  // Don't trust a zero from non-active conversation updates when we already
+  // have a local unread (e.g. late outbound emit / stale mark-read).
+  if (payload === 0 && existing > 0) return existing
+  return payload ?? existing
+}
+
 function upsertWhatsAppFromConversation(
   prev: ChatListItem[],
   payload: {
@@ -166,9 +180,11 @@ function upsertWhatsAppFromConversation(
     subtitle: payload.conversation.last_message_preview ?? existing?.subtitle ?? "—",
     time: formatTime(payload.conversation.last_message_at),
     sortAt: payload.conversation.last_message_at,
-    unread: isActiveChat(payload.conversation.id, "whatsapp")
-      ? 0
-      : (payload.conversation.unread_count ?? existing?.unread ?? 0),
+    unread: resolveListUnread({
+      isActive: isActiveChat(payload.conversation.id, "whatsapp"),
+      payloadUnread: payload.conversation.unread_count,
+      existingUnread: existing?.unread,
+    }),
     online: existing?.online ?? false,
     phone: payload.conversation.customer_wa_number,
     initials: existing?.initials ?? initialsFromLabel(title, "WA"),
@@ -202,9 +218,11 @@ function upsertInstagramFromConversation(
     subtitle: payload.conversation.last_message_preview ?? existing?.subtitle ?? "—",
     time: formatTime(payload.conversation.last_message_at),
     sortAt: payload.conversation.last_message_at,
-    unread: isActiveChat(payload.conversation.id, "instagram")
-      ? 0
-      : (payload.conversation.unread_count ?? existing?.unread ?? 0),
+    unread: resolveListUnread({
+      isActive: isActiveChat(payload.conversation.id, "instagram"),
+      payloadUnread: payload.conversation.unread_count,
+      existingUnread: existing?.unread,
+    }),
     online: existing?.online ?? false,
     phone: payload.conversation.customer_ig_id,
     initials: existing?.initials ?? initialsFromLabel(title, "IG"),

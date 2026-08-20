@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Image } from 'expo-image'
-import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { getWhatsAppMediaAuthHeaders, mediaUrlRequiresAuth } from '@src/lib/whatsapp-media'
 import Colors from '@src/theme/colors'
 
 const imageStyle = StyleSheet.create({
@@ -17,7 +17,7 @@ type Props = {
 }
 
 export function ChatImageBubble({ uri, variant, onPress, onLongPress }: Props) {
-  const [source, setSource] = useState<{ uri: string; headers: Record<string, string> } | null>(
+  const [source, setSource] = useState<{ uri: string; headers?: Record<string, string> } | null>(
     null,
   )
   const [failed, setFailed] = useState(false)
@@ -27,8 +27,12 @@ export function ChatImageBubble({ uri, variant, onPress, onLongPress }: Props) {
     let cancelled = false
     void (async () => {
       try {
-        const headers = await getWhatsAppMediaAuthHeaders()
-        if (!cancelled) setSource({ uri, headers })
+        if (mediaUrlRequiresAuth(uri)) {
+          const headers = await getWhatsAppMediaAuthHeaders()
+          if (!cancelled) setSource({ uri, headers })
+        } else if (!cancelled) {
+          setSource({ uri })
+        }
       } catch {
         if (!cancelled) setFailed(true)
       }

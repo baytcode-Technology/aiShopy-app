@@ -1,7 +1,7 @@
 import { LockedMenuRow } from "@/components/subscription/LockedMenuRow";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { Caption, Heading, Muted } from "@/components/ui/Typography";
+import { Caption, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { env } from "@src/config/env";
 import { useStore } from "@src/contexts/store-context";
@@ -10,15 +10,13 @@ import { hasPremiumAccess } from "@src/lib/subscription";
 import Colors from "@src/theme/colors";
 import { Redirect, router, type Href } from "expo-router";
 import { useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 export default function AdminDashboardScreen() {
   const { store, role } = useStore();
   const premium = hasPremiumAccess(store);
   const [domainOpen, setDomainOpen] = useState(false);
   const [customDomainComingSoon, setCustomDomainComingSoon] = useState(false);
-  // TEMP: Instagram coming soon — remove after Meta review approval
-  const [instagramComingSoon, setInstagramComingSoon] = useState(false);
 
   if (role === "staff") {
     return <Redirect href="/settings" />;
@@ -78,10 +76,7 @@ export default function AdminDashboardScreen() {
           value="Connect business account"
           icon="instagram"
           showChevron
-          onPress={() => {
-            // TEMP: restore router.push("/instagram-connect") after Meta review approval
-            setInstagramComingSoon(true);
-          }}
+          onPress={() => router.push("/instagram-connect" as Href)}
         />
 
         <LockedMenuRow
@@ -173,53 +168,6 @@ export default function AdminDashboardScreen() {
           ) : null}
         </View>
       </ScreenScrollBody>
-
-      {/* TEMP: Instagram coming soon — remove this modal after Meta review approval */}
-      <Modal
-        visible={instagramComingSoon}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setInstagramComingSoon(false)}
-      >
-        <View className="flex-1 justify-center px-6">
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setInstagramComingSoon(false)}
-            accessibilityLabel="Dismiss"
-          >
-            <View className="flex-1 bg-ink-overlay" />
-          </Pressable>
-
-          <View
-            className="bg-surface rounded-3xl border border-gray-200 p-6"
-            style={shadows.card}
-          >
-            <View className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 items-center justify-center mb-4">
-              <FontAwesome
-                name="instagram"
-                size={22}
-                color={Colors.brand.primary}
-              />
-            </View>
-            <Heading className="text-xl mb-2">Coming soon</Heading>
-            <Muted className="text-[15px] leading-[22px] mb-6">
-              Instagram connection is temporarily unavailable while we finish
-              Meta review. You can connect your business account here once it is
-              approved.
-            </Muted>
-            <Pressable
-              onPress={() => setInstagramComingSoon(false)}
-              className="py-4 rounded-2xl items-center justify-center border-2"
-              style={{
-                backgroundColor: Colors.brand.primary,
-                borderColor: Colors.brand.primary,
-              }}
-            >
-              <Text className="text-[16px] font-bold">Got it</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </Screen>
   );
 }

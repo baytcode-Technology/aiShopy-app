@@ -150,6 +150,10 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
 
   const setActiveChat = useCallback((chat: ActiveChat | null) => {
     activeChatRef.current = chat
+    if (chat == null && markChatReadTimer.current) {
+      clearTimeout(markChatReadTimer.current)
+      markChatReadTimer.current = null
+    }
   }, [])
 
   const setActiveSupportChat = useCallback((conversationId: number | null) => {
@@ -211,6 +215,14 @@ export function StoreUnreadProvider({ children }: { children: ReactNode }) {
       }
       markChatReadTimer.current = setTimeout(() => {
         markChatReadTimer.current = null
+        const active = activeChatRef.current
+        if (
+          !active ||
+          active.conversationId !== conversationId ||
+          active.channel !== channel
+        ) {
+          return
+        }
         void markChatRead(conversationId, channel)
       }, MARK_CHAT_READ_DEBOUNCE_MS)
     },

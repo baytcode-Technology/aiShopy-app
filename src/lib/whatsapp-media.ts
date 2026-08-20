@@ -7,6 +7,10 @@ export function buildWhatsAppMediaUrl(mediaId: string, storeId: number): string 
   return `${base}/api/whatsapp/media/${encodeURIComponent(mediaId)}?${qs}`
 }
 
+export function mediaUrlRequiresAuth(uri: string): boolean {
+  return uri.includes('/api/whatsapp/media/')
+}
+
 export async function getWhatsAppMediaAuthHeaders(): Promise<Record<string, string>> {
   const token = await getValidAccessToken()
   return { Authorization: `Bearer ${token}` }

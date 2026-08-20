@@ -4,7 +4,7 @@ import { Image } from 'expo-image'
 import { Video, ResizeMode } from 'expo-av'
 import * as FileSystem from 'expo-file-system/legacy'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { getWhatsAppMediaAuthHeaders, mediaUrlRequiresAuth } from '@src/lib/whatsapp-media'
 import Colors from '@src/theme/colors'
 
 type Props = {
@@ -34,9 +34,9 @@ export function ChatMediaViewerModal({ visible, mode, uri, onClose }: Props) {
     let cancelled = false
     void (async () => {
       try {
-        const headers = await getWhatsAppMediaAuthHeaders()
+        const headers = mediaUrlRequiresAuth(uri) ? await getWhatsAppMediaAuthHeaders() : undefined
         const cachePath = `${FileSystem.cacheDirectory}wa-viewer-${Date.now()}.${extForMode(mode)}`
-        const result = await FileSystem.downloadAsync(uri, cachePath, { headers })
+        const result = await FileSystem.downloadAsync(uri, cachePath, headers ? { headers } : undefined)
         if (!cancelled) setLocalUri(result.uri)
       } catch {
         if (!cancelled) setFailed(true)

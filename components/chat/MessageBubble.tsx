@@ -11,7 +11,7 @@ import { ChatVoiceBubble } from '@/components/chat/ChatVoiceBubble'
 import { cn } from '@src/lib/cn'
 import { FormattedMessageText } from '@src/lib/parse-inline-markdown'
 import { showError } from '@src/lib/toast'
-import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { getWhatsAppMediaAuthHeaders, mediaUrlRequiresAuth } from '@src/lib/whatsapp-media'
 import type { ChatMessage } from '@src/types/chat'
 import Colors from '@src/theme/colors'
 import { useAppTheme } from '@src/contexts/theme-context'
@@ -26,10 +26,10 @@ type Props = {
 function WhatsAppDocumentBubble({ uri, label }: { uri: string; label: string }) {
   const openDocument = useCallback(async () => {
     try {
-      const headers = await getWhatsAppMediaAuthHeaders()
+      const headers = mediaUrlRequiresAuth(uri) ? await getWhatsAppMediaAuthHeaders() : undefined
       const ext = label.includes('.') ? label.split('.').pop() : 'bin'
       const fileUri = `${FileSystem.cacheDirectory}wa-doc-${Date.now()}.${ext}`
-      const result = await FileSystem.downloadAsync(uri, fileUri, { headers })
+      const result = await FileSystem.downloadAsync(uri, fileUri, headers ? { headers } : undefined)
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(result.uri)
       } else {

@@ -17,11 +17,14 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   fetchChatMessages,
   fetchInstagramMessages,
+  forwardInstagramMessage,
   forwardWhatsAppMessage,
   mapApiMessageToChatMessage,
   mapSocketMessageToChatMessage,
   sendChatMessage,
+  sendInstagramMediaMessage,
   sendWhatsAppMediaMessage,
+  uploadInstagramMedia,
   uploadWhatsAppMedia,
 } from "@src/api/chats";
 import { setChatReplyMode } from "@src/api/inbox-ai";
@@ -596,6 +599,8 @@ export default function ChatDetailScreen() {
         type: payload.type,
         text: previewForMediaType(payload.type, payload.caption),
         caption: payload.caption,
+        mediaUrl: payload.uri,
+        mimeType: payload.mimeType,
         time,
         timestamp: now.toISOString(),
         outgoing: true,
@@ -607,40 +612,78 @@ export default function ChatDetailScreen() {
     triggerAutoScroll();
 
     try {
-      const uploaded = await uploadWhatsAppMedia({
-        storeId: store!.id,
-        kind: payload.type,
-        uri: payload.uri,
-        name: payload.name,
-        type: payload.mimeType,
-        voice: payload.voice,
-      });
+      if (channel === "instagram") {
+        const uploaded = await uploadInstagramMedia({
+          storeId: store!.id,
+          kind: payload.type,
+          uri: payload.uri,
+          name: payload.name,
+          type: payload.mimeType,
+        });
 
-      const res = await sendWhatsAppMediaMessage({
-        storeId: store!.id,
-        to: customerPhone,
-        conversationId,
-        type: payload.type,
-        mediaId: uploaded.data.media_id,
-        mimeType: uploaded.data.mime_type,
-        caption: payload.caption,
-        voice: payload.voice === true,
-      });
+        const res = await sendInstagramMediaMessage({
+          storeId: store!.id,
+          to: customerPhone,
+          conversationId,
+          type: payload.type,
+          mediaUrl: uploaded.data.media_url,
+          mimeType: uploaded.data.mime_type,
+          caption: payload.caption,
+        });
 
-      const serverMessage = mapApiMessageToChatMessage(
-        res.data.message,
-        store!.id,
-      );
+        const serverMessage = mapApiMessageToChatMessage(
+          res.data.message,
+          store!.id,
+        );
 
-      setMessages((prev) =>
-        dedupeByIdAndMeta(
-          prev.map((m) =>
-            m.clientKey === clientKey
-              ? patchOutgoingWithServer(m, serverMessage)
-              : m,
+        setMessages((prev) =>
+          dedupeByIdAndMeta(
+            prev.map((m) =>
+              m.clientKey === clientKey
+                ? patchOutgoingWithServer(m, {
+                    ...serverMessage,
+                    mediaUrl: serverMessage.mediaUrl ?? uploaded.data.media_url,
+                  })
+                : m,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        const uploaded = await uploadWhatsAppMedia({
+          storeId: store!.id,
+          kind: payload.type,
+          uri: payload.uri,
+          name: payload.name,
+          type: payload.mimeType,
+          voice: payload.voice,
+        });
+
+        const res = await sendWhatsAppMediaMessage({
+          storeId: store!.id,
+          to: customerPhone,
+          conversationId,
+          type: payload.type,
+          mediaId: uploaded.data.media_id,
+          mimeType: uploaded.data.mime_type,
+          caption: payload.caption,
+          voice: payload.voice === true,
+        });
+
+        const serverMessage = mapApiMessageToChatMessage(
+          res.data.message,
+          store!.id,
+        );
+
+        setMessages((prev) =>
+          dedupeByIdAndMeta(
+            prev.map((m) =>
+              m.clientKey === clientKey
+                ? patchOutgoingWithServer(m, serverMessage)
+                : m,
+            ),
+          ),
+        );
+      }
     } catch (e: unknown) {
       setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
       showError(e, "Failed to send media");
@@ -651,7 +694,8 @@ export default function ChatDetailScreen() {
   const sendMediaMessage = async (
     payload: OutboundMediaPayload | OutboundMediaPayload[],
   ) => {
-    if (!store?.id || isSending || channel !== "whatsapp") return;
+    if (!store?.id || isSending) return;
+    if (channel !== "whatsapp" && channel !== "instagram") return;
 
     const payloads = Array.isArray(payload) ? payload : [payload];
     if (!payloads.length) return;
@@ -934,9 +978,7 @@ export default function ChatDetailScreen() {
               onSendText={() => void sendMessage()}
               onSendMedia={sendMediaMessage}
               onOpenProductPicker={
-                channel === "whatsapp" && store?.slug
-                  ? () => setProductPickerOpen(true)
-                  : undefined
+                store?.slug ? () => setProductPickerOpen(true) : undefined
               }
               disabled={isSending}
               channel={channel}
@@ -975,12 +1017,10 @@ export default function ChatDetailScreen() {
                     message={item}
                     storeId={store?.id}
                     onLongPress={(message) => {
-                      if (channel !== "whatsapp") return;
                       setActionsMessage(message);
                       setActionsVisible(true);
                     }}
                     onForward={(message) => {
-                      if (channel !== "whatsapp") return;
                       setForwardMessage(message);
                       setForwardVisible(true);
                     }}
@@ -1028,6 +1068,7 @@ export default function ChatDetailScreen() {
             visible={forwardVisible}
             storeId={store.id}
             sourceConversationId={conversationId}
+            channel={channel}
             message={forwardMessage}
             onClose={() => {
               setForwardVisible(false);
@@ -1035,6 +1076,14 @@ export default function ChatDetailScreen() {
             }}
             onForward={async ({ targetConversationId }) => {
               if (!forwardMessage) return;
+              if (channel === "instagram") {
+                await forwardInstagramMessage({
+                  storeId: store.id,
+                  sourceMessageId: forwardMessage.id,
+                  targetConversationId,
+                });
+                return;
+              }
               await forwardWhatsAppMessage({
                 storeId: store.id,
                 sourceMessageId: forwardMessage.id,

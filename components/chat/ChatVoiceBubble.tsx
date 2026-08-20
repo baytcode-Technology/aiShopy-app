@@ -6,7 +6,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useChatVoicePlayer } from '@src/contexts/chat-voice-player-context'
 import { cn } from '@src/lib/cn'
 import { showError } from '@src/lib/toast'
-import { getWhatsAppMediaAuthHeaders } from '@src/lib/whatsapp-media'
+import { getWhatsAppMediaAuthHeaders, mediaUrlRequiresAuth } from '@src/lib/whatsapp-media'
 import { useAppTheme } from '@src/contexts/theme-context'
 import Colors from '@src/theme/colors'
 
@@ -101,9 +101,9 @@ export function ChatVoiceBubble({ messageId, uri, outgoing }: Props) {
       cachedUriRef.current = uri
       return uri
     }
-    const headers = await getWhatsAppMediaAuthHeaders()
+    const headers = mediaUrlRequiresAuth(uri) ? await getWhatsAppMediaAuthHeaders() : undefined
     const cachePath = `${FileSystem.cacheDirectory}wa-voice-${Date.now()}.${extFromUri(uri)}`
-    const result = await FileSystem.downloadAsync(uri, cachePath, { headers })
+    const result = await FileSystem.downloadAsync(uri, cachePath, headers ? { headers } : undefined)
     cachedUriRef.current = result.uri
     return result.uri
   }, [uri])

@@ -84,6 +84,8 @@ export type ApiMessage = {
 
   media_id?: string | null
 
+  media_url?: string | null
+
   mime_type?: string | null
 
   caption?: string | null
@@ -216,9 +218,19 @@ export type ApiInstagramMessage = {
 
   text_body: string | null
 
+  media_id?: string | null
+
+  media_url?: string | null
+
+  mime_type?: string | null
+
+  caption?: string | null
+
   status?: string
 
   timestamp: string | null
+
+  raw_payload?: unknown
 
 }
 
@@ -226,6 +238,12 @@ export type UploadWhatsAppMediaResponse = {
   success: boolean
   message: string
   data: { store_id: number; media_id: string; mime_type: string }
+}
+
+export type UploadInstagramMediaResponse = {
+  success: boolean
+  message: string
+  data: { store_id: number; media_url: string; mime_type: string }
 }
 
 export type SendMediaMessageResponse = {
@@ -344,6 +362,80 @@ export async function uploadWhatsAppMedia(input: {
   return postWhatsAppMediaUpload(uploadUrl, prepared, input, token)
 }
 
+export async function uploadInstagramMedia(input: {
+  storeId: number
+  kind: 'image' | 'audio' | 'video'
+  uri: string
+  name: string
+  type: string
+}): Promise<UploadInstagramMediaResponse> {
+  let prepared
+  try {
+    prepared = await prepareWhatsAppMediaUpload({
+      kind: input.kind,
+      uri: input.uri,
+      name: input.name,
+      type: input.type,
+    })
+  } catch (e: unknown) {
+    throw new ApiHttpError(
+      e instanceof Error ? e.message : 'Media file is missing or empty',
+      400,
+      null,
+    )
+  }
+
+  const qs = new URLSearchParams({
+    store_id: String(input.storeId),
+    kind: input.kind,
+  }).toString()
+
+  const base = env.apiBaseUrl.replace(/\/$/, '')
+  const uploadUrl = `${base}${endpoints.instagramMediaUpload}?${qs}`
+  const token = await getValidAccessToken()
+
+  const formData = new FormData()
+  formData.append('file', {
+    uri: prepared.uri,
+    name: prepared.name,
+    type: prepared.type,
+  } as unknown as Blob)
+  formData.append('kind', input.kind)
+
+  let res: Response
+  try {
+    res = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+  } catch (err: unknown) {
+    throw new ApiHttpError(
+      err instanceof Error ? err.message : 'Network request failed while uploading media',
+      0,
+      null,
+    )
+  }
+
+  const text = await res.text()
+  let body: unknown = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = text
+  }
+
+  if (!res.ok) {
+    throw new ApiHttpError(
+      parseUploadErrorBody(body, res.statusText || 'Upload failed'),
+      res.status,
+      body,
+    )
+  }
+
+  return body as UploadInstagramMediaResponse
+}
+
 export async function sendWhatsAppMediaMessage(input: {
   storeId: number
   to: string
@@ -369,12 +461,50 @@ export async function sendWhatsAppMediaMessage(input: {
   })
 }
 
+export async function sendInstagramMediaMessage(input: {
+  storeId: number
+  to: string
+  conversationId?: number
+  type: 'image' | 'audio' | 'video'
+  mediaUrl: string
+  mimeType?: string
+  caption?: string
+}): Promise<SendMediaMessageResponse> {
+  return authenticatedFetch<SendMediaMessageResponse>(endpoints.instagramSendMedia, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      to: input.to,
+      conversationId: input.conversationId,
+      type: input.type,
+      mediaUrl: input.mediaUrl,
+      mimeType: input.mimeType,
+      caption: input.caption,
+    }),
+  })
+}
+
 export async function forwardWhatsAppMessage(input: {
   storeId: number
   sourceMessageId: number
   targetConversationId: number
 }): Promise<ForwardMessageResponse> {
   return authenticatedFetch<ForwardMessageResponse>(endpoints.whatsappForward, {
+    method: 'POST',
+    body: JSON.stringify({
+      storeId: input.storeId,
+      sourceMessageId: input.sourceMessageId,
+      targetConversationId: input.targetConversationId,
+    }),
+  })
+}
+
+export async function forwardInstagramMessage(input: {
+  storeId: number
+  sourceMessageId: number
+  targetConversationId: number
+}): Promise<ForwardMessageResponse> {
+  return authenticatedFetch<ForwardMessageResponse>(endpoints.instagramForward, {
     method: 'POST',
     body: JSON.stringify({
       storeId: input.storeId,
@@ -586,6 +716,7 @@ function mapMessageFields(
     type: string
     text_body: string | null
     media_id?: string | null
+    media_url?: string | null
     mime_type?: string | null
     caption?: string | null
     raw_payload?: unknown
@@ -618,6 +749,8 @@ function mapMessageFields(
         undefined
       : undefined
 
+  const directMediaUrl = m.media_url?.trim() || undefined
+
   return {
     id: m.id,
     metaMessageId: m.meta_message_id,
@@ -631,7 +764,8 @@ function mapMessageFields(
     mimeType: enriched.mimeType,
     caption: enriched.caption,
     mediaUrl:
-      mediaId && storeId ? buildWhatsAppMediaUrl(mediaId, storeId) : undefined,
+      directMediaUrl ??
+      (mediaId && storeId ? buildWhatsAppMediaUrl(mediaId, storeId) : undefined),
     reactionEmoji,
     reactionTargetId: enriched.reactionTargetId,
   }
@@ -659,6 +793,7 @@ type SocketMessageShape = {
   type: string
   text_body: string | null
   media_id?: string | null
+  media_url?: string | null
   mime_type?: string | null
   caption?: string | null
   raw_payload?: unknown

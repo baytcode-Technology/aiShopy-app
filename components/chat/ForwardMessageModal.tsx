@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, FlatList, Modal, Text, View } from 'react-native'
 import { ConversationRow } from '@/components/chat/ConversationRow'
 import { SearchBar } from '@/components/ui/SearchBar'
-import { fetchChats } from '@src/api/chats'
+import { fetchChats, fetchInstagramChats } from '@src/api/chats'
 import { showError, showSuccess } from '@src/lib/toast'
-import type { ChatListItem, ChatMessage } from '@src/types/chat'
+import type { ChatChannel, ChatListItem, ChatMessage } from '@src/types/chat'
 
 function formatWaPhone(phone: string): string {
   const trimmed = phone.trim()
@@ -12,7 +12,7 @@ function formatWaPhone(phone: string): string {
   return trimmed.startsWith('+') ? trimmed : `+${trimmed}`
 }
 
-function mapConversation(c: {
+function mapWhatsAppConversation(c: {
   id: number
   customer_wa_number: string
   customer_name?: string | null
@@ -39,10 +39,38 @@ function mapConversation(c: {
   }
 }
 
+function mapInstagramConversation(c: {
+  id: number
+  customer_ig_id: string
+  customer_ig_username: string | null
+  last_message_at: string | null
+  last_message_preview: string | null
+  unread_count?: number
+}): ChatListItem {
+  const title = c.customer_ig_username
+    ? `@${c.customer_ig_username}`
+    : c.customer_ig_id
+  return {
+    id: c.id,
+    channel: 'instagram',
+    title,
+    subtitle: c.last_message_preview ?? '—',
+    time: c.last_message_at
+      ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '',
+    sortAt: c.last_message_at,
+    unread: c.unread_count ?? 0,
+    online: false,
+    phone: c.customer_ig_id,
+    initials: title.slice(0, 2).toUpperCase(),
+  }
+}
+
 type Props = {
   visible: boolean
   storeId: number
   sourceConversationId: number
+  channel: ChatChannel
   message: ChatMessage | null
   onClose: () => void
   onForward: (input: { targetConversationId: number; targetPhone: string }) => Promise<void>
@@ -52,6 +80,7 @@ export function ForwardMessageModal({
   visible,
   storeId,
   sourceConversationId,
+  channel,
   message,
   onClose,
   onForward,
@@ -65,18 +94,27 @@ export function ForwardMessageModal({
     if (!storeId) return
     setLoading(true)
     try {
-      const res = await fetchChats(storeId)
-      setItems(
-        res.data.chats
-          .filter((c) => c.id !== sourceConversationId)
-          .map(mapConversation),
-      )
+      if (channel === 'instagram') {
+        const res = await fetchInstagramChats(storeId)
+        setItems(
+          res.data.chats
+            .filter((c) => c.id !== sourceConversationId)
+            .map(mapInstagramConversation),
+        )
+      } else {
+        const res = await fetchChats(storeId)
+        setItems(
+          res.data.chats
+            .filter((c) => c.id !== sourceConversationId)
+            .map(mapWhatsAppConversation),
+        )
+      }
     } catch (e: unknown) {
       showError('Failed to load chats', e instanceof Error ? e.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
-  }, [storeId, sourceConversationId])
+  }, [storeId, sourceConversationId, channel])
 
   useEffect(() => {
     if (visible) void load()
@@ -120,20 +158,23 @@ export function ForwardMessageModal({
           <SearchBar value={search} onChangeText={setSearch} placeholder="Search chats" />
         </View>
         {loading ? (
-          <ActivityIndicator className="mt-8" />
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color="#111" />
+          </View>
         ) : (
           <FlatList
             data={filtered}
-            keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => `${item.channel}-${item.id}`}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+            ListEmptyComponent={
+              <Text className="text-center text-gray-500 mt-10">No conversations found</Text>
+            }
             renderItem={({ item }) => (
               <ConversationRow
                 conversation={item}
                 onPress={() => void handleSelect(item)}
               />
             )}
-            ListEmptyComponent={
-              <Text className="text-center text-gray-500 mt-8">No chats found</Text>
-            }
           />
         )}
       </View>

@@ -1,11 +1,17 @@
+import {
+  ChatComposer,
+  type OutboundMediaPayload,
+} from "@/components/chat/ChatComposer";
 import { ChatDateSeparator } from "@/components/chat/ChatDateSeparator";
-import { MessageBubble } from "@/components/chat/MessageBubble";
-import { ChatComposer, type OutboundMediaPayload } from "@/components/chat/ChatComposer";
-import { ChatProductSendModal, type ProductShareSendPayload } from "@/components/chat/ChatProductSendModal";
 import { ChatMessageActionsSheet } from "@/components/chat/ChatMessageActionsSheet";
+import {
+  ChatProductSendModal,
+  type ProductShareSendPayload,
+} from "@/components/chat/ChatProductSendModal";
 import { ForwardMessageModal } from "@/components/chat/ForwardMessageModal";
-import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
+import { MessageBubble } from "@/components/chat/MessageBubble";
 import { HeaderActionsRow } from "@/components/navigation/HeaderActionsRow";
+import { SupportKeyboardChatLayout } from "@/components/support/SupportKeyboardChatLayout";
 import { LinkText, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
@@ -19,7 +25,13 @@ import {
   uploadWhatsAppMedia,
 } from "@src/api/chats";
 import { setChatReplyMode } from "@src/api/inbox-ai";
-import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
+import { useChatSocket } from "@src/contexts/chat-socket-context";
+import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
+import { useChatVoiceRecording } from "@src/contexts/chat-voice-recording-context";
+import { useStore } from "@src/contexts/store-context";
+import { useStoreUnread } from "@src/contexts/store-unread-context";
+import { useAppTheme } from "@src/contexts/theme-context";
+import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
 import {
   dateLabelFromTimestamp,
   injectChatDateSeparators,
@@ -27,20 +39,19 @@ import {
   stickyDateLabelFromViewableItems,
   type ChatListItem,
 } from "@src/lib/chat-date-separators";
-import { useChatVoiceRecording } from "@src/contexts/chat-voice-recording-context";
-import { useChatSocket } from "@src/contexts/chat-socket-context";
+import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import { toSocketId } from "@src/lib/socket-normalize";
-import { ChatVoicePlayerProvider } from "@src/contexts/chat-voice-player-context";
-import { useStore } from "@src/contexts/store-context";
-import { useStoreUnread } from "@src/contexts/store-unread-context";
-import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
+import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
-import { useAppTheme } from "@src/contexts/theme-context";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
-import { router, useLocalSearchParams, useFocusEffect, type Href } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
-import { useNavigateBackTo } from "@src/hooks/useNavigateBackTo";
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+  type Href,
+} from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -127,9 +138,21 @@ export default function ChatDetailScreen() {
   const { store } = useStore();
   const { isDark } = useAppTheme();
   const { markChatRead, setActiveChat } = useStoreUnread();
-  const { onMessageNew, onMessageStatus, onInstagramMessageNew, onInboxAiTyping } = useChatSocket();
+  const {
+    onMessageNew,
+    onMessageStatus,
+    onInstagramMessageNew,
+    onInboxAiTyping,
+  } = useChatSocket();
   const { pauseRecording } = useChatVoiceRecording();
-  const { id, phone, channel: channelParam, displayName, unread, replyMode: replyModeParam } = useLocalSearchParams<{
+  const {
+    id,
+    phone,
+    channel: channelParam,
+    displayName,
+    unread,
+    replyMode: replyModeParam,
+  } = useLocalSearchParams<{
     id: string;
     phone?: string;
     channel?: string;
@@ -141,17 +164,23 @@ export default function ChatDetailScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(null);
+  const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(
+    null,
+  );
   const [actionsVisible, setActionsVisible] = useState(false);
-  const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
+  const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(
+    null,
+  );
   const [forwardVisible, setForwardVisible] = useState(false);
   const [productPickerOpen, setProductPickerOpen] = useState(false);
-  const [replyMode, setReplyMode] = useState<'ai' | 'manual'>(
-    replyModeParam === 'manual' ? 'manual' : 'ai',
+  const [replyMode, setReplyMode] = useState<"ai" | "manual">(
+    replyModeParam === "manual" ? "manual" : "ai",
   );
   const [replyModeBusy, setReplyModeBusy] = useState(false);
   const [aiPreparingReply, setAiPreparingReply] = useState(false);
-  const aiPreparingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aiPreparingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -164,7 +193,11 @@ export default function ChatDetailScreen() {
 
   const unreadCount = useMemo(() => {
     const raw =
-      typeof unread === "string" ? unread : Array.isArray(unread) ? unread[0] : "0";
+      typeof unread === "string"
+        ? unread
+        : Array.isArray(unread)
+          ? unread[0]
+          : "0";
     const parsed = Number(raw);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [unread]);
@@ -201,7 +234,7 @@ export default function ChatDetailScreen() {
     store?.ai_auto_reply_enabled === true &&
     replyMode === "ai";
 
-  const toggleReplyMode = async (mode: 'ai' | 'manual') => {
+  const toggleReplyMode = async (mode: "ai" | "manual") => {
     if (!store?.id) return;
     setReplyModeBusy(true);
     try {
@@ -227,8 +260,14 @@ export default function ChatDetailScreen() {
   }, [store]);
 
   const title = useMemo(() => {
-    if (channel === "instagram" && customerPhone && !customerPhone.startsWith("@")) {
-      return customerPhone.length > 12 ? `IG ${customerPhone.slice(0, 8)}…` : customerPhone;
+    if (
+      channel === "instagram" &&
+      customerPhone &&
+      !customerPhone.startsWith("@")
+    ) {
+      return customerPhone.length > 12
+        ? `IG ${customerPhone.slice(0, 8)}…`
+        : customerPhone;
     }
     return headerLabel || "Chat";
   }, [channel, customerPhone, headerLabel]);
@@ -264,7 +303,9 @@ export default function ChatDetailScreen() {
           mapApiMessageToChatMessage(m, store.id),
         );
         setMessages((prev) => {
-          const nextMessages = silent ? mergeMessageLists(prev, mapped) : mapped;
+          const nextMessages = silent
+            ? mergeMessageLists(prev, mapped)
+            : mapped;
           return channel === "whatsapp"
             ? prepareWhatsAppMessagesForDisplay(nextMessages)
             : nextMessages;
@@ -345,14 +386,7 @@ export default function ChatDetailScreen() {
     } finally {
       setLoadingMore(false);
     }
-  }, [
-    store?.id,
-    conversationId,
-    channel,
-    nextCursor,
-    loadingMore,
-    hasMore,
-  ]);
+  }, [store?.id, conversationId, channel, nextCursor, loadingMore, hasMore]);
 
   useEffect(() => {
     initialLoadDoneRef.current = false;
@@ -413,9 +447,13 @@ export default function ChatDetailScreen() {
         timestamp: string | null;
       };
     }) => {
-      if (toSocketId(payload.conversationId) !== conversationId || !store?.id) return;
+      if (toSocketId(payload.conversationId) !== conversationId || !store?.id)
+        return;
       setMessages((prev) => {
-        const incoming = mapSocketMessageToChatMessage(payload.message, store.id);
+        const incoming = mapSocketMessageToChatMessage(
+          payload.message,
+          store.id,
+        );
 
         // Already have this exact server message? Skip.
         if (
@@ -424,7 +462,7 @@ export default function ChatDetailScreen() {
               m.id === incoming.id ||
               (incoming.metaMessageId &&
                 m.metaMessageId === incoming.metaMessageId &&
-                incoming.type !== 'reaction'),
+                incoming.type !== "reaction"),
           )
         ) {
           return prev;
@@ -441,7 +479,7 @@ export default function ChatDetailScreen() {
             const patched = patchOutgoingWithServer(prev[pendingIdx], incoming);
             const next = [...prev];
             next[pendingIdx] = patched;
-            return channel === 'whatsapp'
+            return channel === "whatsapp"
               ? prepareWhatsAppMessagesForDisplay(next)
               : next;
           }
@@ -484,7 +522,15 @@ export default function ChatDetailScreen() {
       unsubIg();
       unsubStatus();
     };
-  }, [conversationId, store?.id, channel, onMessageNew, onInstagramMessageNew, onMessageStatus, triggerAutoScroll]);
+  }, [
+    conversationId,
+    store?.id,
+    channel,
+    onMessageNew,
+    onInstagramMessageNew,
+    onMessageStatus,
+    triggerAutoScroll,
+  ]);
 
   useEffect(() => {
     if (!Number.isFinite(conversationId) || !store?.id) return;
@@ -577,7 +623,10 @@ export default function ChatDetailScreen() {
         voice: payload.voice === true,
       });
 
-      const serverMessage = mapApiMessageToChatMessage(res.data.message, store!.id);
+      const serverMessage = mapApiMessageToChatMessage(
+        res.data.message,
+        store!.id,
+      );
 
       setMessages((prev) =>
         dedupeByIdAndMeta(
@@ -724,7 +773,11 @@ export default function ChatDetailScreen() {
   }, [messages]);
 
   const onViewableItemsChanged = useRef(
-    ({ viewableItems }: { viewableItems: { index: number | null; item: ChatListItem }[] }) => {
+    ({
+      viewableItems,
+    }: {
+      viewableItems: { index: number | null; item: ChatListItem }[];
+    }) => {
       const label = stickyDateLabelFromViewableItems(viewableItems);
       if (label) setStickyDateLabel(label);
     },
@@ -760,226 +813,244 @@ export default function ChatDetailScreen() {
 
   return (
     <ChatVoicePlayerProvider>
-    <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
-      <View
-        className={`flex-row items-center px-3 py-3 gap-2.5 ${isDark ? "bg-charcoal" : "bg-brand-primary"}`}
-      >
-        <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
-          <FontAwesome
-            name="chevron-left"
-            size={18}
-            color={isDark ? "#FFFFFF" : Colors.brand.onPrimary}
-          />
-        </Pressable>
+      <SafeAreaView className="flex-1 bg-gray-100" edges={["top"]}>
         <View
-          className="w-10 h-10 rounded-full items-center justify-center"
-          style={{
-            backgroundColor: channel === "instagram" ? "#E1306C" : "#25D366",
-          }}
+          className={`flex-row items-center px-3 py-3 gap-2.5 ${isDark ? "bg-charcoal" : "bg-brand-primary"}`}
         >
-          <FontAwesome
-            name={channel === "instagram" ? "instagram" : "whatsapp"}
-            size={18}
-            color="#FFFFFF"
-          />
-        </View>
-        <View className="flex-1 min-w-0">
-          <Text
-            className={isDark ? "text-white text-base font-bold" : "text-brand-on-primary text-base font-bold"}
-            numberOfLines={1}
+          <Pressable className="p-1" onPress={goBackToChats} hitSlop={12}>
+            <FontAwesome
+              name="chevron-left"
+              size={18}
+              color={isDark ? "#FFFFFF" : Colors.brand.onPrimary}
+            />
+          </Pressable>
+          <View
+            className="w-10 h-10 rounded-full items-center justify-center"
+            style={{
+              backgroundColor: channel === "instagram" ? "#E1306C" : "#25D366",
+            }}
           >
-            {title}
-          </Text>
-          <Muted className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
-            {isLoading
-              ? "Loading…"
-              : channel === "instagram"
-                ? "Instagram DM"
-                : customerPhone}
-          </Muted>
-        </View>
-        <HeaderActionsRow settingsTone="onPrimary" />
-      </View>
-
-      {chatBoatActive ? (
-        <View className="flex-row items-center justify-between px-3 py-2 bg-emerald-50 border-b border-emerald-100">
-          <View className="flex-row items-center gap-2 flex-1 min-w-0">
-            <FontAwesome name="magic" size={14} color={Colors.brand.primary} />
-            <Text className="text-sm text-emerald-900 font-medium flex-1" numberOfLines={1}>
-              Chat Boat is replying automatically
-            </Text>
+            <FontAwesome
+              name={channel === "instagram" ? "instagram" : "whatsapp"}
+              size={18}
+              color="#FFFFFF"
+            />
           </View>
-          <Pressable
-            className="px-3 py-1.5 rounded-full bg-surface border border-emerald-200"
-            disabled={replyModeBusy}
-            onPress={() => void toggleReplyMode('manual')}
-          >
+          <View className="flex-1 min-w-0">
             <Text
               className={
                 isDark
-                  ? "text-xs font-semibold text-emerald-50"
-                  : "text-xs font-semibold text-emerald-800"
+                  ? "text-white text-base font-bold"
+                  : "text-brand-on-primary text-base font-bold"
               }
+              numberOfLines={1}
             >
-              Take over
+              {title}
             </Text>
-          </Pressable>
+            <Muted className="text-gray-400 text-xs mt-0.5" numberOfLines={1}>
+              {isLoading
+                ? "Loading…"
+                : channel === "instagram"
+                  ? "Instagram DM"
+                  : customerPhone}
+            </Muted>
+          </View>
+          <HeaderActionsRow settingsTone="onPrimary" />
         </View>
-      ) : null}
 
-      {!chatBoatActive && store?.ai_auto_reply_enabled && replyMode === 'manual' && hasPremiumAccess(store) ? (
-        <View className="flex-row items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
-          <Text className="text-sm text-gray-600 flex-1">You are replying manually</Text>
-          <Pressable
-            className="px-3 py-1.5 rounded-full bg-brand-primary"
-            disabled={replyModeBusy}
-            onPress={() => void toggleReplyMode('ai')}
-          >
-            <Text className="text-xs font-semibold text-brand-on-primary">Resume AI</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <SupportKeyboardChatLayout
-        listRef={listRef}
-        onKeyboardShow={() => scrollToBottom(true)}
-        footer={
-          chatBoatActive && aiPreparingReply ? (
-            <View className="flex-row items-center gap-2 px-4 py-2">
-              <ActivityIndicator size="small" color={Colors.brand.primary} />
-              <Muted className="text-[13px]">AI is preparing a reply…</Muted>
+        {chatBoatActive ? (
+          <View className="flex-row items-center justify-between px-3 py-2 bg-emerald-50 border-b border-emerald-100">
+            <View className="flex-row items-center gap-2 flex-1 min-w-0">
+              <FontAwesome
+                name="magic"
+                size={14}
+                color={Colors.brand.primary}
+              />
+              <Text
+                className="text-sm text-emerald-900 font-medium flex-1"
+                numberOfLines={1}
+              >
+                Chat Boat is replying automatically
+              </Text>
             </View>
-          ) : null
-        }
-        composer={
-          <ChatComposer
-            conversationId={conversationId}
-            draft={draft}
-            onChangeDraft={setDraft}
-            onSendText={() => void sendMessage()}
-            onSendMedia={sendMediaMessage}
-            onOpenProductPicker={
-              channel === "whatsapp" && store?.slug
-                ? () => setProductPickerOpen(true)
-                : undefined
-            }
-            disabled={isSending}
-            channel={channel}
-          />
-        }
-      >
-        <View className="flex-1 relative">
-          {stickyDateLabel ? (
-            <View
-              className="absolute top-0 left-0 right-0 z-20 items-center pt-2 pointer-events-none"
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
+            <Pressable
+              className="px-3 py-1.5 rounded-full bg-surface border border-emerald-200"
+              disabled={replyModeBusy}
+              onPress={() => void toggleReplyMode("manual")}
             >
-              <ChatDateSeparator label={stickyDateLabel} variant="sticky" />
-            </View>
-          ) : null}
-          {loadingMore ? (
-            <View className="absolute top-0 left-0 right-0 z-10 py-2 items-center">
-              <ActivityIndicator color={Colors.brand.primary} size="small" />
-            </View>
-          ) : null}
-          <FlatList
-            ref={listRef}
-            inverted
-            data={listItems}
-            keyExtractor={(item) =>
-              isDateSeparatorItem(item)
-                ? item.id
-                : item.clientKey ?? String(item.id)
-            }
-            renderItem={({ item }) =>
-              isDateSeparatorItem(item) ? (
-                <ChatDateSeparator label={item.label} />
-              ) : (
-                <MessageBubble
-                  message={item}
-                  storeId={store?.id}
-                  onLongPress={(message) => {
-                    if (channel !== "whatsapp") return;
-                    setActionsMessage(message);
-                    setActionsVisible(true);
-                  }}
-                  onForward={(message) => {
-                    if (channel !== "whatsapp") return;
-                    setForwardMessage(message);
-                    setForwardVisible(true);
-                  }}
-                />
-              )
-            }
-            contentContainerStyle={{
-              paddingTop: 12,
-              paddingHorizontal: 16,
-              paddingBottom: stickyDateLabel ? 40 : 8,
-            }}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            onScroll={handleListScroll}
-            scrollEventThrottle={16}
-            onViewableItemsChanged={onViewableItemsChanged}
-            viewabilityConfig={viewabilityConfig}
-            onEndReached={() => void loadOlderMessages()}
-            onEndReachedThreshold={0.2}
-            onContentSizeChange={() => {
-              if (stickToBottomRef.current && shouldAutoScrollRef.current) {
-                scrollToBottom(false);
-                shouldAutoScrollRef.current = false;
+              <Text
+                className={
+                  isDark
+                    ? "text-xs font-semibold text-emerald-50"
+                    : "text-xs font-semibold text-emerald-800"
+                }
+              >
+                Take over
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!chatBoatActive &&
+        store?.ai_auto_reply_enabled &&
+        replyMode === "manual" &&
+        hasPremiumAccess(store) ? (
+          <View className="flex-row items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+            <Text className="text-sm text-gray-600 flex-1">
+              You are replying manually
+            </Text>
+            <Pressable
+              className="px-3 py-1.5 rounded-full bg-brand-primary"
+              disabled={replyModeBusy}
+              onPress={() => void toggleReplyMode("ai")}
+            >
+              <Text className="text-xs font-semibold text-brand-on-primary">
+                Resume AI
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <SupportKeyboardChatLayout
+          listRef={listRef}
+          onKeyboardShow={() => scrollToBottom(true)}
+          footer={
+            chatBoatActive && aiPreparingReply ? (
+              <View className="flex-row items-center gap-2 px-4 py-2">
+                <ActivityIndicator size="small" color={Colors.brand.primary} />
+                <Muted className="text-[13px]">AI is preparing a reply…</Muted>
+              </View>
+            ) : null
+          }
+          composer={
+            <ChatComposer
+              conversationId={conversationId}
+              draft={draft}
+              onChangeDraft={setDraft}
+              onSendText={() => void sendMessage()}
+              onSendMedia={sendMediaMessage}
+              onOpenProductPicker={
+                channel === "whatsapp" && store?.slug
+                  ? () => setProductPickerOpen(true)
+                  : undefined
               }
+              disabled={isSending}
+              channel={channel}
+            />
+          }
+        >
+          <View className="flex-1 relative">
+            {stickyDateLabel ? (
+              <View
+                className="absolute top-0 left-0 right-0 z-20 items-center pt-2 pointer-events-none"
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <ChatDateSeparator label={stickyDateLabel} variant="sticky" />
+              </View>
+            ) : null}
+            {loadingMore ? (
+              <View className="absolute top-0 left-0 right-0 z-10 py-2 items-center">
+                <ActivityIndicator color={Colors.brand.primary} size="small" />
+              </View>
+            ) : null}
+            <FlatList
+              ref={listRef}
+              inverted
+              data={listItems}
+              keyExtractor={(item) =>
+                isDateSeparatorItem(item)
+                  ? item.id
+                  : (item.clientKey ?? String(item.id))
+              }
+              renderItem={({ item }) =>
+                isDateSeparatorItem(item) ? (
+                  <ChatDateSeparator label={item.label} />
+                ) : (
+                  <MessageBubble
+                    message={item}
+                    storeId={store?.id}
+                    onLongPress={(message) => {
+                      if (channel !== "whatsapp") return;
+                      setActionsMessage(message);
+                      setActionsVisible(true);
+                    }}
+                    onForward={(message) => {
+                      if (channel !== "whatsapp") return;
+                      setForwardMessage(message);
+                      setForwardVisible(true);
+                    }}
+                  />
+                )
+              }
+              contentContainerStyle={{
+                paddingTop: 12,
+                paddingHorizontal: 16,
+                paddingBottom: stickyDateLabel ? 40 : 8,
+              }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+              onScroll={handleListScroll}
+              scrollEventThrottle={16}
+              onViewableItemsChanged={onViewableItemsChanged}
+              viewabilityConfig={viewabilityConfig}
+              onEndReached={() => void loadOlderMessages()}
+              onEndReachedThreshold={0.2}
+              onContentSizeChange={() => {
+                if (stickToBottomRef.current && shouldAutoScrollRef.current) {
+                  scrollToBottom(false);
+                  shouldAutoScrollRef.current = false;
+                }
+              }}
+            />
+          </View>
+        </SupportKeyboardChatLayout>
+
+        <ChatMessageActionsSheet
+          visible={actionsVisible}
+          message={actionsMessage}
+          onClose={() => {
+            setActionsVisible(false);
+            setActionsMessage(null);
+          }}
+          onForward={(message) => {
+            setForwardMessage(message);
+            setForwardVisible(true);
+          }}
+        />
+
+        {store?.id ? (
+          <ForwardMessageModal
+            visible={forwardVisible}
+            storeId={store.id}
+            sourceConversationId={conversationId}
+            message={forwardMessage}
+            onClose={() => {
+              setForwardVisible(false);
+              setForwardMessage(null);
+            }}
+            onForward={async ({ targetConversationId }) => {
+              if (!forwardMessage) return;
+              await forwardWhatsAppMessage({
+                storeId: store.id,
+                sourceMessageId: forwardMessage.id,
+                targetConversationId,
+              });
             }}
           />
-        </View>
-      </SupportKeyboardChatLayout>
+        ) : null}
 
-      <ChatMessageActionsSheet
-        visible={actionsVisible}
-        message={actionsMessage}
-        onClose={() => {
-          setActionsVisible(false);
-          setActionsMessage(null);
-        }}
-        onForward={(message) => {
-          setForwardMessage(message);
-          setForwardVisible(true);
-        }}
-      />
-
-      {store?.id ? (
-        <ForwardMessageModal
-          visible={forwardVisible}
-          storeId={store.id}
-          sourceConversationId={conversationId}
-          message={forwardMessage}
-          onClose={() => {
-            setForwardVisible(false);
-            setForwardMessage(null);
-          }}
-          onForward={async ({ targetConversationId }) => {
-            if (!forwardMessage) return;
-            await forwardWhatsAppMessage({
-              storeId: store.id,
-              sourceMessageId: forwardMessage.id,
-              targetConversationId,
-            });
-          }}
-        />
-      ) : null}
-
-      {store?.id && store.slug ? (
-        <ChatProductSendModal
-          visible={productPickerOpen}
-          storeId={store.id}
-          storeSlug={store.slug}
-          currency={store.currency}
-          onClose={() => setProductPickerOpen(false)}
-          onSend={(payload) => void sendProductShare(payload)}
-        />
-      ) : null}
-    </SafeAreaView>
+        {store?.id && store.slug ? (
+          <ChatProductSendModal
+            visible={productPickerOpen}
+            storeId={store.id}
+            storeSlug={store.slug}
+            currency={store.currency}
+            onClose={() => setProductPickerOpen(false)}
+            onSend={(payload) => void sendProductShare(payload)}
+          />
+        ) : null}
+      </SafeAreaView>
     </ChatVoicePlayerProvider>
   );
 }

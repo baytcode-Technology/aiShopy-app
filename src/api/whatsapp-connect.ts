@@ -118,6 +118,27 @@ export async function offboardWhatsApp(storeId: number): Promise<WhatsAppOffboar
   })
 }
 
+export type WhatsAppClearChatHistoryResponse = {
+  success: boolean
+  message: string
+  data: {
+    storeId: number
+    deletedConversations: number
+  }
+}
+
+export async function clearWhatsAppChatHistory(
+  storeId: number
+): Promise<WhatsAppClearChatHistoryResponse> {
+  return authenticatedFetch<WhatsAppClearChatHistoryResponse>(
+    endpoints.whatsappClearChatHistory,
+    {
+      method: 'POST',
+      body: JSON.stringify({ storeId }),
+    }
+  )
+}
+
 export async function triggerWhatsAppSync(storeId: number): Promise<WhatsAppTriggerSyncResponse> {
   return authenticatedFetch<WhatsAppTriggerSyncResponse>(endpoints.whatsappSync, {
     method: 'POST',

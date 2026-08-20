@@ -4,6 +4,7 @@ import * as WebBrowser from 'expo-web-browser'
 import { router } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Heading, Muted } from '@/components/ui/Typography'
@@ -11,6 +12,7 @@ import Colors from '@src/theme/colors'
 import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
+  clearInstagramChatHistory,
   fetchInstagramConnectionStatus,
   getInstagramConnectUrl,
   subscribeInstagramWebhooks,
@@ -32,6 +34,9 @@ export default function InstagramConnectScreen() {
   const [phase, setPhase] = useState<ScreenPhase>('loading')
   const [connection, setConnection] = useState<InstagramConnectionStatus | null>(null)
   const [subscribing, setSubscribing] = useState(false)
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false)
+  const [clearingHistory, setClearingHistory] = useState(false)
+  const [historyCleared, setHistoryCleared] = useState(false)
   const oauthRunRef = useRef(0)
 
   const refreshStatus = useCallback(async () => {
@@ -73,6 +78,7 @@ export default function InstagramConnectScreen() {
 
       const status = await refreshStatus()
       setPhase('connected')
+      setHistoryCleared(false)
 
       const handle =
         formatInstagramHandle(authResult.username) ??
@@ -112,6 +118,28 @@ export default function InstagramConnectScreen() {
       oauthRunRef.current += 1
     }
   }, [store?.id, refreshStatus])
+
+  const handleClearChatHistory = async () => {
+    if (!store?.id) return
+    setClearingHistory(true)
+    try {
+      const res = await clearInstagramChatHistory(store.id)
+      setHistoryCleared(true)
+      setConfirmClearHistory(false)
+      showSuccess(
+        'Chats deleted',
+        res.data.deletedConversations === 0
+          ? 'No previous Instagram chats to remove'
+          : `${res.data.deletedConversations} conversation${
+              res.data.deletedConversations === 1 ? '' : 's'
+            } removed from AiShopy`
+      )
+    } catch (e: unknown) {
+      showError(e, 'Could not delete chats')
+    } finally {
+      setClearingHistory(false)
+    }
+  }
 
   const subtitle =
     phase === 'connected'
@@ -194,6 +222,15 @@ export default function InstagramConnectScreen() {
                 }}
               />
               <Button label="Reconnect account" variant="outline" onPress={() => void startOAuth()} />
+              {!historyCleared ? (
+                <Button
+                  label="Delete previous account chats"
+                  variant="outline"
+                  onPress={() => setConfirmClearHistory(true)}
+                />
+              ) : (
+                <Muted className="text-center text-[15px]">Previous account chats deleted</Muted>
+              )}
               <Button label="Done" onPress={() => router.back()} />
             </>
           ) : null}
@@ -209,6 +246,21 @@ export default function InstagramConnectScreen() {
           ) : null}
         </View>
       </ScreenScrollBody>
+
+      <ConfirmDialog
+        visible={confirmClearHistory}
+        title="Delete previous account chats?"
+        message="This permanently removes Instagram conversations from other accounts linked to this store in AiShopy. Chats for your currently connected Instagram account are kept. It does not delete chats inside Instagram. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={clearingHistory}
+        onCancel={() => {
+          if (!clearingHistory) setConfirmClearHistory(false)
+        }}
+        onConfirm={() => {
+          void handleClearChatHistory()
+        }}
+      />
     </Screen>
   )
 }

@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native'
 import { router } from 'expo-router'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Heading, Muted } from '@/components/ui/Typography'
@@ -11,6 +12,7 @@ import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
   completeWhatsAppOnboarding,
+  clearWhatsAppChatHistory,
   fetchWhatsAppConnectionStatus,
   getWhatsAppConnectUrl,
   offboardWhatsApp,
@@ -67,6 +69,9 @@ export default function ConnectWhatsAppScreen() {
   const [connection, setConnection] = useState<WhatsAppConnectionStatus | null>(null)
   const [retryingSync, setRetryingSync] = useState(false)
   const [offboarding, setOffboarding] = useState(false)
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false)
+  const [clearingHistory, setClearingHistory] = useState(false)
+  const [historyCleared, setHistoryCleared] = useState(false)
   const oauthRunRef = useRef(0)
 
   const refreshStatus = useCallback(async () => {
@@ -126,6 +131,7 @@ export default function ConnectWhatsAppScreen() {
 
       if (status?.connected) {
         setPhase('connected')
+        setHistoryCleared(false)
         showSuccess('WhatsApp connected', 'Your number is linked to AiShopy')
       } else {
         setPhase('disconnected')
@@ -201,6 +207,28 @@ export default function ConnectWhatsAppScreen() {
     }
   }
 
+  const handleClearChatHistory = async () => {
+    if (!store?.id) return
+    setClearingHistory(true)
+    try {
+      const res = await clearWhatsAppChatHistory(store.id)
+      setHistoryCleared(true)
+      setConfirmClearHistory(false)
+      showSuccess(
+        'Chats deleted',
+        res.data.deletedConversations === 0
+          ? 'No previous WhatsApp chats to remove'
+          : `${res.data.deletedConversations} conversation${
+              res.data.deletedConversations === 1 ? '' : 's'
+            } removed from AiShopy`
+      )
+    } catch (e: unknown) {
+      showError('Could not delete chats', e instanceof Error ? e.message : 'Unknown error')
+    } finally {
+      setClearingHistory(false)
+    }
+  }
+
   const subtitle =
     phase === 'connected'
       ? connection?.whatsapp_number ?? 'Connected'
@@ -255,6 +283,15 @@ export default function ConnectWhatsAppScreen() {
                   : 'Your number is linked. Coexistence sync will complete when Meta approves Tech Provider access.'}
               </Muted>
               {connection ? <SyncProgress status={connection} /> : null}
+              {!historyCleared ? (
+                <Button
+                  label="Delete previous account chats"
+                  variant="outline"
+                  onPress={() => setConfirmClearHistory(true)}
+                />
+              ) : (
+                <Muted className="text-center text-[15px]">Previous account chats deleted</Muted>
+              )}
               <Button label="Reconnect account" variant="outline" onPress={() => void startOAuth()} />
               <Button label="Done" onPress={() => router.back()} />
             </>
@@ -289,6 +326,21 @@ export default function ConnectWhatsAppScreen() {
           />
         ) : null}
       </ScreenScrollBody>
+
+      <ConfirmDialog
+        visible={confirmClearHistory}
+        title="Delete previous account chats?"
+        message="This permanently removes WhatsApp conversations from other accounts linked to this store in AiShopy. Chats for your currently connected WhatsApp number are kept. It does not delete chats inside WhatsApp. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        loading={clearingHistory}
+        onCancel={() => {
+          if (!clearingHistory) setConfirmClearHistory(false)
+        }}
+        onConfirm={() => {
+          void handleClearChatHistory()
+        }}
+      />
     </Screen>
   )
 }

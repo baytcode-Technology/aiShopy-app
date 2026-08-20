@@ -45,3 +45,24 @@ export async function subscribeInstagramWebhooks(storeId: number): Promise<{
     method: 'POST',
   })
 }
+
+export type InstagramClearChatHistoryResponse = {
+  success: boolean
+  message: string
+  data: {
+    storeId: number
+    deletedConversations: number
+  }
+}
+
+export async function clearInstagramChatHistory(
+  storeId: number
+): Promise<InstagramClearChatHistoryResponse> {
+  return authenticatedFetch<InstagramClearChatHistoryResponse>(
+    endpoints.instagramClearChatHistory,
+    {
+      method: 'POST',
+      body: JSON.stringify({ storeId }),
+    }
+  )
+}

@@ -11,6 +11,11 @@ import Colors from '@src/theme/colors'
 import { useStore } from '@src/contexts/store-context'
 import { showError, showSuccess } from '@src/lib/toast'
 import {
+  WHATSAPP_FIX_STEPS,
+  WHATSAPP_PREP_STEPS,
+  syncStuckReason,
+} from '@src/lib/whatsapp-coexistence-steps'
+import {
   completeWhatsAppOnboarding,
   clearWhatsAppChatHistory,
   fetchWhatsAppConnectionStatus,
@@ -41,14 +46,31 @@ function syncJobLabel(job: WhatsAppSyncJob): string {
   return `${type}: ${status}`
 }
 
+function StepList({ title, steps }: { title: string; steps: string[] }) {
+  return (
+    <View className="w-full gap-3">
+      <Heading className="text-center text-base">{title}</Heading>
+      {steps.map((step, index) => (
+        <Muted key={step} className="text-left text-[15px] leading-6">
+          {`${index + 1}. ${step}`}
+        </Muted>
+      ))}
+    </View>
+  )
+}
+
 function SyncProgress({ status }: { status: WhatsAppConnectionStatus }) {
   if (!status.connected) return null
 
   if (status.sync_jobs.length === 0) {
     return (
-      <Muted className="text-center text-[15px]">
-        Waiting for sync to start…
-      </Muted>
+      <View className="w-full gap-3">
+        <Heading className="text-center text-base">Contact sync has not started</Heading>
+        <Muted className="text-center text-[15px] leading-6">
+          {syncStuckReason(status)}
+        </Muted>
+        <StepList title="How to fix" steps={WHATSAPP_FIX_STEPS} />
+      </View>
     )
   }
 
@@ -132,7 +154,14 @@ export default function ConnectWhatsAppScreen() {
       if (status?.connected) {
         setPhase('connected')
         setHistoryCleared(false)
-        showSuccess('WhatsApp connected', 'Your number is linked to AiShopy')
+        if (status.sync_jobs.length === 0) {
+          showSuccess(
+            'WhatsApp connected',
+            'Number linked. If contact sync has not started, follow the steps on this screen, then tap Retry sync.'
+          )
+        } else {
+          showSuccess('WhatsApp connected', 'Your number is linked to AiShopy')
+        }
       } else {
         setPhase('disconnected')
         showError(
@@ -180,10 +209,16 @@ export default function ConnectWhatsAppScreen() {
       const result = await offboardWhatsApp(store.id)
       setConnection(null)
       setPhase('disconnected')
-      const steps = result.data.merchantSteps.join('\n\n')
+      const steps =
+        result.data.merchantSteps.length > 0
+          ? result.data.merchantSteps.join('\n\n')
+          : [
+              'On the phone, open WhatsApp Business → Settings → Account → Business platform → Disconnect from BaytCode / AiShopy.',
+              'Wait about one minute, then tap Connect WhatsApp and finish any QR or verification code Meta shows.',
+            ].join('\n\n')
       showSuccess(
         'Disconnected on server',
-        `Also disconnect in WhatsApp Business app, then tap Connect WhatsApp.\n\n${steps}`
+        `Also disconnect in WhatsApp Business → Settings → Account → Business platform, then Connect again.\n\n${steps}`
       )
     } catch (e: unknown) {
       showError('Offboard failed', e instanceof Error ? e.message : 'Unknown error')
@@ -202,6 +237,7 @@ export default function ConnectWhatsAppScreen() {
       setPhase('connected')
     } catch (e: unknown) {
       showError('Sync failed', e instanceof Error ? e.message : 'Unknown error')
+      await refreshStatus().catch(() => null)
     } finally {
       setRetryingSync(false)
     }
@@ -264,8 +300,9 @@ export default function ConnectWhatsAppScreen() {
               <Heading className="text-center text-xl">Not connected</Heading>
               <Muted className="text-center text-[15px] leading-6">
                 Link your WhatsApp Business account to receive and reply to customer
-                messages in Messages. Keep WhatsApp Business app installed (v2.24.17+).
+                messages in Messages.
               </Muted>
+              <StepList title="Before you connect" steps={WHATSAPP_PREP_STEPS} />
               <Button label="Connect WhatsApp" onPress={() => void startOAuth()} />
             </>
           ) : null}

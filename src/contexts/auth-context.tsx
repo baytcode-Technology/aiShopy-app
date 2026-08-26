@@ -12,6 +12,7 @@ import { AppState } from 'react-native'
 import { router, type Href } from 'expo-router'
 import {
   sendSignInOtp,
+  signInWithApple as signInWithAppleApi,
   signInWithGoogle as signInWithGoogleApi,
   signInWithGoogleAuthCode as signInWithGoogleAuthCodeApi,
   verifyOtp as verifyOtpApi,
@@ -55,6 +56,14 @@ type AuthContextValue = {
     code: string
     redirectUri: string
     codeVerifier: string
+  }) => Promise<void>
+  signInWithApple: (input: {
+    idToken: string
+    fullName?: {
+      givenName?: string
+      middleName?: string
+      familyName?: string
+    }
   }) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -257,6 +266,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const signInWithApple = useCallback(
+    async (input: {
+      idToken: string
+      fullName?: {
+        givenName?: string
+        middleName?: string
+        familyName?: string
+      }
+    }) => {
+      const res = await withTransientNetworkRetry(() => signInWithAppleApi(input))
+      await applyAuthSession(res.data, setUser, setIsAuthenticated)
+    },
+    []
+  )
+
   const value = useMemo(
     () => ({
       isLoading,
@@ -268,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOtp,
       signInWithGoogle,
       signInWithGoogleAuthCode,
+      signInWithApple,
       signOut,
     }),
     [
@@ -280,6 +305,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       verifyOtp,
       signInWithGoogle,
       signInWithGoogleAuthCode,
+      signInWithApple,
       signOut,
     ]
   )

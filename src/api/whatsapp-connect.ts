@@ -28,6 +28,8 @@ export type WhatsAppConnectionStatus = {
   connected: boolean
   is_on_biz_app: boolean
   platform_type: string | null
+  code_verification_status?: string | null
+  phone_status?: string | null
   wa_phone_number_id: string | null
   wa_waba_id: string | null
   whatsapp_number: string | null

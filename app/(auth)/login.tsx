@@ -5,6 +5,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { GoogleButton } from '@/components/auth/GoogleButton'
+import { AppleButton } from '@/components/auth/AppleButton'
 import { Divider } from '@/components/auth/Divider'
 import { useAuth } from '@src/contexts/auth-context'
 
@@ -49,6 +50,7 @@ export default function LoginScreen() {
         </Text>
       }
     >
+      <AppleButton />
       <GoogleButton />
       <Divider />
       <AuthInput

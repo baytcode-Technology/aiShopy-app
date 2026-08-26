@@ -31,6 +31,23 @@ export async function signInWithGoogle(
   })
 }
 
+export async function signInWithApple(input: {
+  idToken: string
+  fullName?: {
+    givenName?: string
+    middleName?: string
+    familyName?: string
+  }
+}): Promise<ApiResponse<VerifyOtpData>> {
+  return apiFetch<ApiResponse<VerifyOtpData>>(endpoints.authApple, {
+    method: 'POST',
+    body: JSON.stringify({
+      idToken: input.idToken.trim(),
+      ...(input.fullName ? { fullName: input.fullName } : {}),
+    }),
+  })
+}
+
 export async function signInWithGoogleAuthCode(input: {
   code: string
   redirectUri: string

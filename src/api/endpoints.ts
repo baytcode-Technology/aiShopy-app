@@ -2,6 +2,7 @@ export const endpoints = {
   authSignIn: "/api/auth/signin",
   authVerify: "/api/auth/verify",
   authGoogle: "/api/auth/google",
+  authApple: "/api/auth/apple",
   authGoogleCode: "/api/auth/google/code",
   authRefresh: "/api/auth/refresh",
   storesMe: "/api/stores/me",

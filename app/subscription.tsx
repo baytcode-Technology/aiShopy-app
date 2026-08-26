@@ -8,16 +8,16 @@ import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import {
   createSubscriptionCheckout,
   fetchSubscriptionPricing,
+  syncAppleSubscription,
   verifySubscriptionPayment,
   type SubscriptionCheckoutData,
   type SubscriptionPricingData,
 } from '@src/api/subscriptions'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
-import { showError, showWarning } from '@src/lib/toast'
+import { showError, showWarning, showSuccess } from '@src/lib/toast'
 import {
   BUSINESS_FEATURES,
-  ENTERPRISE_FEATURES,
   STARTER_FEATURES,
   formatSubscriptionExpiry,
   getBusinessPriceLabel,
@@ -27,43 +27,69 @@ import {
   isCurrentPlan,
   type SubscriptionPlan,
 } from '@src/lib/subscription'
+import {
+  getBusinessPackage,
+  getBusinessPackagePriceString,
+  purchaseBusinessPackage,
+  restorePurchases,
+  setRevenueCatStoreId,
+} from '@src/lib/revenuecat'
 import { shadows } from '@src/lib/shadows'
 import Colors from '@src/theme/colors'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, type Href } from 'expo-router'
-import { useEffect, useState } from 'react'
-import { Alert, Linking, Platform, Text, View } from 'react-native'
-
-const SUPPORT_EMAIL = 'support@aishopy.io'
+import { useCallback, useEffect, useState } from 'react'
+import { Platform, Text, View } from 'react-native'
 
 export default function SubscriptionScreen() {
   const { user } = useAuth()
   const { store, refreshStore } = useStore()
   const [subscribing, setSubscribing] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const [pricing, setPricing] = useState<SubscriptionPricingData | null>(null)
   const [pricingLoading, setPricingLoading] = useState(true)
+  const [iosPriceLabel, setIosPriceLabel] = useState<string | null>(null)
   const [checkoutSession, setCheckoutSession] = useState<SubscriptionCheckoutData | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('starter')
   const premium = hasPremiumAccess(store)
   const currentPlan = getStorePlan(store)
   const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at)
   const onBusinessPlan = isCurrentPlan(store, 'business')
-  const onEnterprisePlan = isCurrentPlan(store, 'enterprise')
   const onStarterPlan = isCurrentPlan(store, 'starter')
+  const useAppleIap = Platform.OS === 'ios'
 
-  const businessPrice = premium
-    ? getBusinessPriceLabel(store)
-    : pricing?.price_label
+  const businessPrice = useAppleIap
+    ? iosPriceLabel ?? getBusinessPriceLabel(store)
+    : premium
+      ? getBusinessPriceLabel(store)
+      : pricing?.price_label
   const businessCompareAtPrice =
-    !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
+    !useAppleIap && !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
   const businessTone =
-    !premium && pricing?.trial_eligible ? ('trial-offer' as const) : ('default' as const)
+    !useAppleIap && !premium && pricing?.trial_eligible
+      ? ('trial-offer' as const)
+      : ('default' as const)
 
   useEffect(() => {
     setSelectedPlan(currentPlan)
   }, [currentPlan, store?.id])
 
   useEffect(() => {
+    if (store?.id) {
+      void setRevenueCatStoreId(store.id)
+    }
+  }, [store?.id])
+
+  useEffect(() => {
+    if (useAppleIap) {
+      setPricingLoading(true)
+      void getBusinessPackagePriceString()
+        .then(setIosPriceLabel)
+        .catch(() => setIosPriceLabel(null))
+        .finally(() => setPricingLoading(false))
+      return
+    }
+
     if (premium || !store?.id) {
       setPricing(null)
       setPricingLoading(false)
@@ -75,10 +101,22 @@ export default function SubscriptionScreen() {
       .then(setPricing)
       .catch(() => setPricing(null))
       .finally(() => setPricingLoading(false))
-  }, [premium, store?.id])
+  }, [premium, store?.id, useAppleIap])
+
+  const finishAppleActivation = useCallback(async () => {
+    if (!store?.id) return
+    try {
+      await syncAppleSubscription(store.id)
+    } catch {
+      // Webhook may still be in flight; refresh store either way.
+    }
+    await refreshStore()
+    router.replace('/subscription-success' as Href)
+  }, [refreshStore, store?.id])
 
   const handleSubscribe = async () => {
     if (!store?.id) return
+
     if (Platform.OS === 'web') {
       showWarning('Subscribe on the mobile app to complete payment.')
       return
@@ -86,12 +124,43 @@ export default function SubscriptionScreen() {
 
     setSubscribing(true)
     try {
+      if (useAppleIap) {
+        const pkg = await getBusinessPackage()
+        if (!pkg) {
+          throw new Error(
+            'Business subscription is not available yet. Try again shortly or contact support.'
+          )
+        }
+        await purchaseBusinessPackage(pkg)
+        await finishAppleActivation()
+        return
+      }
+
       const checkout = await createSubscriptionCheckout(store.id)
       setCheckoutSession(checkout)
     } catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      if (/cancel/i.test(message)) {
+        return
+      }
       showError(error, 'Could not start checkout')
     } finally {
       setSubscribing(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    if (!useAppleIap || !store?.id) return
+    setRestoring(true)
+    try {
+      await restorePurchases()
+      await syncAppleSubscription(store.id)
+      await refreshStore()
+      showSuccess('Purchases restored')
+    } catch (error) {
+      showError(error, 'Could not restore purchases')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -121,21 +190,8 @@ export default function SubscriptionScreen() {
     }
   }
 
-  const handleEnterpriseContact = () => {
-    const subject = encodeURIComponent('Enterprise plan inquiry')
-    const body = encodeURIComponent(
-      `Hi,\n\nI'm interested in the Enterprise plan for my store${store?.name ? ` (${store.name})` : ''}.\n\n`
-    )
-    const url = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
-    void Linking.openURL(url).catch(() => {
-      Alert.alert(
-        "Let's talk",
-        `Email us at ${SUPPORT_EMAIL} to discuss Enterprise pricing.`
-      )
-    })
-  }
-
-  const subscribeLabel = pricing?.trial_eligible ? 'Start trial' : 'Subscribe'
+  const subscribeLabel =
+    useAppleIap || !pricing?.trial_eligible ? 'Subscribe' : 'Start trial'
   const showPlanCards = premium || !pricingLoading
 
   return (
@@ -180,14 +236,12 @@ export default function SubscriptionScreen() {
         ) : store ? (
           <Muted className="text-[14px] leading-5">
             Current plan:{' '}
-            <Muted className="font-semibold text-ink">
-              {getPlanLabel(currentPlan)}
-            </Muted>
+            <Muted className="font-semibold text-ink">{getPlanLabel(currentPlan)}</Muted>
           </Muted>
         ) : null}
 
         {!showPlanCards ? (
-          <SubscriptionPlanCardsSkeleton count={!premium ? 3 : 2} />
+          <SubscriptionPlanCardsSkeleton count={2} />
         ) : (
           <>
             {!premium ? (
@@ -232,40 +286,31 @@ export default function SubscriptionScreen() {
                 ) : null
               }
             />
-
-            <PlanCard
-              emoji="🏢"
-              title="Enterprise"
-              price="Let's Talk"
-              subtitle={premium ? undefined : 'Everything in Business +'}
-              features={ENTERPRISE_FEATURES}
-              selected={selectedPlan === 'enterprise'}
-              isCurrent={onEnterprisePlan}
-              onPress={() => setSelectedPlan('enterprise')}
-              footer={
-                !onEnterprisePlan ? (
-                  <Button
-                    label="Let's Talk"
-                    variant="outline"
-                    onPress={handleEnterpriseContact}
-                    className="w-full"
-                  />
-                ) : null
-              }
-            />
           </>
         )}
+
+        {useAppleIap ? (
+          <Button
+            label="Restore purchases"
+            variant="outline"
+            onPress={() => void handleRestore()}
+            loading={restoring}
+            className="w-full"
+          />
+        ) : null}
       </ScreenScrollBody>
 
-      <RazorpayWebCheckout
-        visible={checkoutSession !== null}
-        checkout={checkoutSession}
-        customerEmail={user?.email}
-        customerPhone={store?.whatsapp_number}
-        customerName={store?.name}
-        onSuccess={(payment) => void handlePaymentSuccess(payment)}
-        onDismiss={() => setCheckoutSession(null)}
-      />
+      {!useAppleIap ? (
+        <RazorpayWebCheckout
+          visible={checkoutSession !== null}
+          checkout={checkoutSession}
+          customerEmail={user?.email}
+          customerPhone={store?.whatsapp_number}
+          customerName={store?.name}
+          onSuccess={(payment) => void handlePaymentSuccess(payment)}
+          onDismiss={() => setCheckoutSession(null)}
+        />
+      ) : null}
     </Screen>
   )
 }

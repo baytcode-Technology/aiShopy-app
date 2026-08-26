@@ -84,3 +84,14 @@ export async function verifySubscriptionPayment(
   )
   return res.data
 }
+
+export async function syncAppleSubscription(
+  storeId: number
+): Promise<VerifySubscriptionPaymentResponse['data'] & { active?: boolean }> {
+  const res = await authenticatedFetch<
+    VerifySubscriptionPaymentResponse & { data: { active?: boolean } }
+  >(`${endpoints.subscriptionsAppleSync}${storeIdQuery(storeId)}`, {
+    method: 'POST',
+  })
+  return res.data
+}

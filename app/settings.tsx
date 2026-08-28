@@ -27,7 +27,7 @@ import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 import { performSignOut } from "@src/lib/safe-sign-out";
-import { SUPPORT_EMAIL } from "@src/lib/support-contact";
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_USE_URL } from "@src/lib/support-contact";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -67,6 +67,12 @@ export default function SettingsScreen() {
     const url = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
     void Linking.openURL(url).catch(() => {
       Alert.alert("Send feedback", `Email us at ${SUPPORT_EMAIL}`);
+    });
+  };
+
+  const handleOpenLegalUrl = (url: string, label: string) => {
+    void Linking.openURL(url).catch(() => {
+      Alert.alert(label, `Open ${url} in your browser.`);
     });
   };
 
@@ -304,14 +310,14 @@ export default function SettingsScreen() {
                 value=""
                 icon="lock"
                 showChevron
-                onPress={() => router.push("/privacy-policy" as Href)}
+                onPress={() => handleOpenLegalUrl(PRIVACY_POLICY_URL, "Privacy policy")}
               />
               <MenuRow
                 label="Terms"
                 value=""
                 icon="file-text-o"
                 showChevron
-                onPress={() => router.push("/terms" as Href)}
+                onPress={() => handleOpenLegalUrl(TERMS_OF_USE_URL, "Terms")}
               />
             </View>
           </View>

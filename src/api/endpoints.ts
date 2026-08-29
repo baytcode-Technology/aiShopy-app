@@ -49,6 +49,7 @@ export const endpoints = {
   subscriptionsCheckout: "/api/subscriptions/checkout",
   subscriptionsVerify: "/api/subscriptions/verify",
   subscriptionsStatus: "/api/subscriptions/status",
+  subscriptionsAppleSync: "/api/subscriptions/apple/sync",
   supportConversation: "/api/support/conversation",
   supportMessages: (conversationId: number) =>
     `/api/support/conversations/${conversationId}/messages`,

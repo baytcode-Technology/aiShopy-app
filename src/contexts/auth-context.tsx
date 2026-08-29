@@ -39,6 +39,10 @@ import {
 import { disconnectChatSocket } from '@src/lib/socket'
 import { unregisterDevicePushToken } from '@src/lib/unregister-push-token'
 import { withTransientNetworkRetry } from '@src/lib/ios-network-settle'
+import {
+  identifyRevenueCatUser,
+  logoutRevenueCatUser,
+} from '@src/lib/revenuecat'
 import type { AuthSession, AuthUser } from '@src/types/auth'
 
 const FOREGROUND_RESUME_DEBOUNCE_MS = 600
@@ -90,6 +94,9 @@ async function applyAuthSession(
 ) {
   setSigningOut(false)
   await saveAuthSession(data.session, data.user)
+  if (data.user.id) {
+    void identifyRevenueCatUser(data.user.id).catch(() => undefined)
+  }
   setUser(data.user)
   setIsAuthenticated(true)
 }
@@ -145,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await unregisterDevicePushToken()
       setSigningOut(true)
       await clearNativeGoogleSignInSession()
+      await logoutRevenueCatUser()
       await clearTokens()
       setUser(null)
       setIsAuthenticated(false)
@@ -166,6 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const restoredUser = await restoreUserFromStorage()
         if (restoredUser) {
           setUser(restoredUser)
+          if (restoredUser.id) {
+            void identifyRevenueCatUser(restoredUser.id).catch(() => undefined)
+          }
         }
         setIsAuthenticated(true)
       } catch {

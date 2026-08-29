@@ -32,6 +32,8 @@ export type ApiConversation = {
 
   reply_mode?: 'ai' | 'manual'
 
+  ai_paused_until?: string | null
+
 }
 
 
@@ -53,6 +55,8 @@ export type ApiInstagramConversation = {
   unread_count?: number
 
   reply_mode?: 'ai' | 'manual'
+
+  ai_paused_until?: string | null
 
 }
 

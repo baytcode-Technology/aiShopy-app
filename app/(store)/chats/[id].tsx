@@ -45,6 +45,7 @@ import {
 import { prepareWhatsAppMessagesForDisplay } from "@src/lib/prepare-whatsapp-messages";
 import { toSocketId } from "@src/lib/socket-normalize";
 import { hasPremiumAccess } from "@src/lib/subscription";
+import { isAiPaused } from "@src/lib/inbox-ai";
 import { showError } from "@src/lib/toast";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatMessage } from "@src/types/chat";
@@ -146,6 +147,8 @@ export default function ChatDetailScreen() {
     onMessageStatus,
     onInstagramMessageNew,
     onInboxAiTyping,
+    onConversationUpdated,
+    onInstagramConversationUpdated,
   } = useChatSocket();
   const { pauseRecording } = useChatVoiceRecording();
   const {
@@ -155,6 +158,7 @@ export default function ChatDetailScreen() {
     displayName,
     unread,
     replyMode: replyModeParam,
+    aiPausedUntil: aiPausedUntilParam,
   } = useLocalSearchParams<{
     id: string;
     phone?: string;
@@ -162,11 +166,12 @@ export default function ChatDetailScreen() {
     displayName?: string;
     unread?: string;
     replyMode?: string;
+    aiPausedUntil?: string;
   }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
+  const [isSendingMedia, setIsSendingMedia] = useState(false);
   const [actionsMessage, setActionsMessage] = useState<ChatMessage | null>(
     null,
   );
@@ -178,6 +183,18 @@ export default function ChatDetailScreen() {
   const [productPickerOpen, setProductPickerOpen] = useState(false);
   const [replyMode, setReplyMode] = useState<"ai" | "manual">(
     replyModeParam === "manual" ? "manual" : "ai",
+  );
+  const initialAiPausedUntil = useMemo(() => {
+    const raw =
+      typeof aiPausedUntilParam === "string"
+        ? aiPausedUntilParam
+        : Array.isArray(aiPausedUntilParam)
+          ? aiPausedUntilParam[0]
+          : "";
+    return raw?.trim() ? raw : null;
+  }, [aiPausedUntilParam]);
+  const [aiPausedUntil, setAiPausedUntil] = useState<string | null>(
+    initialAiPausedUntil,
   );
   const [replyModeBusy, setReplyModeBusy] = useState(false);
   const [aiPreparingReply, setAiPreparingReply] = useState(false);
@@ -193,6 +210,7 @@ export default function ChatDetailScreen() {
   const shouldAutoScrollRef = useRef(false);
   const initialLoadDoneRef = useRef(false);
   const loadGenerationRef = useRef(0);
+  const clientKeyCounterRef = useRef(0);
 
   const unreadCount = useMemo(() => {
     const raw =
@@ -235,7 +253,14 @@ export default function ChatDetailScreen() {
   const chatBoatActive =
     hasPremiumAccess(store) &&
     store?.ai_auto_reply_enabled === true &&
-    replyMode === "ai";
+    replyMode === "ai" &&
+    !isAiPaused(aiPausedUntil);
+
+  const aiPausedWhileAuto =
+    hasPremiumAccess(store) &&
+    store?.ai_auto_reply_enabled === true &&
+    replyMode === "ai" &&
+    isAiPaused(aiPausedUntil);
 
   const toggleReplyMode = async (mode: "ai" | "manual") => {
     if (!store?.id) return;
@@ -248,13 +273,50 @@ export default function ChatDetailScreen() {
         replyMode: mode,
       });
       setReplyMode(mode);
-      if (mode === "manual") setAiPreparingReply(false);
+      if (mode === "ai") {
+        setAiPausedUntil(null);
+      } else {
+        setAiPreparingReply(false);
+      }
     } catch (e) {
       showError(e, "Could not update reply mode");
     } finally {
       setReplyModeBusy(false);
     }
   };
+
+  useEffect(() => {
+    setReplyMode(replyModeParam === "manual" ? "manual" : "ai");
+    setAiPausedUntil(initialAiPausedUntil);
+  }, [conversationId, replyModeParam, initialAiPausedUntil]);
+
+  useEffect(() => {
+    if (!Number.isFinite(conversationId)) return;
+
+    const syncConversationState = (payload: {
+      conversation: {
+        id: number;
+        reply_mode?: "ai" | "manual";
+        ai_paused_until?: string | null;
+      };
+    }) => {
+      if (toSocketId(payload.conversation.id) !== conversationId) return;
+      if (payload.conversation.reply_mode) {
+        setReplyMode(payload.conversation.reply_mode);
+      }
+      if (payload.conversation.ai_paused_until !== undefined) {
+        setAiPausedUntil(payload.conversation.ai_paused_until);
+      }
+    };
+
+    const unsubWa = onConversationUpdated(syncConversationState);
+    const unsubIg = onInstagramConversationUpdated(syncConversationState);
+
+    return () => {
+      unsubWa();
+      unsubIg();
+    };
+  }, [conversationId, onConversationUpdated, onInstagramConversationUpdated]);
 
   useEffect(() => {
     if (store && !hasPremiumAccess(store)) {
@@ -500,6 +562,7 @@ export default function ChatDetailScreen() {
       triggerAutoScroll();
       if (payload.message.direction === "inbound") {
         scheduleMarkReadRef.current();
+        setAiPausedUntil(null);
       }
       if (payload.message.direction === "outbound") {
         setAiPreparingReply(false);
@@ -694,28 +757,29 @@ export default function ChatDetailScreen() {
   const sendMediaMessage = async (
     payload: OutboundMediaPayload | OutboundMediaPayload[],
   ) => {
-    if (!store?.id || isSending) return;
+    if (!store?.id || isSendingMedia) return;
     if (channel !== "whatsapp" && channel !== "instagram") return;
 
     const payloads = Array.isArray(payload) ? payload : [payload];
     if (!payloads.length) return;
 
-    setIsSending(true);
+    setIsSendingMedia(true);
     try {
       for (let i = 0; i < payloads.length; i++) {
         await sendOneMediaMessage(payloads[i], i);
       }
     } finally {
-      setIsSending(false);
+      setIsSendingMedia(false);
     }
   };
 
   const sendTextMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || !store?.id || isSending) return;
+      if (!trimmed || !store?.id) return;
 
-      const tempId = -Date.now();
+      clientKeyCounterRef.current += 1;
+      const tempId = -(Date.now() + clientKeyCounterRef.current);
       const clientKey = `client-${tempId}`;
       const now = new Date();
       const time = now.toLocaleTimeString([], {
@@ -737,7 +801,6 @@ export default function ChatDetailScreen() {
         ...prev,
       ]);
       triggerAutoScroll();
-      setIsSending(true);
 
       try {
         const res = await sendChatMessage({
@@ -766,13 +829,10 @@ export default function ChatDetailScreen() {
         setMessages((prev) => prev.filter((m) => m.clientKey !== clientKey));
         showError(e, "Failed to send");
         throw e;
-      } finally {
-        setIsSending(false);
       }
     },
     [
       store?.id,
-      isSending,
       customerPhone,
       conversationId,
       channel,
@@ -848,15 +908,13 @@ export default function ChatDetailScreen() {
     );
   }
 
-  const sendMessage = async () => {
+  const sendMessage = () => {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
-    try {
-      await sendTextMessage(text);
-    } catch {
+    void sendTextMessage(text).catch(() => {
       setDraft(text);
-    }
+    });
   };
 
   return (
@@ -939,7 +997,25 @@ export default function ChatDetailScreen() {
           </View>
         ) : null}
 
+        {aiPausedWhileAuto ? (
+          <View className="flex-row items-center justify-between px-3 py-2 bg-amber-50 border-b border-amber-100">
+            <Text className="text-sm text-amber-900 flex-1 font-medium">
+              AI paused — tap Resume AI
+            </Text>
+            <Pressable
+              className="px-3 py-1.5 rounded-full bg-brand-primary"
+              disabled={replyModeBusy}
+              onPress={() => void toggleReplyMode("ai")}
+            >
+              <Text className="text-xs font-semibold text-brand-on-primary">
+                Resume AI
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         {!chatBoatActive &&
+        !aiPausedWhileAuto &&
         store?.ai_auto_reply_enabled &&
         replyMode === "manual" &&
         hasPremiumAccess(store) ? (
@@ -963,7 +1039,7 @@ export default function ChatDetailScreen() {
           listRef={listRef}
           onKeyboardShow={() => scrollToBottom(true)}
           footer={
-            chatBoatActive && aiPreparingReply ? (
+            (chatBoatActive || aiPausedWhileAuto) && aiPreparingReply ? (
               <View className="flex-row items-center gap-2 px-4 py-2">
                 <ActivityIndicator size="small" color={Colors.brand.primary} />
                 <Muted className="text-[13px]">AI is preparing a reply…</Muted>
@@ -980,7 +1056,6 @@ export default function ChatDetailScreen() {
               onOpenProductPicker={
                 store?.slug ? () => setProductPickerOpen(true) : undefined
               }
-              disabled={isSending}
               channel={channel}
             />
           }

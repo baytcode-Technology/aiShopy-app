@@ -67,6 +67,8 @@ export type SocketConversationPayload = {
     last_message_at: string | null
     last_message_preview: string | null
     unread_count: number
+    reply_mode?: 'ai' | 'manual'
+    ai_paused_until?: string | null
   }
 }
 
@@ -99,6 +101,8 @@ export type SocketInstagramConversationPayload = {
     last_message_at: string | null
     last_message_preview: string | null
     unread_count: number
+    reply_mode?: 'ai' | 'manual'
+    ai_paused_until?: string | null
   }
 }
 

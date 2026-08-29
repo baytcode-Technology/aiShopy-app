@@ -1,10 +1,11 @@
-import { PlanCard } from '@/components/subscription/PlanCard'
-import { RazorpayWebCheckout } from '@/components/subscription/RazorpayWebCheckout'
-import { Button } from '@/components/ui/Button'
-import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
-import { ScreenHeader } from '@/components/ui/ScreenHeader'
-import { SubscriptionPlanCardsSkeleton } from '@/components/ui/Skeleton'
-import { Caption, Heading, Muted } from '@/components/ui/Typography'
+import { PlanCard } from "@/components/subscription/PlanCard";
+import { RazorpayWebCheckout } from "@/components/subscription/RazorpayWebCheckout";
+import { Button } from "@/components/ui/Button";
+import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { SubscriptionPlanCardsSkeleton } from "@/components/ui/Skeleton";
+import { Caption, Heading, Muted } from "@/components/ui/Typography";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   createSubscriptionCheckout,
   fetchSubscriptionPricing,
@@ -12,10 +13,17 @@ import {
   verifySubscriptionPayment,
   type SubscriptionCheckoutData,
   type SubscriptionPricingData,
-} from '@src/api/subscriptions'
-import { useAuth } from '@src/contexts/auth-context'
-import { useStore } from '@src/contexts/store-context'
-import { showError, showWarning, showSuccess } from '@src/lib/toast'
+} from "@src/api/subscriptions";
+import { useAuth } from "@src/contexts/auth-context";
+import { useStore } from "@src/contexts/store-context";
+import {
+  getBusinessPackage,
+  getBusinessPackagePriceString,
+  purchaseBusinessPackage,
+  restorePurchases,
+  setRevenueCatStoreId,
+} from "@src/lib/revenuecat";
+import { shadows } from "@src/lib/shadows";
 import {
   BUSINESS_FEATURES,
   STARTER_FEATURES,
@@ -26,179 +34,179 @@ import {
   hasPremiumAccess,
   isCurrentPlan,
   type SubscriptionPlan,
-} from '@src/lib/subscription'
-import {
-  getBusinessPackage,
-  getBusinessPackagePriceString,
-  purchaseBusinessPackage,
-  restorePurchases,
-  setRevenueCatStoreId,
-} from '@src/lib/revenuecat'
-import { shadows } from '@src/lib/shadows'
-import Colors from '@src/theme/colors'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { router, type Href } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
-import { Platform, Text, View } from 'react-native'
+} from "@src/lib/subscription";
+import { showError, showSuccess, showWarning } from "@src/lib/toast";
+import Colors from "@src/theme/colors";
+import { router, type Href } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
+import { Platform, Text, View } from "react-native";
 
 export default function SubscriptionScreen() {
-  const { user } = useAuth()
-  const { store, refreshStore } = useStore()
-  const [subscribing, setSubscribing] = useState(false)
-  const [restoring, setRestoring] = useState(false)
-  const [pricing, setPricing] = useState<SubscriptionPricingData | null>(null)
-  const [pricingLoading, setPricingLoading] = useState(true)
-  const [iosPriceLabel, setIosPriceLabel] = useState<string | null>(null)
-  const [checkoutSession, setCheckoutSession] = useState<SubscriptionCheckoutData | null>(null)
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('starter')
-  const premium = hasPremiumAccess(store)
-  const currentPlan = getStorePlan(store)
-  const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at)
-  const onBusinessPlan = isCurrentPlan(store, 'business')
-  const onStarterPlan = isCurrentPlan(store, 'starter')
-  const useAppleIap = Platform.OS === 'ios'
+  const { user } = useAuth();
+  const { store, refreshStore } = useStore();
+  const [subscribing, setSubscribing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [pricing, setPricing] = useState<SubscriptionPricingData | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(true);
+  const [iosPriceLabel, setIosPriceLabel] = useState<string | null>(null);
+  const [checkoutSession, setCheckoutSession] =
+    useState<SubscriptionCheckoutData | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>("starter");
+  const premium = hasPremiumAccess(store);
+  const currentPlan = getStorePlan(store);
+  const expiryLabel = formatSubscriptionExpiry(store?.subscription_expires_at);
+  const onBusinessPlan = isCurrentPlan(store, "business");
+  const onStarterPlan = isCurrentPlan(store, "starter");
+  const useAppleIap = Platform.OS === "ios";
 
   const businessPrice = useAppleIap
-    ? iosPriceLabel ?? getBusinessPriceLabel(store)
+    ? (iosPriceLabel ?? getBusinessPriceLabel(store))
     : premium
       ? getBusinessPriceLabel(store)
-      : pricing?.price_label
+      : pricing?.price_label;
   const businessCompareAtPrice =
-    !useAppleIap && !premium && pricing?.trial_eligible ? pricing.compare_at_label : undefined
+    !useAppleIap && !premium && pricing?.trial_eligible
+      ? pricing.compare_at_label
+      : undefined;
   const businessTone =
     !useAppleIap && !premium && pricing?.trial_eligible
-      ? ('trial-offer' as const)
-      : ('default' as const)
+      ? ("trial-offer" as const)
+      : ("default" as const);
 
   useEffect(() => {
-    setSelectedPlan(currentPlan)
-  }, [currentPlan, store?.id])
+    setSelectedPlan(currentPlan);
+  }, [currentPlan, store?.id]);
 
   useEffect(() => {
     if (store?.id) {
-      void setRevenueCatStoreId(store.id)
+      void setRevenueCatStoreId(store.id);
     }
-  }, [store?.id])
+  }, [store?.id]);
 
   useEffect(() => {
     if (useAppleIap) {
-      setPricingLoading(true)
+      setPricingLoading(true);
       void getBusinessPackagePriceString()
         .then(setIosPriceLabel)
         .catch(() => setIosPriceLabel(null))
-        .finally(() => setPricingLoading(false))
-      return
+        .finally(() => setPricingLoading(false));
+      return;
     }
 
     if (premium || !store?.id) {
-      setPricing(null)
-      setPricingLoading(false)
-      return
+      setPricing(null);
+      setPricingLoading(false);
+      return;
     }
 
-    setPricingLoading(true)
+    setPricingLoading(true);
     void fetchSubscriptionPricing(store.id)
       .then(setPricing)
       .catch(() => setPricing(null))
-      .finally(() => setPricingLoading(false))
-  }, [premium, store?.id, useAppleIap])
+      .finally(() => setPricingLoading(false));
+  }, [premium, store?.id, useAppleIap]);
 
   const finishAppleActivation = useCallback(async () => {
-    if (!store?.id) return
+    if (!store?.id) return;
     try {
-      await syncAppleSubscription(store.id)
+      await syncAppleSubscription(store.id);
     } catch {
       // Webhook may still be in flight; refresh store either way.
     }
-    await refreshStore()
-    router.replace('/subscription-success' as Href)
-  }, [refreshStore, store?.id])
+    await refreshStore();
+    router.replace("/subscription-success" as Href);
+  }, [refreshStore, store?.id]);
 
   const handleSubscribe = async () => {
-    if (!store?.id) return
+    if (!store?.id) return;
 
-    if (Platform.OS === 'web') {
-      showWarning('Subscribe on the mobile app to complete payment.')
-      return
+    if (Platform.OS === "web") {
+      showWarning("Subscribe on the mobile app to complete payment.");
+      return;
     }
 
-    setSubscribing(true)
+    setSubscribing(true);
     try {
       if (useAppleIap) {
-        const pkg = await getBusinessPackage()
+        const pkg = await getBusinessPackage();
         if (!pkg) {
           throw new Error(
-            'Business subscription is not available yet. Try again shortly or contact support.'
-          )
+            "Business subscription is not available yet. Try again shortly or contact support.",
+          );
         }
-        await purchaseBusinessPackage(pkg)
-        await finishAppleActivation()
-        return
+        await purchaseBusinessPackage(pkg);
+        await finishAppleActivation();
+        return;
       }
 
-      const checkout = await createSubscriptionCheckout(store.id)
-      setCheckoutSession(checkout)
+      const checkout = await createSubscriptionCheckout(store.id);
+      setCheckoutSession(checkout);
     } catch (error) {
-      const message = error instanceof Error ? error.message : ''
+      const message = error instanceof Error ? error.message : "";
       if (/cancel/i.test(message)) {
-        return
+        return;
       }
-      showError(error, 'Could not start checkout')
+      showError(error, "Could not start checkout");
     } finally {
-      setSubscribing(false)
+      setSubscribing(false);
     }
-  }
+  };
 
   const handleRestore = async () => {
-    if (!useAppleIap || !store?.id) return
-    setRestoring(true)
+    if (!useAppleIap || !store?.id) return;
+    setRestoring(true);
     try {
-      await restorePurchases()
-      await syncAppleSubscription(store.id)
-      await refreshStore()
-      showSuccess('Purchases restored')
+      await restorePurchases();
+      await syncAppleSubscription(store.id);
+      await refreshStore();
+      showSuccess("Purchases restored");
     } catch (error) {
-      showError(error, 'Could not restore purchases')
+      showError(error, "Could not restore purchases");
     } finally {
-      setRestoring(false)
+      setRestoring(false);
     }
-  }
+  };
 
   const handlePaymentSuccess = async (payment: {
-    razorpay_payment_id: string
-    razorpay_order_id: string
-    razorpay_signature: string
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
   }) => {
-    if (!checkoutSession) return
+    if (!checkoutSession) return;
 
-    setSubscribing(true)
+    setSubscribing(true);
     try {
       await verifySubscriptionPayment({
         checkout_id: checkoutSession.checkout_id,
         razorpay_order_id: payment.razorpay_order_id,
         razorpay_payment_id: payment.razorpay_payment_id,
         razorpay_signature: payment.razorpay_signature,
-      })
+      });
 
-      setCheckoutSession(null)
-      await refreshStore()
-      router.replace('/subscription-success' as Href)
+      setCheckoutSession(null);
+      await refreshStore();
+      router.replace("/subscription-success" as Href);
     } catch (error) {
-      showError(error, 'Payment received but activation failed. Contact support.')
+      showError(
+        error,
+        "Payment received but activation failed. Contact support.",
+      );
     } finally {
-      setSubscribing(false)
+      setSubscribing(false);
     }
-  }
+  };
 
   const subscribeLabel =
-    useAppleIap || !pricing?.trial_eligible ? 'Subscribe' : 'Start trial'
-  const showPlanCards = premium || !pricingLoading
+    useAppleIap || !pricing?.trial_eligible ? "Subscribe" : "Start trial";
+  const showPlanCards = premium || !pricingLoading;
 
   return (
     <Screen>
       <ScreenHeader
         title="Subscription"
-        subtitle={premium ? 'Your active plan' : 'Choose the plan that fits your store'}
+        subtitle={
+          premium ? "Your active plan" : "Choose the plan that fits your store"
+        }
         onBack={() => router.back()}
         showSettings
       />
@@ -213,7 +221,7 @@ export default function SubscriptionScreen() {
                 <Caption className="text-[10px] uppercase tracking-widest text-brand-green font-bold mb-2">
                   Active plan
                 </Caption>
-                <Heading className="text-2xl tracking-tight text-ink">
+                <Heading className="text-2xl tracking-tight text-black">
                   {getPlanLabel(currentPlan)}
                 </Heading>
                 {expiryLabel ? (
@@ -229,14 +237,20 @@ export default function SubscriptionScreen() {
                 </Muted>
               </View>
               <View className="w-12 h-12 rounded-full bg-brand-green/15 items-center justify-center">
-                <FontAwesome name="check" size={18} color={Colors.brand.green} />
+                <FontAwesome
+                  name="check"
+                  size={18}
+                  color={Colors.brand.green}
+                />
               </View>
             </View>
           </View>
         ) : store ? (
           <Muted className="text-[14px] leading-5">
-            Current plan:{' '}
-            <Muted className="font-semibold text-ink">{getPlanLabel(currentPlan)}</Muted>
+            Current plan:{" "}
+            <Muted className="font-semibold text-ink">
+              {getPlanLabel(currentPlan)}
+            </Muted>
           </Muted>
         ) : null}
 
@@ -251,9 +265,9 @@ export default function SubscriptionScreen() {
                 price="₹0 / month"
                 features={STARTER_FEATURES}
                 isCurrent={onStarterPlan}
-                selected={selectedPlan === 'starter'}
-                tone={onStarterPlan ? 'starter-limited' : 'default'}
-                onPress={() => setSelectedPlan('starter')}
+                selected={selectedPlan === "starter"}
+                tone={onStarterPlan ? "starter-limited" : "default"}
+                onPress={() => setSelectedPlan("starter")}
               />
             ) : null}
 
@@ -262,12 +276,12 @@ export default function SubscriptionScreen() {
               title="Business"
               price={businessPrice ?? getBusinessPriceLabel(store)}
               compareAtPrice={businessCompareAtPrice}
-              subtitle={premium ? undefined : 'Everything in Starter +'}
+              subtitle={premium ? undefined : "Everything in Starter +"}
               features={BUSINESS_FEATURES}
-              selected={selectedPlan === 'business'}
+              selected={selectedPlan === "business"}
               tone={businessTone}
               isCurrent={onBusinessPlan}
-              onPress={() => setSelectedPlan('business')}
+              onPress={() => setSelectedPlan("business")}
               footer={
                 onBusinessPlan ? (
                   <Button
@@ -312,5 +326,5 @@ export default function SubscriptionScreen() {
         />
       ) : null}
     </Screen>
-  )
+  );
 }

@@ -12,6 +12,7 @@ export type ChatListItem = {
   phone: string
   initials: string
   replyMode?: 'ai' | 'manual'
+  aiPausedUntil?: string | null
   /** Chat Boat is auto-replying in this thread */
   aiHandling?: boolean
 }

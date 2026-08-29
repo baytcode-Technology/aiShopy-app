@@ -17,6 +17,7 @@ import { useStoreTabRootBack } from "@src/hooks/useStoreTabRootBack";
 import { usePlatformAdmin } from "@src/hooks/usePlatformAdmin";
 import { showError } from "@src/lib/toast";
 import { hasPremiumAccess } from "@src/lib/subscription";
+import { isAiPaused } from "@src/lib/inbox-ai";
 import Colors from "@src/theme/colors";
 import type { ChatChannel, ChatListItem } from "@src/types/chat";
 import { router, useFocusEffect, type Href } from "expo-router";
@@ -55,6 +56,7 @@ function mapWhatsAppConversation(c: {
   last_message_preview: string | null;
   unread_count?: number;
   reply_mode?: 'ai' | 'manual';
+  ai_paused_until?: string | null;
 }): ChatListItem {
   const phone = c.customer_wa_number;
   const name = c.customer_name?.trim();
@@ -71,6 +73,7 @@ function mapWhatsAppConversation(c: {
     phone,
     initials: initialsFromLabel(title, "WA"),
     replyMode: c.reply_mode ?? 'ai',
+    aiPausedUntil: c.ai_paused_until ?? null,
   };
 }
 
@@ -82,6 +85,7 @@ function mapInstagramConversation(c: {
   last_message_preview: string | null;
   unread_count?: number;
   reply_mode?: 'ai' | 'manual';
+  ai_paused_until?: string | null;
 }): ChatListItem {
   const title = c.customer_ig_username
     ? `@${c.customer_ig_username}`
@@ -98,6 +102,7 @@ function mapInstagramConversation(c: {
     phone: c.customer_ig_id,
     initials: initialsFromLabel(title, "IG"),
     replyMode: c.reply_mode ?? 'ai',
+    aiPausedUntil: c.ai_paused_until ?? null,
   };
 }
 
@@ -136,6 +141,7 @@ function mergeChatLists(current: ChatListItem[], fetched: ChatListItem[]): ChatL
       ...item,
       title: item.title || prev.title,
       replyMode: item.replyMode ?? prev.replyMode,
+      aiPausedUntil: item.aiPausedUntil ?? prev.aiPausedUntil,
       ...(prevTs > nextTs
         ? { subtitle: prev.subtitle, time: prev.time, sortAt: prev.sortAt, unread: prev.unread }
         : {}),
@@ -167,6 +173,8 @@ function upsertWhatsAppFromConversation(
       last_message_at: string | null
       last_message_preview: string | null
       unread_count: number
+      reply_mode?: 'ai' | 'manual'
+      ai_paused_until?: string | null
     }
   },
   isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
@@ -188,7 +196,12 @@ function upsertWhatsAppFromConversation(
     online: existing?.online ?? false,
     phone: payload.conversation.customer_wa_number,
     initials: existing?.initials ?? initialsFromLabel(title, "WA"),
-    replyMode: existing?.replyMode ?? "ai",
+    replyMode:
+      payload.conversation.reply_mode ?? existing?.replyMode ?? "ai",
+    aiPausedUntil:
+      payload.conversation.ai_paused_until !== undefined
+        ? payload.conversation.ai_paused_until
+        : (existing?.aiPausedUntil ?? null),
   }
   return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)])
 }
@@ -203,6 +216,8 @@ function upsertInstagramFromConversation(
       last_message_at: string | null
       last_message_preview: string | null
       unread_count: number
+      reply_mode?: 'ai' | 'manual'
+      ai_paused_until?: string | null
     }
   },
   isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
@@ -226,7 +241,12 @@ function upsertInstagramFromConversation(
     online: existing?.online ?? false,
     phone: payload.conversation.customer_ig_id,
     initials: existing?.initials ?? initialsFromLabel(title, "IG"),
-    replyMode: existing?.replyMode ?? "ai",
+    replyMode:
+      payload.conversation.reply_mode ?? existing?.replyMode ?? "ai",
+    aiPausedUntil:
+      payload.conversation.ai_paused_until !== undefined
+        ? payload.conversation.ai_paused_until
+        : (existing?.aiPausedUntil ?? null),
   }
   return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)])
 }
@@ -510,7 +530,8 @@ export default function MessagesListScreen() {
                 aiHandling:
                   hasPremiumAccess(store) &&
                   store?.ai_auto_reply_enabled === true &&
-                  item.replyMode === 'ai',
+                  item.replyMode === 'ai' &&
+                  !isAiPaused(item.aiPausedUntil),
               }}
               onPress={() =>
                 router.push({
@@ -521,6 +542,7 @@ export default function MessagesListScreen() {
                     displayName: item.title,
                     unread: String(item.unread),
                     replyMode: item.replyMode ?? 'ai',
+                    aiPausedUntil: item.aiPausedUntil ?? '',
                   },
                 } as unknown as Href)
               }

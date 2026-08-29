@@ -7,7 +7,7 @@ import { Caption, Muted } from './Typography'
 
 type Props = {
   label: string
-  value?: string
+  value?: string | ReactNode
   icon?: React.ComponentProps<typeof FontAwesome>['name']
   onPress?: () => void
   showChevron?: boolean
@@ -36,7 +36,13 @@ export function MenuRow({
         <Caption className="text-[10px] uppercase tracking-widest text-gray-400 mb-0.5">
           {label}
         </Caption>
-        {value ? <Text className="text-[15px] font-semibold text-ink">{value}</Text> : null}
+        {value ? (
+          typeof value === 'string' ? (
+            <Text className="text-[15px] font-semibold text-ink">{value}</Text>
+          ) : (
+            value
+          )
+        ) : null}
       </View>
       {showChevron ? (
         <FontAwesome name="chevron-right" size={12} color={Colors.text.muted} />

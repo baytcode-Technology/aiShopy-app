@@ -163,7 +163,7 @@ export default function ChatDetailScreen() {
     id: string;
     phone?: string;
     channel?: string;
-    displayName?: string;
+    displayName?: string | string[];
     unread?: string;
     replyMode?: string;
     aiPausedUntil?: string;
@@ -195,6 +195,20 @@ export default function ChatDetailScreen() {
   }, [aiPausedUntilParam]);
   const [aiPausedUntil, setAiPausedUntil] = useState<string | null>(
     initialAiPausedUntil,
+  );
+  const initialCustomerDisplayName = useMemo(() => {
+    if (typeof displayName === "string") {
+      const trimmed = displayName.trim();
+      return trimmed || null;
+    }
+    if (Array.isArray(displayName)) {
+      const trimmed = (displayName[0] ?? "").trim();
+      return trimmed || null;
+    }
+    return null;
+  }, [displayName]);
+  const [customerDisplayName, setCustomerDisplayName] = useState<string | null>(
+    initialCustomerDisplayName,
   );
   const [replyModeBusy, setReplyModeBusy] = useState(false);
   const [aiPreparingReply, setAiPreparingReply] = useState(false);
@@ -288,7 +302,8 @@ export default function ChatDetailScreen() {
   useEffect(() => {
     setReplyMode(replyModeParam === "manual" ? "manual" : "ai");
     setAiPausedUntil(initialAiPausedUntil);
-  }, [conversationId, replyModeParam, initialAiPausedUntil]);
+    setCustomerDisplayName(initialCustomerDisplayName);
+  }, [conversationId, replyModeParam, initialAiPausedUntil, initialCustomerDisplayName]);
 
   useEffect(() => {
     if (!Number.isFinite(conversationId)) return;
@@ -298,6 +313,7 @@ export default function ChatDetailScreen() {
         id: number;
         reply_mode?: "ai" | "manual";
         ai_paused_until?: string | null;
+        customer_ig_username?: string | null;
       };
     }) => {
       if (toSocketId(payload.conversation.id) !== conversationId) return;
@@ -306,6 +322,10 @@ export default function ChatDetailScreen() {
       }
       if (payload.conversation.ai_paused_until !== undefined) {
         setAiPausedUntil(payload.conversation.ai_paused_until);
+      }
+      const username = payload.conversation.customer_ig_username?.trim();
+      if (username) {
+        setCustomerDisplayName(`@${username.replace(/^@/, "")}`);
       }
     };
 
@@ -325,17 +345,24 @@ export default function ChatDetailScreen() {
   }, [store]);
 
   const title = useMemo(() => {
-    if (
-      channel === "instagram" &&
-      customerPhone &&
-      !customerPhone.startsWith("@")
-    ) {
-      return customerPhone.length > 12
-        ? `IG ${customerPhone.slice(0, 8)}…`
-        : customerPhone;
+    if (channel === "instagram") {
+      const label = customerDisplayName?.trim() || headerLabel.trim();
+      if (label) {
+        if (label.startsWith("@")) return label;
+        if (!/^\d+$/.test(label)) return label;
+      }
+      const igId = customerPhone.trim();
+      if (!igId) return "Instagram";
+      return igId.length > 12 ? `IG ${igId.slice(0, 8)}…` : igId;
     }
-    return headerLabel || "Chat";
-  }, [channel, customerPhone, headerLabel]);
+    return customerDisplayName || headerLabel || customerPhone || "Chat";
+  }, [channel, customerDisplayName, customerPhone, headerLabel]);
+
+  const instagramSubtitle = useMemo(() => {
+    const label = customerDisplayName?.trim() || headerLabel.trim();
+    if (label.startsWith("@")) return label;
+    return "Instagram DM";
+  }, [customerDisplayName, headerLabel]);
 
   const loadMessages = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -957,7 +984,7 @@ export default function ChatDetailScreen() {
               {isLoading
                 ? "Loading…"
                 : channel === "instagram"
-                  ? "Instagram DM"
+                  ? instagramSubtitle
                   : customerPhone}
             </Muted>
           </View>

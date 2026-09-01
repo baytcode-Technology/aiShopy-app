@@ -51,10 +51,10 @@ export default function PrivacyPolicyScreen() {
       </LegalSection>
 
       <LegalSection title="Your choices">
-        You can update store and account details in the app. You can delete your account at any
-        time from Settings → Delete account; this permanently removes your account and any stores
-        you own. You may also email {SUPPORT_EMAIL} for access or correction requests. We may need
-        to keep some records for legal or billing reasons.
+        You can update store and account details in the app. You can delete your account from
+        Settings → Admin Dashboard → Delete account; this permanently removes your account and any
+        stores you own. You may also email {SUPPORT_EMAIL} for access or correction requests. We
+        may need to keep some records for legal or billing reasons.
       </LegalSection>
 
       <Body className="text-gray-600 leading-6">

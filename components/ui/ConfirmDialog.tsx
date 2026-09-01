@@ -6,6 +6,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Heading, Muted } from './Typography'
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   confirmLabel?: string
   cancelLabel?: string
   confirmVariant?: 'danger' | 'primary'
+  tone?: 'default' | 'danger'
   loading?: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -27,12 +29,14 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   confirmVariant = 'danger',
+  tone = 'default',
   loading = false,
   onConfirm,
   onCancel,
 }: Props) {
-  const confirmBg =
-    confirmVariant === 'primary' ? '#3EB056' : '#EF4444'
+  const confirmBg = confirmVariant === 'primary' ? '#3EB056' : '#E11D48'
+  const isDangerTone = tone === 'danger'
+
   return (
     <RNModal
       visible={visible}
@@ -49,9 +53,29 @@ export function ConfirmDialog({
           <View className="flex-1 bg-ink-overlay" />
         </Pressable>
 
-        <View className="bg-surface rounded-3xl border border-gray-200 p-6 shadow-sm">
-          <Heading className="text-xl mb-2">{title}</Heading>
-          <Muted className="text-[15px] leading-[22px] mb-6">{message}</Muted>
+        <View
+          className={`bg-surface rounded-3xl border p-6 shadow-sm ${
+            isDangerTone ? 'border-rose-200' : 'border-gray-200'
+          }`}
+        >
+          {isDangerTone ? (
+            <View className="items-center mb-4">
+              <View className="w-14 h-14 rounded-full bg-rose-100 border border-rose-200 items-center justify-center">
+                <FontAwesome name="exclamation-triangle" size={24} color="#E11D48" />
+              </View>
+            </View>
+          ) : null}
+
+          <Heading className={`text-xl mb-2 ${isDangerTone ? 'text-center' : ''}`}>
+            {title}
+          </Heading>
+          <Muted
+            className={`text-[15px] leading-[22px] mb-6 ${
+              isDangerTone ? 'text-center text-gray-600' : ''
+            }`}
+          >
+            {message}
+          </Muted>
 
           <View className="flex-row gap-3">
             <Pressable

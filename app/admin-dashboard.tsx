@@ -1,4 +1,5 @@
 import { LockedMenuRow } from "@/components/subscription/LockedMenuRow";
+import { DeleteAccountSection } from "@/components/account/DeleteAccountSection";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
@@ -167,6 +168,8 @@ export default function AdminDashboardScreen() {
             </View>
           ) : null}
         </View>
+
+        <DeleteAccountSection storeName={store?.name} />
       </ScreenScrollBody>
     </Screen>
   );

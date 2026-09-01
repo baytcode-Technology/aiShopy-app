@@ -28,6 +28,8 @@ import { usePlatformAdminBack } from "@src/hooks/usePlatformAdminBack";
 import { useSupportAdminSummary } from "@src/hooks/useSupportAdminSummary";
 import { performSignOut } from "@src/lib/safe-sign-out";
 import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_OF_USE_URL } from "@src/lib/support-contact";
+import { deleteAccount } from "@src/api/auth";
+import { showError } from "@src/lib/toast";
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -57,6 +59,47 @@ export default function SettingsScreen() {
 
   const handleSignOut = () => {
     void performSignOut(clearStore, signOut);
+  };
+
+  const handleDeleteAccount = () => {
+    const ownedStoreNote =
+      role === "owner" && store
+        ? `Your store “${store.name}” and all its products, orders, and messages will be permanently deleted. `
+        : "";
+    Alert.alert(
+      "Delete account?",
+      `${ownedStoreNote}This permanently removes your AiShopy account. This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Delete forever?",
+              "All account data will be permanently removed.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete account",
+                  style: "destructive",
+                  onPress: () => {
+                    void (async () => {
+                      try {
+                        await deleteAccount();
+                        await performSignOut(clearStore, signOut);
+                      } catch (e) {
+                        showError(e, "Could not delete account");
+                      }
+                    })();
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
   };
 
   const handleSendFeedback = () => {
@@ -140,7 +183,14 @@ export default function SettingsScreen() {
               onPress={() => router.push("/create-store" as Href)}
             />
 
-            <View className="pt-4">
+            <View className="pt-4 gap-3">
+              <Button
+                label="Delete account"
+                variant="outline"
+                onPress={handleDeleteAccount}
+                className="border-rose-200 bg-rose-50"
+                labelClassName="text-rose-700"
+              />
               <Button
                 label="Sign out"
                 variant="primary"
@@ -322,7 +372,14 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View className="pt-2">
+          <View className="pt-2 gap-3">
+            <Button
+              label="Delete account"
+              variant="outline"
+              onPress={handleDeleteAccount}
+              className="border-rose-200 bg-rose-50"
+              labelClassName="text-rose-700"
+            />
             <Button
               label="Sign out"
               variant="primary"

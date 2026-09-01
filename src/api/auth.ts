@@ -1,4 +1,4 @@
-import { apiFetch } from '@src/api/client'
+import { apiFetch, authenticatedFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
 import type { ApiResponse, VerifyOtpData } from '@src/types/auth'
 
@@ -69,5 +69,11 @@ export async function refreshAuthSession(
   return apiFetch<ApiResponse<VerifyOtpData>>(endpoints.authRefresh, {
     method: 'POST',
     body: JSON.stringify({ refreshToken }),
+  })
+}
+
+export async function deleteAccount(): Promise<ApiResponse<Record<string, never>>> {
+  return authenticatedFetch<ApiResponse<Record<string, never>>>(endpoints.authAccountDelete, {
+    method: 'DELETE',
   })
 }

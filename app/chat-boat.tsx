@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { router } from 'expo-router'
 import { ActivityIndicator, Switch, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { AiThirdPartyConsentModal } from '@/components/store/AiThirdPartyConsentModal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
@@ -26,6 +27,9 @@ export default function ChatBoatScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [enabled, setEnabled] = useState(false)
+  const [hasConsent, setHasConsent] = useState(false)
+  const [consentModalOpen, setConsentModalOpen] = useState(false)
+  const [pendingConsentEnable, setPendingConsentEnable] = useState(false)
   const [language, setLanguage] = useState('English')
   const [customPrompt, setCustomPrompt] = useState('')
 
@@ -35,6 +39,7 @@ export default function ChatBoatScreen() {
     try {
       const res = await fetchInboxAiSettings(store.id)
       setEnabled(res.data.ai_auto_reply_enabled)
+      setHasConsent(res.data.ai_third_party_consented)
       setLanguage(res.data.ai_language?.trim() || 'English')
       setCustomPrompt(res.data.ai_system_prompt ?? '')
     } catch (e) {
@@ -48,7 +53,7 @@ export default function ChatBoatScreen() {
     void load()
   }, [load])
 
-  const handleSave = async () => {
+  const saveSettings = async (options?: { grantConsent?: boolean }) => {
     if (!store?.id) return
     if (enabled && !premium) {
       router.push('/subscription' as never)
@@ -60,14 +65,48 @@ export default function ChatBoatScreen() {
         ai_auto_reply_enabled: enabled,
         ai_language: language,
         ai_system_prompt: customPrompt.trim() || null,
+        ...(options?.grantConsent ? { ai_third_party_consent: true } : {}),
       })
+      if (options?.grantConsent) {
+        setHasConsent(true)
+      }
       await refreshStore({ silent: true })
       showSuccess('Chat Boat settings saved')
+      setConsentModalOpen(false)
+      setPendingConsentEnable(false)
     } catch (e) {
       showError(e, 'Could not save settings')
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSave = () => {
+    if (enabled && !hasConsent) {
+      setPendingConsentEnable(true)
+      setConsentModalOpen(true)
+      return
+    }
+    void saveSettings()
+  }
+
+  const handleToggleEnabled = (next: boolean) => {
+    if (next && !hasConsent) {
+      setPendingConsentEnable(true)
+      setConsentModalOpen(true)
+      return
+    }
+    setEnabled(next)
+  }
+
+  const handleConsentAgree = () => {
+    setEnabled(true)
+    void saveSettings({ grantConsent: true })
+  }
+
+  const handleConsentClose = () => {
+    setConsentModalOpen(false)
+    setPendingConsentEnable(false)
   }
 
   return (
@@ -123,8 +162,8 @@ export default function ChatBoatScreen() {
                 </View>
                 <Switch
                   value={enabled}
-                  onValueChange={setEnabled}
-                  disabled={!premium}
+                  onValueChange={handleToggleEnabled}
+                  disabled={!premium || saving}
                   trackColor={{ false: '#E4E4E7', true: Colors.brand.primary }}
                   thumbColor="#FFFFFF"
                 />
@@ -163,13 +202,22 @@ export default function ChatBoatScreen() {
             <Muted className="text-xs">
               Custom instructions actively shape how Chat Boat replies. It shares product links
               from your storefront, ignores off-topic questions, and will not share code or
-              passwords. You can take over any chat manually from the inbox.
+              passwords. You can take over any chat manually from the inbox. Third-party AI
+              providers process customer messages only to generate replies — see consent when
+              enabling.
             </Muted>
 
             <Button label="Save settings" loading={saving} onPress={() => void handleSave()} />
           </>
         )}
       </ScreenScrollBody>
+
+      <AiThirdPartyConsentModal
+        isOpen={consentModalOpen}
+        saving={saving && pendingConsentEnable}
+        onClose={handleConsentClose}
+        onAgree={handleConsentAgree}
+      />
     </Screen>
   )
 }

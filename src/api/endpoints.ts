@@ -5,6 +5,7 @@ export const endpoints = {
   authApple: "/api/auth/apple",
   authGoogleCode: "/api/auth/google/code",
   authRefresh: "/api/auth/refresh",
+  authAccountDelete: "/api/auth/account",
   storesMe: "/api/stores/me",
   storesMine: "/api/stores/mine",
   storesStaff: "/api/stores/staff",

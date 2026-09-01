@@ -52,3 +52,37 @@ export async function setChatReplyMode(input: {
     body: JSON.stringify({ reply_mode: input.replyMode }),
   })
 }
+
+export type InboxAiPreviewResult = {
+  intent: string
+  customerLanguage: string
+  scriptStyle: 'malayalam_script' | 'latin' | 'other'
+  searchQuery: string | null
+  color: string | null
+  categoryName: string | null
+  requestedItem: string | null
+  replyText: string
+  wouldSendImage: boolean
+  hasFollowUpText: boolean
+  lastShownProductTitle: string | null
+  note: string
+}
+
+export type InboxAiPreviewResponse = {
+  success: boolean
+  message: string
+  data: InboxAiPreviewResult
+}
+
+export async function previewInboxAiReply(
+  storeId: number,
+  input: { message: string; channel?: 'whatsapp' | 'instagram' }
+): Promise<InboxAiPreviewResponse> {
+  return authenticatedFetch<InboxAiPreviewResponse>(endpoints.inboxAiPreview(storeId), {
+    method: 'POST',
+    body: JSON.stringify({
+      message: input.message.trim(),
+      channel: input.channel ?? 'whatsapp',
+    }),
+  })
+}

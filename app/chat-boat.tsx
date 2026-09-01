@@ -10,7 +10,9 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { Heading, Label, Muted } from '@/components/ui/Typography'
 import {
   fetchInboxAiSettings,
+  previewInboxAiReply,
   updateInboxAiSettings,
+  type InboxAiPreviewResult,
 } from '@src/api/inbox-ai'
 import { useStore } from '@src/contexts/store-context'
 import { hasPremiumAccess } from '@src/lib/subscription'
@@ -19,6 +21,20 @@ import Colors from '@src/theme/colors'
 import { shadows } from '@src/lib/shadows'
 
 const LANGUAGE_OPTIONS = ['English', 'Hindi', 'Tamil', 'Malayalam', 'Arabic']
+
+const CUSTOM_PROMPT_PLACEHOLDER = `Examples you can copy:
+• Call every customer sir or saar — warm shop tone
+• Free delivery above ₹999 within Kerala
+• COD available — ask size before confirming
+• Reply in Manglish when customer writes Manglish (undo?, ethu size?)`
+
+const PREVIEW_EXAMPLES = ['blue shirt undo?', 'ok', 'order cheyyam', 'where is my order']
+
+function scriptStyleLabel(style: InboxAiPreviewResult['scriptStyle']): string {
+  if (style === 'malayalam_script') return 'Malayalam script'
+  if (style === 'latin') return 'Manglish / Latin'
+  return 'Other'
+}
 
 export default function ChatBoatScreen() {
   const { store, refreshStore } = useStore()
@@ -32,6 +48,11 @@ export default function ChatBoatScreen() {
   const [pendingConsentEnable, setPendingConsentEnable] = useState(false)
   const [language, setLanguage] = useState('English')
   const [customPrompt, setCustomPrompt] = useState('')
+
+  const [previewMessage, setPreviewMessage] = useState('')
+  const [previewChannel, setPreviewChannel] = useState<'whatsapp' | 'instagram'>('whatsapp')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewResult, setPreviewResult] = useState<InboxAiPreviewResult | null>(null)
 
   const load = useCallback(async () => {
     if (!store?.id) return
@@ -109,6 +130,28 @@ export default function ChatBoatScreen() {
     setPendingConsentEnable(false)
   }
 
+  const runPreview = async () => {
+    if (!store?.id) return
+    const message = previewMessage.trim()
+    if (!message) {
+      showError('Enter a test message', 'Type what a customer might send')
+      return
+    }
+    setPreviewLoading(true)
+    setPreviewResult(null)
+    try {
+      const res = await previewInboxAiReply(store.id, {
+        message,
+        channel: previewChannel,
+      })
+      setPreviewResult(res.data)
+    } catch (e) {
+      showError(e, 'Could not preview reply')
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
   return (
     <Screen>
       <ScreenHeader
@@ -174,7 +217,8 @@ export default function ChatBoatScreen() {
               <Label>Default reply language</Label>
               <Muted className="text-xs">
                 Chat Boat replies in whatever language the customer types (English, Malayalam,
-                mixed, etc.). This setting is only used when detection is unsure.
+                Manglish like &quot;undo?&quot; or &quot;ethu size?&quot;, mixed, etc.). This
+                setting is only used when detection is unsure.
               </Muted>
               <View className="flex-row flex-wrap gap-2">
                 {LANGUAGE_OPTIONS.map((lang) => (
@@ -193,10 +237,10 @@ export default function ChatBoatScreen() {
               label="Custom instructions (optional)"
               value={customPrompt}
               onChangeText={setCustomPrompt}
-              placeholder="We sell shirts and pants. Reply like a friendly shop owner — casual, short, sales-focused. Match the customer's language. If we don't have something, say so and share our store link."
+              placeholder={CUSTOM_PROMPT_PLACEHOLDER}
               multiline
-              numberOfLines={4}
-              className="min-h-[100px]"
+              numberOfLines={6}
+              className="min-h-[120px]"
             />
 
             <Muted className="text-xs">
@@ -206,6 +250,92 @@ export default function ChatBoatScreen() {
               providers process customer messages only to generate replies — see consent when
               enabling.
             </Muted>
+
+            <View
+              className="rounded-2xl border border-gray-200 bg-surface p-4 gap-3"
+              style={shadows.card}
+            >
+              <View>
+                <Label>Try a customer message</Label>
+                <Muted className="text-xs mt-1">
+                  Preview how Chat Boat would reply. Nothing is sent to WhatsApp or Instagram.
+                </Muted>
+              </View>
+
+              <View className="flex-row gap-2">
+                {(['whatsapp', 'instagram'] as const).map((ch) => (
+                  <Button
+                    key={ch}
+                    label={ch === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
+                    size="sm"
+                    variant={previewChannel === ch ? 'primary' : 'outline'}
+                    onPress={() => setPreviewChannel(ch)}
+                  />
+                ))}
+              </View>
+
+              <Input
+                value={previewMessage}
+                onChangeText={setPreviewMessage}
+                placeholder='e.g. "blue shirt undo?" or "ok"'
+                multiline
+                numberOfLines={3}
+                className="min-h-[72px]"
+              />
+
+              <View className="flex-row flex-wrap gap-2">
+                {PREVIEW_EXAMPLES.map((example) => (
+                  <Button
+                    key={example}
+                    label={example}
+                    size="sm"
+                    variant="outline"
+                    onPress={() => setPreviewMessage(example)}
+                  />
+                ))}
+              </View>
+
+              <Button
+                label="Preview reply"
+                loading={previewLoading}
+                onPress={() => void runPreview()}
+              />
+
+              {previewLoading ? (
+                <ActivityIndicator color={Colors.brand.primary} className="py-2" />
+              ) : null}
+
+              {previewResult ? (
+                <View className="rounded-xl border border-gray-100 bg-gray-50 p-3 gap-2">
+                  <Text className="text-sm font-semibold text-gray-900">Understood</Text>
+                  <Muted className="text-xs leading-5">
+                    Intent: {previewResult.intent}
+                    {' · '}
+                    Language: {previewResult.customerLanguage}
+                    {' · '}
+                    Script: {scriptStyleLabel(previewResult.scriptStyle)}
+                    {previewResult.searchQuery
+                      ? ` · Product: ${previewResult.searchQuery}`
+                      : ''}
+                    {previewResult.color ? ` · Color: ${previewResult.color}` : ''}
+                    {previewResult.lastShownProductTitle
+                      ? ` · Last shown: ${previewResult.lastShownProductTitle}`
+                      : ''}
+                  </Muted>
+                  {previewResult.wouldSendImage ? (
+                    <Muted className="text-xs text-emerald-800">
+                      WhatsApp would also send a product photo with this caption.
+                    </Muted>
+                  ) : null}
+                  {previewResult.hasFollowUpText ? (
+                    <Muted className="text-xs">Includes a second message with more options.</Muted>
+                  ) : null}
+                  <Text className="text-sm font-semibold text-gray-900 mt-1">Would reply</Text>
+                  <Text className="text-sm text-gray-800 leading-5">{previewResult.replyText}</Text>
+                  <Muted className="text-xs mt-1">{previewResult.note}</Muted>
+                </View>
+              ) : null}
+            </View>
 
             <Button label="Save settings" loading={saving} onPress={() => void handleSave()} />
           </>

@@ -11,7 +11,6 @@ export const endpoints = {
   storesStaff: "/api/stores/staff",
   stores: "/api/stores",
   inboxAiSettings: (storeId: number) => `/api/stores/${storeId}/inbox-ai/settings`,
-  inboxAiPreview: (storeId: number) => `/api/stores/${storeId}/inbox-ai/preview`,
   whatsappReplyMode: (conversationId: number, storeId: number) =>
     `/api/whatsapp/chats/${conversationId}/reply-mode?store_id=${storeId}`,
   instagramReplyMode: (conversationId: number, storeId: number) =>

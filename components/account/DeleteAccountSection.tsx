@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { View } from 'react-native'
+import { Pressable, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { Caption, Muted } from '@/components/ui/Typography'
+import { Caption, LinkText, Muted } from '@/components/ui/Typography'
 import { deleteAccount } from '@src/api/auth'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
@@ -12,9 +12,11 @@ import { showError } from '@src/lib/toast'
 
 type Props = {
   storeName?: string | null
+  /** Card is for Settings. Link is a quiet footer action on Create store. */
+  variant?: 'card' | 'link'
 }
 
-export function DeleteAccountSection({ storeName }: Props) {
+export function DeleteAccountSection({ storeName, variant = 'card' }: Props) {
   const { signOut } = useAuth()
   const { clearStore } = useStore()
   const [step, setStep] = useState<'closed' | 'warn' | 'confirm'>('closed')
@@ -36,8 +38,12 @@ export function DeleteAccountSection({ storeName }: Props) {
     }
   }
 
-  return (
-    <>
+  const trigger =
+    variant === 'link' ? (
+      <Pressable onPress={() => setStep('warn')} hitSlop={8} className="items-center py-1">
+        <LinkText className="text-[14px] font-semibold no-underline">Delete account</LinkText>
+      </Pressable>
+    ) : (
       <View className="rounded-2xl border border-rose-200 bg-rose-50/80 p-5 gap-3">
         <View className="flex-row items-start gap-3">
           <View className="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 items-center justify-center mt-0.5">
@@ -61,6 +67,11 @@ export function DeleteAccountSection({ storeName }: Props) {
           labelClassName="text-rose-700"
         />
       </View>
+    )
+
+  return (
+    <>
+      {trigger}
 
       <ConfirmDialog
         visible={step === 'warn'}

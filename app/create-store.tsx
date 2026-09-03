@@ -1,3 +1,4 @@
+import { DeleteAccountSection } from '@/components/account/DeleteAccountSection'
 import { AuthButton } from '@/components/auth/AuthButton'
 import { AuthInput } from '@/components/auth/AuthInput'
 import { AuthLayout } from '@/components/auth/AuthLayout'
@@ -121,12 +122,24 @@ export default function CreateStoreScreen() {
       title="Create your store"
       subtitle="Required fields are marked with *. Optional fields can be added now or later."
       footer={
-        <Button
-          label="Sign out"
-          variant="ghost"
-          onPress={() => void handleSignOut()}
-          className="w-full"
-        />
+        <View className="w-full items-center gap-3">
+          <Button
+            label="Sign out"
+            variant="ghost"
+            onPress={() => void handleSignOut()}
+            className="w-full"
+          />
+          <DeleteAccountSection variant="link" />
+          <Pressable
+            onPress={() => router.push('/ai-privacy' as Href)}
+            hitSlop={8}
+            className="py-1"
+          >
+            <LinkText className="text-[14px] font-semibold no-underline">
+              AI & data privacy
+            </LinkText>
+          </Pressable>
+        </View>
       }
     >
       {isPlatformAdmin ? (

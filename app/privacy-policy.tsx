@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '@src/lib/support-contact'
 
 export default function PrivacyPolicyScreen() {
   return (
-    <LegalScreen title="Privacy policy" subtitle="How we handle your data" lastUpdated="1 Sep 2026">
+    <LegalScreen title="Privacy policy" subtitle="How we handle your data" lastUpdated="3 Sep 2026">
       <LegalSection title="Who this applies to">
         This policy describes how AiShopy collects and uses information when you use our merchant
         app, storefront, and related services. If you have questions, email {SUPPORT_EMAIL}.
@@ -26,9 +26,16 @@ export default function PrivacyPolicyScreen() {
       <LegalSection title="Chat Boat and third-party AI">
         If you enable Chat Boat, customer messages, conversation history, your product catalog,
         store details, and any custom instructions you provide may be sent to third-party AI
-        providers (such as OpenAI and/or TokenBee) to generate automatic replies. We ask for your
-        explicit consent in the app before enabling this feature. You can turn off Chat Boat or
-        take over any chat manually at any time.
+        providers (OpenAI and/or TokenBee, using gpt-4o-mini) to generate automatic replies. We
+        ask for your explicit consent in the app before enabling this feature. We use OpenAI's
+        API, which does not use your data to train their models by default. You can turn off
+        Chat Boat or take over any chat manually at any time.
+      </LegalSection>
+
+      <LegalSection title="Service Providers We Use">
+        Service providers we use include Supabase (hosting/database), Expo (push notifications),
+        Razorpay (payments), RevenueCat (subscription billing), OpenAI and/or TokenBee (Chat Boat
+        reply generation using gpt-4o-mini), and Meta Platforms (WhatsApp/Instagram messaging).
       </LegalSection>
 
       <LegalSection title="WhatsApp, Instagram, and payments">
@@ -39,9 +46,11 @@ export default function PrivacyPolicyScreen() {
 
       <LegalSection title="Sharing, retention, and security">
         We share information with service providers who help us host, send messages, process
-        payments, or support the app. We keep information while your account is active and as needed
-        for legal, security, or operational reasons. We use reasonable safeguards, but no method of
-        transmission or storage is completely secure.
+        payments, or support the app. We keep information while your account is active. When you
+        delete your account, we delete your stores and associated data as part of the account
+        deletion request. Some information may be retained for legal, tax, or fraud-prevention
+        purposes. We use reasonable safeguards, but no method of transmission or storage is
+        completely secure.
       </LegalSection>
 
       <LegalSection title="Your responsibilities">
@@ -52,9 +61,24 @@ export default function PrivacyPolicyScreen() {
 
       <LegalSection title="Your choices">
         You can update store and account details in the app. You can delete your account from
-        Settings → Admin Dashboard → Delete account; this permanently removes your account and any
-        stores you own. You may also email {SUPPORT_EMAIL} for access or correction requests. We
-        may need to keep some records for legal or billing reasons.
+        Settings → Delete account; this permanently removes your account and any stores you own.
+        You may also email {SUPPORT_EMAIL} for access or correction requests. We may need to keep
+        some records for legal or billing reasons.
+      </LegalSection>
+
+      <LegalSection title="Your Rights">
+        Depending on where you live, you may have rights to access, correct, delete, or export
+        your personal data. To exercise these rights, email {SUPPORT_EMAIL}.
+      </LegalSection>
+
+      <LegalSection title="Children's Privacy">
+        AiShopy is not directed to children under 13 (or the minimum age required in your region),
+        and we do not knowingly collect personal information from children.
+      </LegalSection>
+
+      <LegalSection title="Changes to This Policy">
+        If we make material changes to this policy, we will notify you in the app before the
+        changes take effect.
       </LegalSection>
 
       <Body className="text-gray-600 leading-6">

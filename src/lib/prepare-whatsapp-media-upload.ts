@@ -69,7 +69,7 @@ function resizeActionsForDimensions(
 }
 
 async function getFileSize(uri: string): Promise<number> {
-  const fileInfo = await FileSystem.getInfoAsync(uri, { size: true })
+  const fileInfo = await FileSystem.getInfoAsync(uri)
   if (!fileInfo.exists) return 0
   return 'size' in fileInfo && typeof fileInfo.size === 'number' ? fileInfo.size : 0
 }

@@ -1,3 +1,4 @@
+import { DeleteAccountSection } from "@/components/account/DeleteAccountSection";
 import { EditStoreLogoModal } from "@/components/store/EditStoreLogoModal";
 import { EditStoreModal } from "@/components/store/EditStoreModal";
 import { StoreAvatar } from "@/components/store/StoreAvatar";
@@ -139,8 +140,15 @@ export default function SettingsScreen() {
               showChevron
               onPress={() => router.push("/create-store" as Href)}
             />
+            <MenuRow
+              label="AI & data privacy"
+              value="What Chat Boat shares with AI providers"
+              icon="shield"
+              showChevron
+              onPress={() => router.push("/ai-privacy" as Href)}
+            />
 
-            <View className="pt-4">
+            <View className="pt-4 gap-3">
               <Button
                 label="Sign out"
                 variant="primary"
@@ -148,6 +156,7 @@ export default function SettingsScreen() {
                 className="bg-[#E11D48] border-[#E11D48]"
                 labelClassName="text-white"
               />
+              <DeleteAccountSection />
             </View>
           </ScrollView>
         ) : (
@@ -313,6 +322,13 @@ export default function SettingsScreen() {
                 onPress={() => handleOpenLegalUrl(PRIVACY_POLICY_URL, "Privacy policy")}
               />
               <MenuRow
+                label="AI & data privacy"
+                value="What Chat Boat shares with AI providers"
+                icon="shield"
+                showChevron
+                onPress={() => router.push("/ai-privacy" as Href)}
+              />
+              <MenuRow
                 label="Terms"
                 value=""
                 icon="file-text-o"
@@ -322,7 +338,7 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <View className="pt-2">
+          <View className="pt-2 gap-3">
             <Button
               label="Sign out"
               variant="primary"
@@ -330,6 +346,7 @@ export default function SettingsScreen() {
               className="bg-[#E11D48] border-[#E11D48]"
               labelClassName="text-white"
             />
+            <DeleteAccountSection storeName={store?.name} />
           </View>
         </ScrollView>
 

@@ -185,7 +185,7 @@ export default function ChatBoatScreen() {
                   <Button
                     key={lang}
                     label={lang}
-                    size="sm"
+                    size="md"
                     variant={language === lang ? 'primary' : 'outline'}
                     onPress={() => setLanguage(lang)}
                   />

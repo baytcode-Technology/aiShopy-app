@@ -51,9 +51,13 @@ export function AiThirdPartyConsentModal({ isOpen, saving, onClose, onAgree }: P
       </View>
 
       <Muted className="text-sm leading-5">
-        Providers: OpenAI and/or TokenBee (as configured by AiShopy). They process this data only
-        to generate reply text for your store. You can turn off Chat Boat or take over any chat
-        manually at any time.
+        Providers: OpenAI (gpt-4o-mini) and/or TokenBee (OpenAIGPT4oMini / OpenAI gpt-4o-mini, as configured by AiShopy).
+        They process this data only to generate reply text for your store.
+        You can turn off Chat Boat or take over any chat manually at any time.
+      </Muted>
+
+      <Muted className="text-xs leading-5">
+        We use OpenAI&apos;s API, which does not use your data to train their models by default.
       </Muted>
 
       <Muted className="text-xs leading-5">

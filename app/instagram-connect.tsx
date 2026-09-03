@@ -198,6 +198,10 @@ export default function InstagramConnectScreen() {
               <Muted className="text-center text-[15px] leading-6">
                 Customer DMs appear in Messages after they message you — not messages you send out.
               </Muted>
+              <Muted className="text-center text-[15px] leading-6">
+                Chat Boat auto-replies on Instagram are text and product links only. Product photos
+                are sent automatically on WhatsApp, not in Instagram DMs.
+              </Muted>
               <Button
                 label={subscribing ? 'Enabling DMs…' : 'Enable DM notifications'}
                 variant="outline"

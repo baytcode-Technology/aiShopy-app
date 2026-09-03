@@ -5,6 +5,7 @@ export type InboxAiSettings = {
   ai_auto_reply_enabled: boolean
   ai_system_prompt: string | null
   ai_language: string | null
+  ai_third_party_consented: boolean
   premium: boolean
 }
 
@@ -26,6 +27,7 @@ export async function updateInboxAiSettings(
     ai_auto_reply_enabled: boolean
     ai_system_prompt: string | null
     ai_language: string | null
+    ai_third_party_consent: true
   }>
 ): Promise<InboxAiSettingsResponse> {
   return authenticatedFetch<InboxAiSettingsResponse>(endpoints.inboxAiSettings(storeId), {

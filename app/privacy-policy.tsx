@@ -4,7 +4,7 @@ import { SUPPORT_EMAIL } from '@src/lib/support-contact'
 
 export default function PrivacyPolicyScreen() {
   return (
-    <LegalScreen title="Privacy policy" subtitle="How we handle your data" lastUpdated="17 Aug 2026">
+    <LegalScreen title="Privacy policy" subtitle="How we handle your data" lastUpdated="1 Sep 2026">
       <LegalSection title="Who this applies to">
         This policy describes how AiShopy collects and uses information when you use our merchant
         app, storefront, and related services. If you have questions, email {SUPPORT_EMAIL}.
@@ -21,6 +21,14 @@ export default function PrivacyPolicyScreen() {
         We use this information to provide your store, process orders, send notifications, support
         chat and inbox features, improve the product, and keep accounts secure. We do not sell your
         personal information.
+      </LegalSection>
+
+      <LegalSection title="Chat Boat and third-party AI">
+        If you enable Chat Boat, customer messages, conversation history, your product catalog,
+        store details, and any custom instructions you provide may be sent to third-party AI
+        providers (such as OpenAI and/or TokenBee) to generate automatic replies. We ask for your
+        explicit consent in the app before enabling this feature. You can turn off Chat Boat or
+        take over any chat manually at any time.
       </LegalSection>
 
       <LegalSection title="WhatsApp, Instagram, and payments">
@@ -43,9 +51,10 @@ export default function PrivacyPolicyScreen() {
       </LegalSection>
 
       <LegalSection title="Your choices">
-        You can update store and account details in the app. To request access, correction, or
-        deletion of your account data, email {SUPPORT_EMAIL}. We may need to keep some records for
-        legal or billing reasons.
+        You can update store and account details in the app. You can delete your account from
+        Settings → Admin Dashboard → Delete account; this permanently removes your account and any
+        stores you own. You may also email {SUPPORT_EMAIL} for access or correction requests. We
+        may need to keep some records for legal or billing reasons.
       </LegalSection>
 
       <Body className="text-gray-600 leading-6">

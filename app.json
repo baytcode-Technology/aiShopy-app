@@ -44,7 +44,7 @@
     "android": {
       "label": "AiShopy",
       "package": "com.aishopy.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"

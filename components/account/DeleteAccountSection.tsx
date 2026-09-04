@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { Button } from '@/components/ui/Button'
@@ -17,14 +17,41 @@ type Props = {
 }
 
 export function DeleteAccountSection({ storeName, variant = 'card' }: Props) {
-  const { signOut } = useAuth()
-  const { clearStore } = useStore()
+  const { signOut, user } = useAuth()
+  const { clearStore, store, role, stores } = useStore()
   const [step, setStep] = useState<'closed' | 'warn' | 'confirm'>('closed')
   const [deleting, setDeleting] = useState(false)
 
-  const warnMessage = storeName
-    ? `Your store “${storeName}” and all its products, orders, and messages will be permanently deleted. This also removes your AiShopy account and cannot be undone.`
-    : 'This permanently removes your AiShopy account and all associated data. This cannot be undone.'
+  const ownedStoreNames = useMemo(() => {
+    const names = stores
+      .filter((item) => item.role === 'owner')
+      .map((item) => item.store.name)
+
+    const ownsCurrentStore =
+      role === 'owner' ||
+      (Boolean(user?.id) && Boolean(store?.owner_id) && store?.owner_id === user?.id)
+
+    if (ownsCurrentStore) {
+      const currentName = store?.name ?? storeName
+      if (currentName && !names.includes(currentName)) {
+        names.push(currentName)
+      }
+    }
+
+    return names
+  }, [stores, role, store?.name, store?.owner_id, storeName, user?.id])
+
+  const deletesOwnedStores = ownedStoreNames.length > 0
+
+  const cardDescription = deletesOwnedStores
+    ? 'Permanently delete your account and all stores you own. This action cannot be reversed.'
+    : 'Permanently delete your AiShopy account. Stores you access as staff are not deleted.'
+
+  const warnMessage = deletesOwnedStores
+    ? ownedStoreNames.length === 1
+      ? `Your store “${ownedStoreNames[0]}” and all its products, orders, and messages will be permanently deleted. This also removes your AiShopy account and cannot be undone.`
+      : `This permanently deletes your AiShopy account and all ${ownedStoreNames.length} stores you own (including products, orders, and messages). Staff access to other people’s stores is removed. This cannot be undone.`
+    : 'This permanently removes your AiShopy account and your staff access to any stores. Stores you work in as staff are not deleted. This cannot be undone.'
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -54,7 +81,7 @@ export function DeleteAccountSection({ storeName, variant = 'card' }: Props) {
               Danger zone
             </Caption>
             <Muted className="text-[14px] leading-5 text-rose-950">
-              Permanently delete your account and all store data. This action cannot be reversed.
+              {cardDescription}
             </Muted>
           </View>
         </View>
@@ -88,7 +115,11 @@ export function DeleteAccountSection({ storeName, variant = 'card' }: Props) {
         visible={step === 'confirm'}
         tone="danger"
         title="Delete forever?"
-        message="All account data will be permanently removed. You will be signed out immediately."
+        message={
+          deletesOwnedStores
+            ? 'All account data and stores you own will be permanently removed. You will be signed out immediately.'
+            : 'Your account and staff access will be permanently removed. Stores you work in as staff are not deleted. You will be signed out immediately.'
+        }
         confirmLabel="Delete account"
         confirmVariant="danger"
         loading={deleting}

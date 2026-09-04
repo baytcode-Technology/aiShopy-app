@@ -16,12 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aishopy.app",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "usesAppleSignIn": true,
       "entitlements": {
-        "com.apple.developer.applesignin": [
-          "Default"
-        ]
+        "com.apple.developer.applesignin": ["Default"]
       },
       "infoPlist": {
         "LSApplicationQueriesSchemes": [

@@ -45,7 +45,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
     setName(store.name)
     setIndustry(store.industry ?? '')
     setDescription(store.description ?? '')
-    setPhoneNumber(store.whatsapp_number)
+    setPhoneNumber(store.whatsapp_number ?? '')
     setCountry({
       name: store.country ?? DEFAULT_COUNTRY.name,
       cca2: guessCountryCodeFromName(store.country ?? DEFAULT_COUNTRY.name),
@@ -77,8 +77,9 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
       showError('Store name is required')
       return
     }
-    if (!phoneNumber.trim()) {
-      showError('Phone number is required')
+    const trimmedPhone = phoneNumber.trim()
+    if (trimmedPhone && (trimmedPhone.length < 8 || trimmedPhone.length > 20)) {
+      showError('Contact number must be 8–20 characters')
       return
     }
     if (!country.name.trim()) {
@@ -101,7 +102,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
         name: trimmedName,
         industry,
         description,
-        whatsapp_number: phoneNumber.trim(),
+        whatsapp_number: trimmedPhone || null,
         country: country.name.trim(),
         currency: currency.trim().toUpperCase(),
         ...(nextLogoUrl !== undefined ? { logo_url: nextLogoUrl } : {}),
@@ -117,9 +118,13 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
       showSuccess('Store updated')
       handleClose()
     } catch (e) {
-      if (getApiErrorCode(e) === 'SLUG_EXISTS') {
+      if (getApiErrorCode(e) === 'SLUG_EXISTS' || getApiErrorCode(e) === 'CONFLICT') {
+        showError('This store name is already taken. Change the store name.')
+        return
+      }
+      if (getApiErrorCode(e) === 'WHATSAPP_EXISTS') {
         showError(
-          'A store with this URL slug already exists. Choose a different store name.'
+          'This contact number is already registered. Use a different number or leave it blank.'
         )
         return
       }
@@ -158,7 +163,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
         value={phoneNumber}
         onChange={setPhoneNumber}
         resetKey={store ? `${store.id}-${visible}` : undefined}
-        label="Phone number *"
+        label="Contact number"
       />
       <IndustryPicker value={industry} onChange={setIndustry} />
       <Input

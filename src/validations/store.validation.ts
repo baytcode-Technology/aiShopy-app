@@ -9,20 +9,28 @@ export const createStoreFormSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(3, "Slug must be at least 3 characters")
-    .max(63, "Slug must be at most 63 characters")
+    .min(3, "Store name must produce a URL of at least 3 characters")
+    .max(63, "Store name is too long")
     .transform((s) => s.toLowerCase())
     .refine((s) => slugRegex.test(s), {
-      message: "Use lowercase letters, numbers, and hyphens only",
+      message: "Use a store name with letters or numbers",
     })
     .refine((s) => !reserved.has(s), {
-      message: "This slug is reserved. Choose another.",
+      message: "This name is reserved. Choose another store name.",
     }),
   whatsapp_number: z
     .string()
     .trim()
-    .min(8, "WhatsApp number is required")
-    .max(20, "WhatsApp number is too long"),
+    .transform((s) => (s === "" ? null : s))
+    .pipe(
+      z.union([
+        z.null(),
+        z
+          .string()
+          .min(8, "Contact number must be at least 8 characters")
+          .max(20, "Contact number is too long"),
+      ]),
+    ),
   currency: z
     .string()
     .trim()

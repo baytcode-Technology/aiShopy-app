@@ -13,6 +13,7 @@ import { fetchSupportAdminStatus } from '@src/api/support'
 import { env } from '@src/config/env'
 import { useAuth } from '@src/contexts/auth-context'
 import { useStore } from '@src/contexts/store-context'
+import { getApiErrorCode } from '@src/lib/api-error'
 import {
   DEFAULT_COUNTRY,
   defaultCurrencyForCountry,
@@ -32,12 +33,18 @@ import { Pressable, View } from 'react-native'
 
 type FieldErrors = Partial<Record<keyof CreateStoreFormValues, string>>
 
+const STORE_NAME_TAKEN_TOAST =
+  'This store name is already taken. Change the store name.'
+const STORE_NAME_TAKEN_HELPER = 'Already exists. Change the store name.'
+const CONTACT_TAKEN_TOAST =
+  'This contact number is already registered. Use a different number or leave it blank.'
+const CONTACT_TAKEN_HELPER =
+  'Already registered. Use a different number or leave it blank.'
+
 export default function CreateStoreScreen() {
   const { signOut } = useAuth()
   const { activateStoreSession, clearStore, refreshStores } = useStore()
   const [name, setName] = useState('')
-  const [slug, setSlug] = useState('')
-  const [slugTouched, setSlugTouched] = useState(false)
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [country, setCountry] = useState<CountryValue>(DEFAULT_COUNTRY)
   const [currency, setCurrency] = useState('USD')
@@ -49,17 +56,31 @@ export default function CreateStoreScreen() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false)
   const prevCountryCode = useRef(country.cca2)
 
+  const slug = slugifyFromName(name)
+
   useEffect(() => {
     void fetchSupportAdminStatus()
       .then((res) => setIsPlatformAdmin(res.data.isAdmin))
       .catch(() => setIsPlatformAdmin(false))
   }, [])
 
+  const clearFieldError = (key: keyof FieldErrors) => {
+    setErrors((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
+
   const onNameChange = (value: string) => {
     setName(value)
-    if (!slugTouched) {
-      setSlug(slugifyFromName(value))
-    }
+    clearFieldError('name')
+  }
+
+  const onWhatsappChange = (value: string) => {
+    setWhatsappNumber(value)
+    clearFieldError('whatsapp_number')
   }
 
   const handleCountryChange = (next: CountryValue) => {
@@ -89,8 +110,9 @@ export default function CreateStoreScreen() {
       const next: FieldErrors = {}
       for (const issue of parsed.error.issues) {
         const key = issue.path[0] as keyof CreateStoreFormValues
-        if (!next[key]) {
-          next[key] = issue.message
+        const field = key === 'slug' ? 'name' : key
+        if (!next[field]) {
+          next[field] = issue.message
         }
       }
       setErrors(next)
@@ -111,6 +133,17 @@ export default function CreateStoreScreen() {
       )
       router.replace('/(store)/chats' as Href)
     } catch (e) {
+      const code = getApiErrorCode(e)
+      if (code === 'SLUG_EXISTS' || code === 'CONFLICT') {
+        setErrors({ name: STORE_NAME_TAKEN_HELPER })
+        showError(STORE_NAME_TAKEN_TOAST)
+        return
+      }
+      if (code === 'WHATSAPP_EXISTS') {
+        setErrors({ whatsapp_number: CONTACT_TAKEN_HELPER })
+        showError(CONTACT_TAKEN_TOAST)
+        return
+      }
       showError(e)
     } finally {
       setLoading(false)
@@ -162,18 +195,6 @@ export default function CreateStoreScreen() {
         placeholder="My Shop"
         error={errors.name}
       />
-      <AuthInput
-        label="Store slug (subdomain) *"
-        value={slug}
-        onChangeText={(v) => {
-          setSlugTouched(true)
-          setSlug(v.toLowerCase().replace(/[^a-z0-9-]/g, ''))
-        }}
-        placeholder="my-shop"
-        autoCapitalize="none"
-        autoCorrect={false}
-        error={errors.slug}
-      />
       <Caption className="pl-1 -mt-1 mb-2.5">
         Your store domain: {slug || 'my-shop'}.{env.storefrontBaseDomain}
       </Caption>
@@ -195,8 +216,9 @@ export default function CreateStoreScreen() {
       />
       <PhoneNumberField
         variant="auth"
+        label="Contact number"
         value={whatsappNumber}
-        onChange={setWhatsappNumber}
+        onChange={onWhatsappChange}
         error={errors.whatsapp_number}
       />
 

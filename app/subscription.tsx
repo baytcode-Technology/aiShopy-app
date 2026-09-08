@@ -331,7 +331,7 @@ export default function SubscriptionScreen() {
           visible={checkoutSession !== null}
           checkout={checkoutSession}
           customerEmail={user?.email}
-          customerPhone={store?.whatsapp_number}
+          customerPhone={store?.whatsapp_number ?? undefined}
           customerName={store?.name}
           onSuccess={(payment) => void handlePaymentSuccess(payment)}
           onDismiss={() => setCheckoutSession(null)}

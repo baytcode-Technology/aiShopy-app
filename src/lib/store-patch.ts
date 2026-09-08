@@ -19,7 +19,8 @@ export function buildStoreUpdatePatch(
   const name = form.name.trim()
   const industry = form.industry.trim() || null
   const description = form.description.trim() || null
-  const whatsapp = form.whatsapp_number.trim()
+  const whatsapp = form.whatsapp_number.trim() || null
+  const currentWhatsapp = store.whatsapp_number ?? null
 
   if (name !== store.name) {
     patch.name = name
@@ -30,7 +31,7 @@ export function buildStoreUpdatePatch(
   }
   if (industry !== (store.industry ?? null)) patch.industry = industry
   if (description !== (store.description ?? null)) patch.description = description
-  if (whatsapp !== store.whatsapp_number) patch.whatsapp_number = whatsapp
+  if (whatsapp !== currentWhatsapp) patch.whatsapp_number = whatsapp
   if (form.country.trim() !== store.country) patch.country = form.country.trim()
   if (form.currency.trim().toUpperCase() !== store.currency) {
     patch.currency = form.currency.trim().toUpperCase()

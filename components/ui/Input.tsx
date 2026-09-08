@@ -64,7 +64,7 @@ export function Input({
         {...props}
       />
       {error ? (
-        <Text className="text-[11px] font-semibold text-[#E11D48] uppercase tracking-wide pl-0.5 mt-0.5">
+        <Text className="text-[12px] font-medium text-[#E11D48] pl-0.5 mt-0.5">
           {error}
         </Text>
       ) : null}

@@ -19,7 +19,7 @@ type Props = {
 export function PhoneNumberField({
   value,
   onChange,
-  label = 'WhatsApp number *',
+  label = 'Contact number',
   error,
   variant = 'default',
   resetKey,

@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Switch, Text, View } from 'react-native'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
 import { Button } from '@/components/ui/Button'
 import { PaymentMethodConfigSkeleton } from '@/components/ui/Skeleton'
@@ -9,19 +9,26 @@ import { fetchPaymentConfig, updatePaymentConfig } from '@src/api/payment-config
 import { useStore } from '@src/contexts/store-context'
 import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { shadows } from '@src/lib/shadows'
-import { showError, showSuccess } from '@src/lib/toast'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 
 export default function CodPaymentScreen() {
-  const { store } = useStore()
+  const { store, role } = useStore()
   const [enabled, setEnabled] = useState(true)
   const [savedEnabled, setSavedEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    if (role === 'staff') {
+      showWarning('Only the store owner can change payment methods')
+      router.back()
+    }
+  }, [role])
+
   const isDirty = !loading && enabled !== savedEnabled
 
   const load = useCallback(async () => {
-    if (!store?.id) return
+    if (!store?.id || role === 'staff') return
     setLoading(true)
     try {
       const res = await fetchPaymentConfig(store.id)
@@ -33,7 +40,7 @@ export default function CodPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [store?.id])
+  }, [store?.id, role])
 
   useFocusEffect(
     useCallback(() => {
@@ -62,6 +69,8 @@ export default function CodPaymentScreen() {
     isLoading: loading,
     onSave: save,
   })
+
+  if (role === 'staff') return null
 
   return (
     <PaymentMethodConfigLayout

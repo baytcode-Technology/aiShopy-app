@@ -242,6 +242,13 @@ export default function SettingsScreen() {
               onPress={() => router.push("/notifications" as Href)}
             />
             <MenuRow
+              label="Chat Boat"
+              value="Inbox auto-reply on or off"
+              icon="magic"
+              showChevron
+              onPress={() => router.push("/chat-boat" as Href)}
+            />
+            <MenuRow
               label="Printer"
               value="Receipts & labels"
               icon="print"

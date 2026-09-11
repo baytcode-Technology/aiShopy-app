@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Linking, Platform, Pressable, Switch, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import * as Clipboard from 'expo-clipboard'
 import { RazorpayWebCheckout } from '@/components/subscription/RazorpayWebCheckout'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
@@ -43,7 +43,7 @@ function testStatusLabel(
 }
 
 export default function RazorpayPaymentScreen() {
-  const { store } = useStore()
+  const { store, role } = useStore()
   const [enabled, setEnabled] = useState(false)
   const [mode, setMode] = useState<RazorpayMode>('test')
   const [keyId, setKeyId] = useState('')
@@ -62,6 +62,13 @@ export default function RazorpayPaymentScreen() {
   const [testing, setTesting] = useState(false)
   const [checkoutSession, setCheckoutSession] = useState<RazorpaySetupTestCheckout | null>(null)
   const [checkoutVisible, setCheckoutVisible] = useState(false)
+
+  useEffect(() => {
+    if (role === 'staff') {
+      showWarning('Only the store owner can change payment methods')
+      router.back()
+    }
+  }, [role])
 
   const { url: webhookUrl, isProductionFallback } = getRazorpayWebhookUrl()
 
@@ -122,7 +129,7 @@ export default function RazorpayPaymentScreen() {
   }, [checkoutSession])
 
   const load = useCallback(async () => {
-    if (!store?.id) return
+    if (!store?.id || role === 'staff') return
     setLoading(true)
     try {
       const res = await fetchPaymentConfig(store.id)
@@ -143,7 +150,7 @@ export default function RazorpayPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [store?.id])
+  }, [store?.id, role])
 
   useFocusEffect(
     useCallback(() => {
@@ -317,6 +324,8 @@ export default function RazorpayPaymentScreen() {
     }
     setEnabled(value)
   }
+
+  if (role === 'staff') return null
 
   return (
     <PaymentMethodConfigLayout

@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Image, Pressable, Switch, Text, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
-import { useFocusEffect } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
 import { CategoryImagePicker } from '@/components/store/CategoryImagePicker'
 import type { PickedImage } from '@/components/store/ProductImagePicker'
@@ -14,7 +14,7 @@ import { uploadProductImages } from '@src/api/uploads'
 import { useStore } from '@src/contexts/store-context'
 import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { shadows } from '@src/lib/shadows'
-import { showError, showSuccess } from '@src/lib/toast'
+import { showError, showSuccess, showWarning } from '@src/lib/toast'
 
 function mimeFromUri(uri: string): string {
   const lower = uri.toLowerCase()
@@ -32,7 +32,7 @@ type UpiSavedSnapshot = {
 }
 
 export default function UpiPaymentScreen() {
-  const { store } = useStore()
+  const { store, role } = useStore()
   const [enabled, setEnabled] = useState(false)
   const [vpa, setVpa] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -46,6 +46,13 @@ export default function UpiPaymentScreen() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (role === 'staff') {
+      showWarning('Only the store owner can change payment methods')
+      router.back()
+    }
+  }, [role])
 
   const qrDisplayUri = qrImage?.uri ?? qrUrl
 
@@ -61,7 +68,7 @@ export default function UpiPaymentScreen() {
   }, [loading, enabled, saved, vpa, displayName, qrUrl, qrImage])
 
   const load = useCallback(async () => {
-    if (!store?.id) return
+    if (!store?.id || role === 'staff') return
     setLoading(true)
     try {
       const res = await fetchPaymentConfig(store.id)
@@ -83,7 +90,7 @@ export default function UpiPaymentScreen() {
     } finally {
       setLoading(false)
     }
-  }, [store?.id])
+  }, [store?.id, role])
 
   useFocusEffect(
     useCallback(() => {
@@ -164,6 +171,8 @@ export default function UpiPaymentScreen() {
     isLoading: loading,
     onSave: save,
   })
+
+  if (role === 'staff') return null
 
   return (
     <PaymentMethodConfigLayout

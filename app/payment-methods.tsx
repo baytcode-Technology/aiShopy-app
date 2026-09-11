@@ -9,7 +9,7 @@ import { PaymentMethodsListSkeleton } from '@/components/ui/Skeleton'
 import { Muted } from '@/components/ui/Typography'
 import { fetchPaymentConfig } from '@src/api/payment-config'
 import { useStore } from '@src/contexts/store-context'
-import { showError } from '@src/lib/toast'
+import { showError, showWarning } from '@src/lib/toast'
 import type { RazorpayMode } from '@src/types/payment-config'
 
 function paymentMethodValue(
@@ -29,7 +29,8 @@ function paymentMethodValue(
 }
 
 export default function PaymentMethodsScreen() {
-  const { store } = useStore()
+  const { store, role } = useStore()
+  const isOwner = role === 'owner'
   const [loading, setLoading] = useState(true)
   const [codEnabled, setCodEnabled] = useState(false)
   const [razorpayEnabled, setRazorpayEnabled] = useState(false)
@@ -59,6 +60,14 @@ export default function PaymentMethodsScreen() {
     }, [load])
   )
 
+  const openMethod = (href: Href) => {
+    if (!isOwner) {
+      showWarning('Only the store owner can change payment methods')
+      return
+    }
+    router.push(href)
+  }
+
   return (
     <Screen>
       <ScreenHeader
@@ -68,7 +77,9 @@ export default function PaymentMethodsScreen() {
       />
       <ScreenScrollBody>
         <Muted className="text-[14px] leading-5 mb-4">
-          Choose how customers pay at checkout. Connect and manage each method below.
+          {isOwner
+            ? 'Choose how customers pay at checkout. Connect and manage each method below.'
+            : 'Payment methods used at checkout. Only the store owner can change them.'}
         </Muted>
 
         {loading ? (
@@ -83,8 +94,8 @@ export default function PaymentMethodsScreen() {
                 razorpayMode,
               )}
               icon="credit-card"
-              showChevron
-              onPress={() => router.push('/payment-methods/razorpay' as Href)}
+              showChevron={isOwner}
+              onPress={() => openMethod('/payment-methods/razorpay' as Href)}
             />
             <MenuRow
               label="Cash on delivery"
@@ -93,15 +104,15 @@ export default function PaymentMethodsScreen() {
                 'Pay when the order arrives',
               )}
               icon="money"
-              showChevron
-              onPress={() => router.push('/payment-methods/cod' as Href)}
+              showChevron={isOwner}
+              onPress={() => openMethod('/payment-methods/cod' as Href)}
             />
             <MenuRow
               label="UPI"
               value={paymentMethodValue(upiEnabled, 'Manual UPI ID & QR')}
               icon="mobile"
-              showChevron
-              onPress={() => router.push('/payment-methods/upi' as Href)}
+              showChevron={isOwner}
+              onPress={() => openMethod('/payment-methods/upi' as Href)}
             />
           </View>
         )}

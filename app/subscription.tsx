@@ -37,10 +37,14 @@ import {
   type SubscriptionPlan,
 } from "@src/lib/subscription";
 import { showError, showSuccess, showWarning } from "@src/lib/toast";
+import {
+  PRIVACY_POLICY_URL,
+  TERMS_OF_USE_URL,
+} from "@src/lib/support-contact";
 import Colors from "@src/theme/colors";
 import { router, type Href } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { Alert, Linking, Platform, Pressable, Text, View } from "react-native";
 
 export default function SubscriptionScreen() {
   const { user } = useAuth();
@@ -211,6 +215,13 @@ export default function SubscriptionScreen() {
   const subscribeLabel =
     useAppleIap || !pricing?.trial_eligible ? "Subscribe" : "Start trial";
   const showPlanCards = premium || !pricingLoading;
+  const businessPriceLabel = businessPrice ?? getBusinessPriceLabel(store);
+
+  const handleOpenLegalUrl = (url: string, label: string) => {
+    void Linking.openURL(url).catch(() => {
+      Alert.alert(label, `Open ${url} in your browser.`);
+    });
+  };
 
   return (
     <Screen>
@@ -285,8 +296,8 @@ export default function SubscriptionScreen() {
 
             <PlanCard
               emoji="🚀"
-              title="Business"
-              price={businessPrice ?? getBusinessPriceLabel(store)}
+              title="AiShopy Business"
+              price={businessPriceLabel}
               compareAtPrice={businessCompareAtPrice}
               subtitle={premium ? undefined : "Everything in Starter +"}
               features={BUSINESS_FEATURES}
@@ -324,6 +335,51 @@ export default function SubscriptionScreen() {
             className="w-full"
           />
         ) : null}
+
+        <View className="gap-3 px-1">
+          <Muted className="text-[13px] leading-5">
+            Auto-renewable subscription: AiShopy Business. Length: 1 month.
+            Price: {businessPriceLabel}.
+          </Muted>
+          {useAppleIap ? (
+            <Muted className="text-[13px] leading-5">
+              Payment is charged to your Apple ID. The subscription renews
+              automatically unless you cancel at least 24 hours before the end
+              of the current period. Manage or cancel in your Apple ID account
+              settings.
+            </Muted>
+          ) : null}
+          <View className="flex-row flex-wrap items-center gap-x-4 gap-y-2">
+            <Pressable
+              onPress={() =>
+                handleOpenLegalUrl(PRIVACY_POLICY_URL, "Privacy Policy")
+              }
+              hitSlop={8}
+            >
+              <Text className="text-[14px] font-semibold text-brand-primary underline">
+                Privacy Policy
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                handleOpenLegalUrl(TERMS_OF_USE_URL, "Terms of Use")
+              }
+              hitSlop={8}
+            >
+              <Text className="text-[14px] font-semibold text-brand-primary underline">
+                Terms of Use
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push("/ai-privacy" as Href)}
+              hitSlop={8}
+            >
+              <Text className="text-[14px] font-semibold text-brand-primary underline">
+                AI & data privacy
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </ScreenScrollBody>
 
       {!useAppleIap ? (

@@ -9,9 +9,37 @@ function parseEntityId(value: unknown): number | null {
   return null
 }
 
+function parseUserId(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  return null
+}
+
 export function navigateFromNotificationData(data: Record<string, unknown>): boolean {
   const type = typeof data.type === 'string' ? data.type : ''
   const channel = typeof data.channel === 'string' ? data.channel : ''
+
+  if (type === 'ticket_raised' || type === 'support_message') {
+    const conversationId = parseEntityId(data.conversationId)
+    if (conversationId != null) {
+      router.navigate('/platform-admin-workspace/support' as Href)
+      router.push(`/platform-support/${conversationId}` as Href)
+      return true
+    }
+    router.navigate('/platform-admin-workspace/support' as Href)
+    return true
+  }
+
+  if (type === 'user_signed_up') {
+    const userId = parseUserId(data.userId)
+    router.navigate('/platform-admin-workspace/users' as Href)
+    if (userId) {
+      router.push({
+        pathname: '/platform-admin-user/[id]',
+        params: { id: userId },
+      } as Href)
+    }
+    return true
+  }
 
   if (type === 'support' || channel === 'support') {
     router.navigate('/(store)/chats' as Href)

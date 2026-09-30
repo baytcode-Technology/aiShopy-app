@@ -4,7 +4,7 @@ import { router, type Href } from "expo-router";
 import { useCallback } from "react";
 
 /** Prefer stack back; fall back to Admin home when platform admin has no store. */
-export function usePlatformAdminBack(fallbackHref: Href = "/platform-admin") {
+export function usePlatformAdminBack(fallbackHref: Href = "/platform-admin-workspace/support") {
   const { store } = useStore();
   const { isPlatformAdmin } = usePlatformAdmin();
 

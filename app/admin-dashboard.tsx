@@ -1,31 +1,32 @@
 import { LockedMenuRow } from "@/components/subscription/LockedMenuRow";
 import { DeleteAccountSection } from "@/components/account/DeleteAccountSection";
+import { CustomDomainPanel } from "@/components/admin/CustomDomainPanel";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { env } from "@src/config/env";
 import { useStore } from "@src/contexts/store-context";
 import { shadows } from "@src/lib/shadows";
 import { hasPremiumAccess } from "@src/lib/subscription";
-import Colors from "@src/theme/colors";
 import { Redirect, router, type Href } from "expo-router";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export default function AdminDashboardScreen() {
   const { store, role } = useStore();
   const premium = hasPremiumAccess(store);
   const [domainOpen, setDomainOpen] = useState(false);
-  const [customDomainComingSoon, setCustomDomainComingSoon] = useState(false);
 
   if (role === "staff") {
     return <Redirect href="/settings" />;
   }
 
-  const currentDomain = store?.slug
-    ? `${store.slug}.${env.storefrontBaseDomain}`
-    : "—";
+  const currentDomain =
+    store?.custom_domain_status === "active" && store.custom_domain
+      ? store.custom_domain
+      : store?.slug
+        ? `${store.slug}.${env.storefrontBaseDomain}`
+        : "—";
 
   const goToSubscription = () => router.push("/subscription" as Href);
 
@@ -35,15 +36,6 @@ export default function AdminDashboardScreen() {
       return;
     }
     setDomainOpen((open) => !open);
-    if (domainOpen) setCustomDomainComingSoon(false);
-  };
-
-  const handleCustomDomainPress = () => {
-    if (!premium) {
-      goToSubscription();
-      return;
-    }
-    setCustomDomainComingSoon(true);
   };
 
   return (
@@ -130,41 +122,7 @@ export default function AdminDashboardScreen() {
                 </Muted>
               </View>
 
-              <Pressable
-                onPress={handleCustomDomainPress}
-                className="px-5 py-4 flex-row items-center justify-between"
-              >
-                <View className="flex-1 pr-3">
-                  <Caption className="text-[10px] uppercase tracking-widest text-gray-400 mb-1.5">
-                    Custom domain
-                  </Caption>
-                  <Text className="text-[15px] font-semibold text-ink">
-                    Use your own domain
-                  </Text>
-                  <Muted className="mt-1.5 text-[13px]">
-                    e.g. shop.yourbrand.com
-                  </Muted>
-                </View>
-                <FontAwesome
-                  name="chevron-right"
-                  size={12}
-                  color={Colors.text.muted}
-                />
-              </Pressable>
-
-              {customDomainComingSoon ? (
-                <View className="px-5 pb-4 pt-0">
-                  <View className="rounded-xl bg-gray-100 border border-gray-200 px-4 py-3">
-                    <Text className="text-[13px] font-bold text-ink mb-1">
-                      Coming soon
-                    </Text>
-                    <Muted className="text-[13px] leading-5">
-                      Custom domain setup will be available here. You can
-                      connect your own domain to your storefront soon.
-                    </Muted>
-                  </View>
-                </View>
-              ) : null}
+              <CustomDomainPanel />
             </View>
           ) : null}
         </View>

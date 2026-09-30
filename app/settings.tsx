@@ -131,7 +131,9 @@ export default function SettingsScreen() {
               value="AiShopy merchant Chat with AI"
               icon="inbox"
               showChevron
-              onPress={() => router.push("/platform-support-inbox" as Href)}
+              onPress={() =>
+                router.push("/platform-admin-workspace/support" as Href)
+              }
             />
             <MenuRow
               label="Create a store"
@@ -296,7 +298,7 @@ export default function SettingsScreen() {
                     icon="inbox"
                     showChevron
                     onPress={() =>
-                      router.push("/platform-support-inbox" as Href)
+                      router.push("/platform-admin-workspace/support" as Href)
                     }
                   />
                   {unreadOnTickets > 0 ? (

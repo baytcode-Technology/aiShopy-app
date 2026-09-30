@@ -16,7 +16,13 @@ import {
   fetchNotificationPreferences,
   registerPushToken,
 } from '@src/api/notification-preferences'
+import { registerThisDeviceAsAdminPush } from '@src/api/platform-admin-push'
+import { fetchSupportAdminStatus } from '@src/api/support'
 import { navigateFromNotificationData } from '@src/lib/notification-navigation'
+import {
+  getAdminAlertsEnabled,
+  getStoreAlertsEnabled,
+} from '@src/lib/push-alert-prefs'
 import {
   ALERTS_CHANNEL_ID,
   addNotificationResponseListener,
@@ -36,6 +42,7 @@ const DEFAULT_PREFS: NotificationPreferences = {
 type StoreNotificationsContextValue = {
   preferences: NotificationPreferences
   refreshPreferences: () => Promise<void>
+  registerStoreAlerts: () => Promise<boolean>
 }
 
 const StoreNotificationsContext = createContext<StoreNotificationsContextValue | null>(null)
@@ -56,46 +63,70 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
     }
   }, [store?.id])
 
+  const registerStoreAlerts = useCallback(async (): Promise<boolean> => {
+    if (!store?.id) return false
+    try {
+      const token = await getExpoPushToken()
+      if (!token) return false
+      await registerPushToken(store.id, {
+        expo_push_token: token,
+        platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
+        sound_channel_id: ALERTS_CHANNEL_ID,
+      })
+      return true
+    } catch (err) {
+      console.warn('[push] Could not register push token:', err)
+      return false
+    }
+  }, [store?.id])
+
   useEffect(() => {
-    if (!isAuthenticated || !store?.id) {
+    if (!isAuthenticated) {
       setPushAlertsEnabled(false)
       return
     }
     setPushAlertsEnabled(true)
     void refreshPreferences()
-  }, [isAuthenticated, store?.id, refreshPreferences])
+  }, [isAuthenticated, refreshPreferences])
 
   useEffect(() => {
     if (!isAuthenticated || !store?.id) return
 
     void setupAndroidNotificationChannels()
+    void (async () => {
+      const enabled = await getStoreAlertsEnabled()
+      if (!enabled) return
+      await registerStoreAlerts()
+    })()
+  }, [isAuthenticated, store?.id, registerStoreAlerts])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
 
     void (async () => {
       try {
-        const token = await getExpoPushToken()
-        if (!token) return
-
-        await registerPushToken(store.id, {
-          expo_push_token: token,
-          platform: Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'web',
-          sound_channel_id: ALERTS_CHANNEL_ID,
-        })
+        const enabled = await getAdminAlertsEnabled()
+        if (!enabled) return
+        const res = await fetchSupportAdminStatus()
+        if (!res.data.isAdmin) return
+        await setupAndroidNotificationChannels()
+        await registerThisDeviceAsAdminPush()
       } catch (err) {
-        console.warn('[push] Could not register push token:', err)
+        console.warn('[push] Could not register admin push token:', err)
       }
     })()
-  }, [isAuthenticated, store?.id])
+  }, [isAuthenticated])
 
   useEffect(() => {
-    if (!isAuthenticated || !store?.id) return
+    if (!isAuthenticated) return
 
     return addNotificationResponseListener((data) => {
       navigateFromNotificationData(data)
     })
-  }, [isAuthenticated, store?.id])
+  }, [isAuthenticated])
 
   useEffect(() => {
-    if (!isAuthenticated || !store?.id || initialNotificationHandled.current) return
+    if (!isAuthenticated || initialNotificationHandled.current) return
 
     void (async () => {
       const response = await Notifications.getLastNotificationResponseAsync()
@@ -106,14 +137,15 @@ export function StoreNotificationsProvider({ children }: { children: ReactNode }
         navigateFromNotificationData(data as Record<string, unknown>)
       }
     })()
-  }, [isAuthenticated, store?.id])
+  }, [isAuthenticated])
 
   const value = useMemo(
     () => ({
       preferences,
       refreshPreferences,
+      registerStoreAlerts,
     }),
-    [preferences, refreshPreferences]
+    [preferences, refreshPreferences, registerStoreAlerts]
   )
 
   return (

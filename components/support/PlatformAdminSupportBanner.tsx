@@ -14,7 +14,7 @@ export function PlatformAdminSupportBanner() {
 
   return (
     <AppPressable
-      onPress={() => router.push("/platform-support-inbox" as Href)}
+      onPress={() => router.push("/platform-admin-workspace/support" as Href)}
       containerClassName="mx-1 mb-3 rounded-2xl border-2 border-brand-green/40 bg-[#E8F8EC] px-4 py-3 flex-row items-center gap-3"
     >
       <View className="relative w-10 h-10 rounded-full bg-brand-green items-center justify-center">

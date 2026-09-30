@@ -62,6 +62,9 @@ export default function RootLayout() {
                   <Stack.Screen name="platform-support-inbox" />
                   <Stack.Screen name="platform-support" />
                   <Stack.Screen name="platform-admin" />
+                  <Stack.Screen name="platform-admin-workspace" />
+                  <Stack.Screen name="platform-admin-users" />
+                  <Stack.Screen name="platform-admin-user" />
                   <Stack.Screen name="settings" />
                   <Stack.Screen name="ai-privacy" />
                   <Stack.Screen name="privacy-policy" />

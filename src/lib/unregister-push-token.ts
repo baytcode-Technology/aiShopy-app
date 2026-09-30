@@ -1,5 +1,6 @@
 import { apiFetch } from '@src/api/client'
 import { endpoints } from '@src/api/endpoints'
+import { unregisterThisDeviceAdminPush } from '@src/api/platform-admin-push'
 import { storeIdQuery } from '@src/api/stores'
 import { getAccessToken } from '@src/lib/auth-storage'
 import { getExpoPushToken, setPushAlertsEnabled } from '@src/lib/push-notifications'
@@ -13,6 +14,12 @@ import { getStoreSession } from '@src/lib/store-storage'
  */
 export async function unregisterDevicePushToken(): Promise<void> {
   setPushAlertsEnabled(false)
+
+  try {
+    await unregisterThisDeviceAdminPush()
+  } catch {
+    // Continue — store token unregister still matters.
+  }
 
   try {
     const session = await getStoreSession()

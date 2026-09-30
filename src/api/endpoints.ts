@@ -10,6 +10,7 @@ export const endpoints = {
   storesMine: "/api/stores/mine",
   storesStaff: "/api/stores/staff",
   stores: "/api/stores",
+  customDomain: "/api/stores/me/custom-domain",
   inboxAiSettings: (storeId: number) => `/api/stores/${storeId}/inbox-ai/settings`,
   whatsappReplyMode: (conversationId: number, storeId: number) =>
     `/api/whatsapp/chats/${conversationId}/reply-mode?store_id=${storeId}`,
@@ -72,4 +73,7 @@ export const endpoints = {
   supportAdminSummary: "/api/support/admin/summary",
   supportAdminMarkRead: (conversationId: number) =>
     `/api/support/admin/conversations/${conversationId}/read`,
+  platformAdminUsers: "/api/platform-admin/users",
+  platformAdminUser: (userId: string) => `/api/platform-admin/users/${userId}`,
+  platformAdminPushToken: "/api/platform-admin/push-token",
 } as const;

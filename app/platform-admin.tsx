@@ -1,3 +1,4 @@
+import { AdminAlertsToggle } from "@/components/admin/AdminAlertsToggle";
 import { Button } from "@/components/ui/Button";
 import { MenuRow } from "@/components/ui/MenuRow";
 import { UnreadCountBadge } from "@/components/ui/UnreadCountBadge";
@@ -56,17 +57,19 @@ export default function PlatformAdminScreen() {
 
         <View className="relative">
           <MenuRow
-            label="Support inbox"
+            label="Admin"
             value={
               openTickets > 0
                 ? `${openTickets} open ticket${openTickets === 1 ? "" : "s"}`
                 : unreadOnTickets > 0
                   ? `${unreadOnTickets} unread message${unreadOnTickets === 1 ? "" : "s"} on tickets`
-                  : "AiShopy merchant Chat with AI"
+                  : "Support inbox and merchant users"
             }
-            icon="inbox"
+            icon="cog"
             showChevron
-            onPress={() => router.push("/platform-support-inbox" as Href)}
+            onPress={() =>
+              router.push("/platform-admin-workspace/support" as Href)
+            }
           />
           {unreadOnTickets > 0 ? (
             <View className="absolute top-3 right-5">
@@ -74,6 +77,8 @@ export default function PlatformAdminScreen() {
             </View>
           ) : null}
         </View>
+
+        <AdminAlertsToggle />
 
         <MenuRow
           label="Create a store"

@@ -1,16 +1,25 @@
 import { useCallback, useState } from 'react'
-import { Pressable, Switch, Text, View } from 'react-native'
+import { Linking, Pressable, Switch, Text, View } from 'react-native'
+import * as Notifications from 'expo-notifications'
 import { useFocusEffect } from 'expo-router'
+import { Button } from '@/components/ui/Button'
 import { Screen, ScreenScrollBody } from '@/components/ui/Screen'
 import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { NotificationSettingsSkeleton } from '@/components/ui/Skeleton'
 import { Label, Muted } from '@/components/ui/Typography'
 import {
   fetchNotificationPreferences,
+  unregisterPushToken,
   updateNotificationPreferences,
 } from '@src/api/notification-preferences'
 import {
+  getStoreAlertsEnabled,
+  setStoreAlertsEnabledFlag,
+} from '@src/lib/push-alert-prefs'
+import {
   ensureNotificationPermissions,
+  getExpoPushToken,
+  setPushAlertsEnabled,
   setupAndroidNotificationChannels,
 } from '@src/lib/push-notifications'
 import { shadows } from '@src/lib/shadows'
@@ -31,10 +40,13 @@ function notificationSettingsErrorMessage(error: unknown, fallback: string): str
 
 export default function NotificationsScreen() {
   const { store } = useStore()
-  const { refreshPreferences: refreshProviderPrefs } = useStoreNotifications()
+  const { refreshPreferences: refreshProviderPrefs, registerStoreAlerts } = useStoreNotifications()
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushDenied, setPushDenied] = useState(false)
 
   const load = useCallback(async () => {
     if (!store?.id) return
@@ -50,13 +62,66 @@ export default function NotificationsScreen() {
     }
   }, [store?.id])
 
+  const refreshPushState = useCallback(async () => {
+    const pref = await getStoreAlertsEnabled()
+    const permission = await Notifications.getPermissionsAsync()
+    setPushDenied(permission.status === Notifications.PermissionStatus.DENIED)
+    setPushEnabled(pref && permission.granted)
+  }, [])
+
   useFocusEffect(
     useCallback(() => {
       void load()
-      void ensureNotificationPermissions()
       void setupAndroidNotificationChannels()
-    }, [load])
+      void refreshPushState()
+    }, [load, refreshPushState])
   )
+
+  const handleEnablePush = async () => {
+    if (!store?.id) return
+    setPushBusy(true)
+    try {
+      const granted = await ensureNotificationPermissions()
+      if (!granted) {
+        setPushDenied(true)
+        setPushEnabled(false)
+        showError('Allow notifications in iPhone Settings, then tap Enable again.')
+        return
+      }
+      setPushAlertsEnabled(true)
+      const ok = await registerStoreAlerts()
+      if (!ok) {
+        showError('Could not get a push token on this device.')
+        return
+      }
+      await setStoreAlertsEnabledFlag(true)
+      setPushDenied(false)
+      setPushEnabled(true)
+      showSuccess('Device alerts enabled')
+    } catch (e) {
+      showError(e, 'Could not enable device alerts')
+    } finally {
+      setPushBusy(false)
+    }
+  }
+
+  const handleDisablePush = async () => {
+    if (!store?.id) return
+    setPushBusy(true)
+    try {
+      const token = await getExpoPushToken()
+      if (token) {
+        await unregisterPushToken(store.id, { expo_push_token: token })
+      }
+      await setStoreAlertsEnabledFlag(false)
+      setPushEnabled(false)
+      showSuccess('Device alerts disabled')
+    } catch (e) {
+      showError(e, 'Could not disable device alerts')
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const save = async (next: NotificationPreferences) => {
     if (!store?.id) return
@@ -114,6 +179,42 @@ export default function NotificationsScreen() {
               Choose which events show alerts. Uses your phone&apos;s default notification sound.
               When the app is fully closed, Firebase push setup is required on Android.
             </Muted>
+
+            <View
+              className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-3"
+              style={shadows.card}
+            >
+              <Label className="text-base">Device alerts</Label>
+              <Muted className="text-[13px] leading-5">
+                {pushDenied
+                  ? 'Notifications are blocked. Open iPhone Settings, allow Notifications for AiShopy, then return here and tap Enable.'
+                  : pushEnabled
+                    ? 'This phone will receive chat and order alerts even when the app is in the background.'
+                    : 'Enable device alerts to get chat and order notifications on this phone.'}
+              </Muted>
+              {pushDenied ? (
+                <Button
+                  label="Open Settings"
+                  variant="outline"
+                  onPress={() => void Linking.openSettings()}
+                />
+              ) : pushEnabled ? (
+                <Button
+                  label={pushBusy ? 'Disabling…' : 'Disable device alerts'}
+                  variant="outline"
+                  disabled={pushBusy}
+                  loading={pushBusy}
+                  onPress={() => void handleDisablePush()}
+                />
+              ) : (
+                <Button
+                  label={pushBusy ? 'Enabling…' : 'Enable device alerts'}
+                  disabled={pushBusy}
+                  loading={pushBusy}
+                  onPress={() => void handleEnablePush()}
+                />
+              )}
+            </View>
 
             <View
               className="w-full rounded-[28px] border border-gray-200 bg-surface px-4 py-5 gap-4"

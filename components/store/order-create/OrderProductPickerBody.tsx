@@ -84,7 +84,7 @@ export function OrderProductPickerBody({
                     <Image
                       source={{ uri: product.thumbnail_url }}
                       style={styles.thumb}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   ) : (
                     <FontAwesome name="image" size={18} color={Colors.text.muted} />

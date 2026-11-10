@@ -10,6 +10,7 @@ import { SleekModal } from '@/components/ui/Modal'
 import { updateProductVariant } from '@src/api/products'
 import { uploadProductImages } from '@src/api/uploads'
 import { parseOptionalPrice } from '@src/lib/parse-optional-price'
+import { parseVariantPrice, variantPriceDraft } from '@src/lib/variant-price'
 import { showError, showSuccess } from '@src/lib/toast'
 import type { Product, ProductVariant } from '@src/types/product'
 import Colors from '@src/theme/colors'
@@ -42,13 +43,11 @@ export function VariantEditModal({
   const [pickedImage, setPickedImage] = useState<PickedVariantImage | null>(null)
   const [imageRemoved, setImageRemoved] = useState(false)
 
-  const unitPrice = variant
-    ? Number(product.base_price) + Number(variant.price_delta)
-    : 0
+  const pricePlaceholder = String(product.base_price)
 
   useEffect(() => {
     if (!visible || !variant) return
-    setPriceDraft(String(unitPrice))
+    setPriceDraft(variantPriceDraft(variant, Number(product.base_price)))
     setCompareAtPriceDraft(
       variant.compare_at_price != null ? String(variant.compare_at_price) : ''
     )
@@ -62,7 +61,8 @@ export function VariantEditModal({
   }, [
     visible,
     variant?.id,
-    unitPrice,
+    variant?.price,
+    product.base_price,
     variant?.compare_at_price,
     variant?.stock_qty,
     variant?.sku,
@@ -77,9 +77,11 @@ export function VariantEditModal({
 
   const save = async () => {
     if (!variant) return
-    const price = Number(priceDraft)
     const stock = Number(stockDraft)
-    if (!Number.isFinite(price) || price < 0) {
+    let price: number | null
+    try {
+      price = parseVariantPrice(priceDraft)
+    } catch {
       showError('Enter a valid price')
       return
     }
@@ -94,7 +96,6 @@ export function VariantEditModal({
       return
     }
 
-    const price_delta = price - Number(product.base_price)
     setSaving(true)
     try {
       let image_url: string | null | undefined
@@ -107,7 +108,7 @@ export function VariantEditModal({
       }
 
       const res = await updateProductVariant(product.id, variant.id, {
-        price_delta,
+        price,
         compare_at_price: compareAtPrice,
         stock_qty: stock,
         sku: skuDraft.trim() || null,
@@ -171,6 +172,8 @@ export function VariantEditModal({
             className="flex-1 py-3 text-base font-bold text-ink"
             value={priceDraft}
             onChangeText={setPriceDraft}
+            placeholder={pricePlaceholder}
+            placeholderTextColor={Colors.text.muted}
             keyboardType="decimal-pad"
             selectionColor={Colors.brand.primary}
             editable={!saving}

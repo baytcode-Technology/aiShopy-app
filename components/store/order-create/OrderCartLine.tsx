@@ -42,7 +42,7 @@ export function OrderCartLine({ line, currency, onQuantityChange, onRemove }: Pr
         <View className="flex-row items-start gap-3">
           <View className="w-14 h-14 rounded-xl bg-gray-100 border border-gray-200 overflow-hidden items-center justify-center">
             {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.thumb} resizeMode="cover" />
+              <Image source={{ uri: imageUri }} style={styles.thumb} resizeMode="contain" />
             ) : (
               <FontAwesome name="image" size={20} color={Colors.text.muted} />
             )}

@@ -7,7 +7,7 @@ import Colors from '@src/theme/colors'
 export type VariantDraft = {
   id: string
   name: string
-  priceDelta: string
+  price: string
   stockQty: string
   sku: string
 }
@@ -18,14 +18,15 @@ type Props = {
 }
 
 export function ProductVariantEditor({ variants, onChange }: Props) {
-  const addVariant = () => {
+export function ProductVariantEditor({ variants, onChange, basePrice }: Props) {
+  const pricePlaceholder = basePrice === undefined || basePrice === '' ? undefined : String(basePrice)
     onChange([
       ...variants,
       {
         id: `${Date.now()}`,
         name: '',
         priceDelta: '0',
-        stockQty: '0',
+        price: '',
         sku: '',
       },
     ])
@@ -75,10 +76,10 @@ export function ProductVariantEditor({ variants, onChange }: Props) {
             <View className="flex-1">
               <AuthInput
                 label="Price +/−"
-                value={v.priceDelta}
-                onChangeText={(priceDelta) => update(v.id, { priceDelta })}
-                placeholder="0"
-                keyboardType="decimal-pad"
+                label="Price"
+                value={v.price}
+                onChangeText={(price) => update(v.id, { price })}
+                placeholder={pricePlaceholder}
               />
             </View>
             <View className="flex-1">

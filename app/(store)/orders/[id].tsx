@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, View } from 'react-native'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerSheet'
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
+import { OrderDeliveryCard } from '@/components/store/OrderDeliveryCard'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
 import { OrderPaymentActions } from '@/components/store/OrderPaymentActions'
 import { OrderPaymentProofCard } from '@/components/store/OrderPaymentProofCard'
@@ -190,6 +191,15 @@ export default function OrderDetailScreen() {
                 />
               </View>
 
+              {store ? (
+                <OrderDeliveryCard
+                  order={order}
+                  storeId={store.id}
+                  saving={saving}
+                  onSavingChange={setSaving}
+                  onUpdated={setOrder}
+                />
+              ) : null}
               {store ? <OrderInvoiceCard order={order} store={store} /> : null}
             </AnimatedFadeIn>
           </ScrollView>

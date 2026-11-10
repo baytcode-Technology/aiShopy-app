@@ -12,12 +12,11 @@ import { Screen, ScreenBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Heading, Muted } from "@/components/ui/Typography";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { env } from "@src/config/env";
 import { useAuth } from "@src/contexts/auth-context";
 import { useStore } from "@src/contexts/store-context";
 import { getPlanLabel, getStorePlan } from "@src/lib/subscription";
 import { getShadows } from "@src/lib/shadows";
-import { buildSubdomainUrl } from "@src/lib/storefront";
+import { buildSubdomainUrl, storefrontAddress } from "@src/lib/storefront";
 import { useAppTheme } from "@src/contexts/theme-context";
 import Colors from "@src/theme/colors";
 import type { Store } from "@src/types/store";
@@ -77,12 +76,9 @@ export default function SettingsScreen() {
     });
   };
 
-  const storefrontHost = store?.slug
-    ? `${store.slug}.${env.storefrontBaseDomain}`
-    : null;
-  const storefrontUrl = store?.slug
-    ? buildSubdomainUrl(store.slug)
-    : subdomainUrl;
+  const address = storefrontAddress(store);
+  const storefrontHost = address?.host ?? null;
+  const storefrontUrl = address?.url ?? subdomainUrl;
 
   const isAdminWithoutStore = isPlatformAdmin && !store;
 
@@ -249,6 +245,13 @@ export default function SettingsScreen() {
               icon="magic"
               showChevron
               onPress={() => router.push("/chat-boat" as Href)}
+            />
+            <MenuRow
+              label="Shop policies"
+              value="Delivery, returns, hours, offers"
+              icon="truck"
+              showChevron
+              onPress={() => router.push("/shop-policies" as Href)}
             />
             <MenuRow
               label="Printer"

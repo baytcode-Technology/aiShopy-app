@@ -57,6 +57,7 @@ function mapWhatsAppConversation(c: {
   unread_count?: number;
   reply_mode?: 'ai' | 'manual';
   ai_paused_until?: string | null;
+  staff_waiting_at?: string | null;
 }): ChatListItem {
   const phone = c.customer_wa_number;
   const name = c.customer_name?.trim();
@@ -74,6 +75,7 @@ function mapWhatsAppConversation(c: {
     initials: initialsFromLabel(title, "WA"),
     replyMode: c.reply_mode ?? 'ai',
     aiPausedUntil: c.ai_paused_until ?? null,
+    staffWaitingAt: c.staff_waiting_at ?? null,
   };
 }
 
@@ -86,6 +88,7 @@ function mapInstagramConversation(c: {
   unread_count?: number;
   reply_mode?: 'ai' | 'manual';
   ai_paused_until?: string | null;
+  staff_waiting_at?: string | null;
 }): ChatListItem {
   const title = c.customer_ig_username
     ? `@${c.customer_ig_username}`
@@ -103,6 +106,7 @@ function mapInstagramConversation(c: {
     initials: initialsFromLabel(title, "IG"),
     replyMode: c.reply_mode ?? 'ai',
     aiPausedUntil: c.ai_paused_until ?? null,
+    staffWaitingAt: c.staff_waiting_at ?? null,
   };
 }
 
@@ -142,6 +146,8 @@ function mergeChatLists(current: ChatListItem[], fetched: ChatListItem[]): ChatL
       title: item.title || prev.title,
       replyMode: item.replyMode ?? prev.replyMode,
       aiPausedUntil: item.aiPausedUntil ?? prev.aiPausedUntil,
+      staffWaitingAt:
+        item.staffWaitingAt !== undefined ? item.staffWaitingAt : prev.staffWaitingAt,
       ...(prevTs > nextTs
         ? { subtitle: prev.subtitle, time: prev.time, sortAt: prev.sortAt, unread: prev.unread }
         : {}),
@@ -175,6 +181,7 @@ function upsertWhatsAppFromConversation(
       unread_count: number
       reply_mode?: 'ai' | 'manual'
       ai_paused_until?: string | null
+      staff_waiting_at?: string | null
     }
   },
   isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
@@ -202,6 +209,10 @@ function upsertWhatsAppFromConversation(
       payload.conversation.ai_paused_until !== undefined
         ? payload.conversation.ai_paused_until
         : (existing?.aiPausedUntil ?? null),
+    staffWaitingAt:
+      payload.conversation.staff_waiting_at !== undefined
+        ? payload.conversation.staff_waiting_at
+        : (existing?.staffWaitingAt ?? null),
   }
   return sortConversations([updated, ...withoutConversation(prev, "whatsapp", updated.id)])
 }
@@ -218,6 +229,7 @@ function upsertInstagramFromConversation(
       unread_count: number
       reply_mode?: 'ai' | 'manual'
       ai_paused_until?: string | null
+      staff_waiting_at?: string | null
     }
   },
   isActiveChat: (conversationId: number, channel: ChatChannel) => boolean,
@@ -247,6 +259,10 @@ function upsertInstagramFromConversation(
       payload.conversation.ai_paused_until !== undefined
         ? payload.conversation.ai_paused_until
         : (existing?.aiPausedUntil ?? null),
+    staffWaitingAt:
+      payload.conversation.staff_waiting_at !== undefined
+        ? payload.conversation.staff_waiting_at
+        : (existing?.staffWaitingAt ?? null),
   }
   return sortConversations([updated, ...withoutConversation(prev, "instagram", updated.id)])
 }
@@ -327,6 +343,7 @@ export default function MessagesListScreen() {
     onInstagramMessageNew,
   } = useChatSocket();
   const [search, setSearch] = useState("");
+  const [listFilter, setListFilter] = useState<"all" | "waiting">("all");
   const [items, setItems] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -449,8 +466,16 @@ export default function MessagesListScreen() {
     isActiveChat,
   ]);
 
+  const waitingCount = useMemo(
+    () => items.filter((c) => Boolean(c.staffWaitingAt)).length,
+    [items],
+  );
+
   const conversations = useMemo(() => {
     let list = items;
+    if (listFilter === "waiting") {
+      list = list.filter((c) => Boolean(c.staffWaitingAt));
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       list = list.filter(
@@ -461,7 +486,7 @@ export default function MessagesListScreen() {
       );
     }
     return list;
-  }, [items, search]);
+  }, [items, search, listFilter]);
 
   const headerSubtitle = useMemo(() => {
     if (!store?.id) return "Connect your store to view messages";
@@ -512,6 +537,31 @@ export default function MessagesListScreen() {
           onChangeText={setSearch}
           className="mt-1 mb-2"
         />
+        <View className="flex-row gap-2 px-4 pb-2">
+          {(["all", "waiting"] as const).map((id) => {
+            const selected = listFilter === id;
+            const label = id === "all" ? "All" : "Waiting";
+            const count = id === "all" ? items.length : waitingCount;
+            return (
+              <AppPressable
+                key={id}
+                onPress={() => setListFilter(id)}
+                containerClassName={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
+                  selected
+                    ? "border-brand-primary bg-brand-primary/10"
+                    : "border-gray-200 bg-surface"
+                }`}
+              >
+                <Muted className={selected ? "text-brand-primary font-semibold" : undefined}>
+                  {label}
+                </Muted>
+                <Muted className={selected ? "text-brand-primary font-bold" : undefined}>
+                  {count}
+                </Muted>
+              </AppPressable>
+            );
+          })}
+        </View>
 
         <FlatList
           data={conversations}
@@ -543,6 +593,7 @@ export default function MessagesListScreen() {
                     unread: String(item.unread),
                     replyMode: item.replyMode ?? 'ai',
                     aiPausedUntil: item.aiPausedUntil ?? '',
+                    staffWaitingAt: item.staffWaitingAt ?? '',
                   },
                 } as unknown as Href)
               }

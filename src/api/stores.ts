@@ -78,6 +78,10 @@ export type CustomDomainView = {
   verified_at: string | null
   cname_host: string
   cname_target: string
+  dns_type?: 'A' | 'CNAME'
+  dns_name?: string
+  dns_value?: string
+  public_link_host?: 'custom' | 'subdomain'
 }
 
 type CustomDomainResponse = {
@@ -111,6 +115,20 @@ export async function verifyCustomDomain(storeId: number): Promise<CustomDomainV
   const res = await authenticatedFetch<CustomDomainResponse>(
     `${endpoints.customDomain}/verify${storeIdQuery(storeId)}`,
     { method: 'POST' }
+  )
+  return res.data
+}
+
+export async function setPublicLinkHost(
+  storeId: number,
+  publicLinkHost: 'custom' | 'subdomain'
+): Promise<CustomDomainView> {
+  const res = await authenticatedFetch<CustomDomainResponse>(
+    `${endpoints.customDomain}/link${storeIdQuery(storeId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ public_link_host: publicLinkHost }),
+    }
   )
   return res.data
 }

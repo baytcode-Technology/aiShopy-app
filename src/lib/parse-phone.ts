@@ -3,7 +3,7 @@ import { FlagType, getAllCountries } from 'react-native-country-picker-modal'
 
 export async function parseE164Phone(
   value: string,
-  fallbackCode: CountryCode = 'US'
+  fallbackCode: CountryCode = 'IN'
 ): Promise<{ countryCode: CountryCode; callingCode: string; national: string }> {
   const cleaned = value.trim()
   if (!cleaned) {
@@ -52,7 +52,7 @@ export async function parseE164Phone(
 async function getCallingCodeSafe(countryCode: CountryCode): Promise<string> {
   const countries = await getAllCountries(FlagType.EMOJI)
   const match = countries.find((c) => c.cca2 === countryCode)
-  return match?.callingCode?.[0] ?? '1'
+  return match?.callingCode?.[0] ?? '91'
 }
 
 export function formatE164(callingCode: string, national: string): string {

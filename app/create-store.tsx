@@ -47,7 +47,7 @@ export default function CreateStoreScreen() {
   const [name, setName] = useState('')
   const [whatsappNumber, setWhatsappNumber] = useState('')
   const [country, setCountry] = useState<CountryValue>(DEFAULT_COUNTRY)
-  const [currency, setCurrency] = useState('USD')
+  const [currency, setCurrency] = useState(() => defaultCurrencyForCountry(DEFAULT_COUNTRY.cca2))
   const [currencyTouched, setCurrencyTouched] = useState(false)
   const [description, setDescription] = useState('')
   const [industry, setIndustry] = useState('')
@@ -219,6 +219,7 @@ export default function CreateStoreScreen() {
         label="Contact number"
         value={whatsappNumber}
         onChange={onWhatsappChange}
+        countryCode={country.cca2}
         error={errors.whatsapp_number}
       />
 

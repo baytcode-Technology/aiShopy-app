@@ -38,10 +38,14 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
   const [currencyTouched, setCurrencyTouched] = useState(false)
   const [logoImage, setLogoImage] = useState<PickedImage | null>(null)
   const [loading, setLoading] = useState(false)
+  const [formReady, setFormReady] = useState(false)
   const prevCountryCode = useRef(country.cca2)
 
   useEffect(() => {
-    if (!visible || !store) return
+    if (!visible || !store) {
+      setFormReady(false)
+      return
+    }
     setName(store.name)
     setIndustry(store.industry ?? '')
     setDescription(store.description ?? '')
@@ -54,6 +58,7 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
     setCurrencyTouched(false)
     setLogoImage(null)
     prevCountryCode.current = guessCountryCodeFromName(store.country ?? DEFAULT_COUNTRY.name)
+    setFormReady(true)
   }, [visible, store])
 
   const handleCountryChange = (next: CountryValue) => {
@@ -159,12 +164,15 @@ export function EditStoreModal({ visible, store, onClose, onUpdated }: Props) {
           setCurrency(code)
         }}
       />
-      <PhoneNumberField
-        value={phoneNumber}
-        onChange={setPhoneNumber}
-        resetKey={store ? `${store.id}-${visible}` : undefined}
-        label="Contact number"
-      />
+      {formReady ? (
+        <PhoneNumberField
+          value={phoneNumber}
+          onChange={setPhoneNumber}
+          resetKey={store ? `${store.id}-${visible}` : undefined}
+          countryCode={country.cca2}
+          label="Contact number"
+        />
+      ) : null}
       <IndustryPicker value={industry} onChange={setIndustry} />
       <Input
         label="Description"

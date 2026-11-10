@@ -159,6 +159,7 @@ export default function ChatDetailScreen() {
     unread,
     replyMode: replyModeParam,
     aiPausedUntil: aiPausedUntilParam,
+    staffWaitingAt: staffWaitingAtParam,
   } = useLocalSearchParams<{
     id: string;
     phone?: string;
@@ -167,6 +168,7 @@ export default function ChatDetailScreen() {
     unread?: string;
     replyMode?: string;
     aiPausedUntil?: string;
+    staffWaitingAt?: string;
   }>();
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -195,6 +197,11 @@ export default function ChatDetailScreen() {
   }, [aiPausedUntilParam]);
   const [aiPausedUntil, setAiPausedUntil] = useState<string | null>(
     initialAiPausedUntil,
+  );
+  const [staffWaitingAt, setStaffWaitingAt] = useState<string | null>(
+    typeof staffWaitingAtParam === "string" && staffWaitingAtParam.trim()
+      ? staffWaitingAtParam
+      : null,
   );
   const initialCustomerDisplayName = useMemo(() => {
     if (typeof displayName === "string") {
@@ -289,6 +296,7 @@ export default function ChatDetailScreen() {
       setReplyMode(mode);
       if (mode === "ai") {
         setAiPausedUntil(null);
+        setStaffWaitingAt(null);
       } else {
         setAiPreparingReply(false);
       }
@@ -313,6 +321,7 @@ export default function ChatDetailScreen() {
         id: number;
         reply_mode?: "ai" | "manual";
         ai_paused_until?: string | null;
+        staff_waiting_at?: string | null;
         customer_ig_username?: string | null;
       };
     }) => {
@@ -322,6 +331,9 @@ export default function ChatDetailScreen() {
       }
       if (payload.conversation.ai_paused_until !== undefined) {
         setAiPausedUntil(payload.conversation.ai_paused_until);
+      }
+      if (payload.conversation.staff_waiting_at !== undefined) {
+        setStaffWaitingAt(payload.conversation.staff_waiting_at);
       }
       const username = payload.conversation.customer_ig_username?.trim();
       if (username) {
@@ -1046,9 +1058,21 @@ export default function ChatDetailScreen() {
         store?.ai_auto_reply_enabled &&
         replyMode === "manual" &&
         hasPremiumAccess(store) ? (
-          <View className="flex-row items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
-            <Text className="text-sm text-gray-600 flex-1">
-              You are replying manually
+          <View
+            className={`flex-row items-center justify-between px-3 py-2 border-b ${
+              staffWaitingAt
+                ? "bg-amber-50 border-amber-200"
+                : "bg-gray-50 border-gray-200"
+            }`}
+          >
+            <Text
+              className={`text-sm flex-1 ${
+                staffWaitingAt ? "text-amber-800" : "text-gray-600"
+              }`}
+            >
+              {staffWaitingAt
+                ? "Customer waiting for you"
+                : "You are replying manually"}
             </Text>
             <Pressable
               className="px-3 py-1.5 rounded-full bg-brand-primary"
@@ -1201,6 +1225,7 @@ export default function ChatDetailScreen() {
             storeId={store.id}
             storeSlug={store.slug}
             currency={store.currency}
+            store={store}
             onClose={() => setProductPickerOpen(false)}
             onSend={(payload) => void sendProductShare(payload)}
           />

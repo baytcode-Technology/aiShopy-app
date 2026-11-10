@@ -10,6 +10,7 @@ import {
   uploadVariantImagesForCreate,
   type GeneratedVariant,
 } from '@src/lib/variant-options'
+import { parseVariantPrice } from '@src/lib/variant-price'
 import type { ProductVariant } from '@src/types/product'
 
 export async function persistVariantChanges(input: {
@@ -57,9 +58,10 @@ export async function persistVariantChanges(input: {
       image_url = v.imageUri
     }
 
+    const price = parseVariantPrice(v.price)
     const payload = {
       name: v.name.trim(),
-      price_delta: Number(v.priceDelta) || 0,
+      price,
       compare_at_price: compareNum,
       stock_qty: Number(v.stockQty) || 0,
       sku: v.sku.trim() || null,
@@ -70,7 +72,7 @@ export async function persistVariantChanges(input: {
 
     const changed =
       original.name !== payload.name ||
-      Number(original.price_delta) !== payload.price_delta ||
+      !sameVariantPrice(original.price, price) ||
       (original.compare_at_price ?? null) !== payload.compare_at_price ||
       original.stock_qty !== payload.stock_qty ||
       (original.sku ?? '') !== (payload.sku ?? '') ||
@@ -96,6 +98,11 @@ export async function persistVariantChanges(input: {
   }
 
   return { created, updated, deleted: toDelete.length }
+}
+
+function sameVariantPrice(stored: number | null | undefined, next: number | null): boolean {
+  if (stored === null || stored === undefined) return next === null
+  return Number(stored) === next
 }
 
 function normalizeOpts(options: Record<string, unknown>): Record<string, string> {

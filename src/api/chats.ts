@@ -34,6 +34,8 @@ export type ApiConversation = {
 
   ai_paused_until?: string | null
 
+  staff_waiting_at?: string | null
+
 }
 
 
@@ -57,6 +59,8 @@ export type ApiInstagramConversation = {
   reply_mode?: 'ai' | 'manual'
 
   ai_paused_until?: string | null
+
+  staff_waiting_at?: string | null
 
 }
 

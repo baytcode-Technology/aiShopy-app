@@ -63,7 +63,7 @@ export function ProductImageCarousel({ images, initialUri, className }: Props) {
   return (
     <View className={cn('gap-3', className)}>
       <View className="h-[300px] rounded-[28px] overflow-hidden bg-gray-100 border border-gray-200">
-        <Image source={{ uri: currentUri }} className="w-full h-full" resizeMode="cover" />
+        <Image source={{ uri: currentUri }} className="w-full h-full" resizeMode="contain" />
         {canNavigate ? (
           <>
             <Pressable
@@ -119,7 +119,7 @@ export function ProductImageCarousel({ images, initialUri, className }: Props) {
                     selected ? 'border-ink' : 'border-transparent'
                   )}
                 >
-                  <Image source={{ uri }} className="w-full h-full" resizeMode="cover" />
+                  <Image source={{ uri }} className="w-full h-full" resizeMode="contain" />
                 </View>
               </Pressable>
             )

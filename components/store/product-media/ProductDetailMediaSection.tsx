@@ -194,7 +194,7 @@ export function ProductDetailMediaSection({ product, storeId, onProductUpdated }
             {items.map((item) => (
               <Pressable key={item.id} onPress={() => setPreviewItem(item)}>
                 <View style={styles.tile}>
-                  <Image source={{ uri: item.uri }} style={styles.image} resizeMode="cover" />
+                  <Image source={{ uri: item.uri }} style={styles.image} resizeMode="contain" />
                   {item.pending ? (
                     <View className="absolute top-1 left-1 bg-orange-500 px-1 py-0.5 rounded">
                       <Text className="text-[8px] font-bold text-white">NEW</Text>

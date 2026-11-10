@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import type { Country, CountryCode } from 'react-native-country-picker-modal'
@@ -14,6 +14,8 @@ type Props = {
   variant?: 'auth' | 'default'
   /** Re-parse phone when form resets (e.g. modal open). */
   resetKey?: string
+  /** Store country. Fills the phone code until the owner picks a different one. */
+  countryCode?: string
 }
 
 export function PhoneNumberField({
@@ -23,11 +25,17 @@ export function PhoneNumberField({
   error,
   variant = 'default',
   resetKey,
+  countryCode,
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [selectedCode, setSelectedCode] = useState<CountryCode>('US')
-  const [callingCode, setCallingCode] = useState('1')
+  const [selectedCode, setSelectedCode] = useState<CountryCode>('IN')
+  const [callingCode, setCallingCode] = useState('91')
   const [nationalNumber, setNationalNumber] = useState('')
+  const phoneCodeTouched = useRef(false)
+  const appliedCountry = useRef<string | null>(null)
+  const nationalRef = useRef('')
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
   const labelClass =
     variant === 'auth'
@@ -35,9 +43,20 @@ export function PhoneNumberField({
       : 'text-[13px] font-bold text-gray-600 mb-2'
 
   useEffect(() => {
+    phoneCodeTouched.current = false
+    appliedCountry.current = null
+  }, [resetKey])
+
+  useEffect(() => {
+    if (!value.trim()) {
+      nationalRef.current = ''
+      setNationalNumber('')
+      return
+    }
     let cancelled = false
     void parseE164Phone(value).then((parsed) => {
       if (cancelled) return
+      nationalRef.current = parsed.national
       setSelectedCode(parsed.countryCode)
       setCallingCode(parsed.callingCode)
       setNationalNumber(parsed.national)
@@ -47,13 +66,36 @@ export function PhoneNumberField({
     }
   }, [value, resetKey])
 
+  useEffect(() => {
+    if (!countryCode || phoneCodeTouched.current) return
+    const previous = appliedCountry.current
+    if (previous === countryCode) return
+    appliedCountry.current = countryCode
+    if (previous === null && value.trim()) return
+
+    let cancelled = false
+    void parseE164Phone('', countryCode as CountryCode).then((parsed) => {
+      if (cancelled || phoneCodeTouched.current) return
+      setSelectedCode(parsed.countryCode)
+      setCallingCode(parsed.callingCode)
+      if (nationalRef.current) {
+        onChangeRef.current(formatE164(parsed.callingCode, nationalRef.current))
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [countryCode, value])
+
   const updateNational = (text: string) => {
     const digits = text.replace(/\D/g, '')
+    nationalRef.current = digits
     setNationalNumber(digits)
     onChange(formatE164(callingCode, digits))
   }
 
   const handleCountrySelect = (country: Country) => {
+    phoneCodeTouched.current = true
     const nextCalling = country.callingCode?.[0] ?? callingCode
     setSelectedCode(country.cca2)
     setCallingCode(nextCalling)

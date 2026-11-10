@@ -86,7 +86,7 @@ export function VariantImageTile({
         style={[styles.tile, { width: size, height: size, borderRadius: size * 0.27 }]}
       >
         {imageUri ? (
-          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="contain" />
         ) : (
           <View className="items-center justify-center flex-1 bg-gray-50">
             <FontAwesome name="plus" size={size * 0.4} color={Colors.text.muted} />

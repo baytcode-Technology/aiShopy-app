@@ -70,6 +70,11 @@ export type Order = {
   shipping_address?: CreateOrderShippingAddress | Record<string, unknown> | null
 
   notes: string | null
+  promised_by?: string | null
+  delay_note?: string | null
+  courier_name?: string | null
+  tracking_url?: string | null
+  tracking_number?: string | null
 
   merchant_viewed_at?: string | null
 
@@ -134,6 +139,11 @@ export type UpdateOrderPayload = {
   payment_status?: OrderPaymentStatus
 
   fulfillment_status?: OrderFulfillmentStatus
+  promised_by?: string | null
+  delay_note?: string | null
+  courier_name?: string | null
+  tracking_url?: string | null
+  tracking_number?: string | null
 
 }
 

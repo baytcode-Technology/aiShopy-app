@@ -274,6 +274,7 @@ export function CreateProductModal({
         options={variantOptions}
         variants={variants}
         showVariantImages={false}
+        basePrice={basePrice}
         onChange={(options, nextVariants) => {
           setVariantOptions(options);
           setVariants(nextVariants);

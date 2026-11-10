@@ -37,6 +37,8 @@ import { fetchProduct, updateProduct } from "@src/api/products";
 
 import { getProductStatus } from "@src/lib/product-status";
 
+import { shareLink } from "@src/lib/share-link";
+import { buildStorefrontProductUrl } from "@src/lib/storefront";
 import { showError, showSuccess } from "@src/lib/toast";
 
 import type { ProductStatus } from "@src/types/product";
@@ -131,14 +133,28 @@ export default function ProductDetailScreen() {
         title={product?.name ?? "Product"}
         onBack={() => router.back()}
         rightActions={
-          <IconButton
-            variant="ghost"
-            onPress={() => setEditOpen(true)}
-            disabled={!product}
-            accessibilityLabel="Edit product"
-          >
-            <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
-          </IconButton>
+          <View className="flex-row">
+            <IconButton
+              variant="ghost"
+              onPress={() => {
+                if (!product || !store?.slug) return;
+                const url = buildStorefrontProductUrl(store.slug, product, null, store);
+                void shareLink({ title: product.name, url });
+              }}
+              disabled={!product || !store?.slug}
+              accessibilityLabel="Share product"
+            >
+              <FontAwesome name="share-alt" size={16} color={Colors.text.primary} />
+            </IconButton>
+            <IconButton
+              variant="ghost"
+              onPress={() => setEditOpen(true)}
+              disabled={!product}
+              accessibilityLabel="Edit product"
+            >
+              <FontAwesome name="pencil" size={16} color={Colors.brand.primary} />
+            </IconButton>
+          </View>
         }
       />
 

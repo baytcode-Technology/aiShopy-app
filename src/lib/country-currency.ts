@@ -79,6 +79,6 @@ export type CountryValue = {
 }
 
 export const DEFAULT_COUNTRY: CountryValue = {
-  name: 'United States',
-  cca2: 'US',
+  name: 'India',
+  cca2: 'IN',
 }

@@ -22,6 +22,7 @@ type Props = {
   generatedVariants: GeneratedVariant[]
   onChange: (options: VariantOption[], generated: GeneratedVariant[]) => void
   showTitle?: boolean
+  basePrice?: string | number
 }
 
 const inputClass =
@@ -35,7 +36,9 @@ export function ProductVariantOptionsManager({
   generatedVariants,
   onChange,
   showTitle = true,
+  basePrice,
 }: Props) {
+  const pricePlaceholder = basePrice === undefined || basePrice === '' ? undefined : String(basePrice)
   const [expanded, setExpanded] = useState(true)
 
   const existingKeys = useMemo(() => {
@@ -237,13 +240,15 @@ export function ProductVariantOptionsManager({
                     <View className="flex-row gap-2 flex-wrap">
                       <View className="flex-1 min-w-[30%]">
                         <Label className="mb-1 normal-case tracking-normal text-[10px]">
-                          +Price
+                          Price
                         </Label>
                         <TextInput
                           className={miniInputClass}
-                          value={v.priceDelta}
-                          onChangeText={(priceDelta) => updateVariant(v.id, { priceDelta })}
+                          value={v.price}
+                          onChangeText={(price) => updateVariant(v.id, { price })}
                           keyboardType="decimal-pad"
+                          placeholder={pricePlaceholder}
+                          placeholderTextColor={Colors.text.muted}
                         />
                       </View>
                       <View className="flex-1 min-w-[30%]">

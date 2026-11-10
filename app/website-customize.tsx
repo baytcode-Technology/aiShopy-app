@@ -15,11 +15,10 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader'
 import { StorefrontUrlActions } from '@/components/store/StorefrontUrlActions'
 import { Label, Muted, SectionTitle } from '@/components/ui/Typography'
 import { updateMyStore } from '@src/api/stores'
-import { env } from '@src/config/env'
 import { useStore } from '@src/contexts/store-context'
 import { useAppTheme } from '@src/contexts/theme-context'
 import { shadows } from '@src/lib/shadows'
-import { buildSubdomainUrl } from '@src/lib/storefront'
+import { buildSubdomainUrl, storefrontAddress } from '@src/lib/storefront'
 import { showError, showSuccess } from '@src/lib/toast'
 import { cn } from '@src/lib/cn'
 import {
@@ -581,11 +580,9 @@ export default function WebsiteCustomizeScreen() {
     })
   }
 
-  const storefrontHost = store?.slug
-    ? `${store.slug}.${env.storefrontBaseDomain}`
-    : null
-  const storefrontUrl =
-    subdomainUrl ?? (store?.slug ? buildSubdomainUrl(store.slug) : null)
+  const address = storefrontAddress(store)
+  const storefrontHost = address?.host ?? null
+  const storefrontUrl = address?.url ?? subdomainUrl
 
   return (
     <Screen>

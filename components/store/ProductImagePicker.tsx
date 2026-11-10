@@ -97,7 +97,8 @@ export function ProductImagePicker({ images, thumbnailId, onChange, error }: Pro
     <View className="gap-2">
       <Label>Product images *</Label>
       <Muted className="text-xs">
-        Add up to {MAX_PRODUCT_IMAGES} images. Tap an image to set it as thumbnail.
+        Add up to {MAX_PRODUCT_IMAGES} images. Tap an image to set it as thumbnail. Use the full
+        product photo — the store shows the whole image.
       </Muted>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="grow-0">
         {images.length < MAX_PRODUCT_IMAGES ? (

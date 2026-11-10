@@ -32,7 +32,7 @@ export function ProductCard({ product, currency = 'INR', onPress }: Props) {
               <Image
                 source={{ uri: product.thumbnail_url }}
                 style={StyleSheet.absoluteFillObject}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             ) : (
               <View className="flex-1 w-full h-full items-center justify-center">

@@ -263,7 +263,9 @@ export default function PlatformSupportDetailScreen() {
             ref={listRef}
             data={messages}
             keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => <SupportMessageBubble message={item} />}
+            renderItem={({ item }) => (
+              <SupportMessageBubble message={item} viewer="admin" />
+            )}
             contentContainerClassName="p-4 pb-2 flex-grow"
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"

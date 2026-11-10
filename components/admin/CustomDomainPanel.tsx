@@ -4,13 +4,82 @@ import {
   deleteCustomDomain,
   fetchCustomDomain,
   saveCustomDomain,
+  setPublicLinkHost,
   verifyCustomDomain,
   type CustomDomainView,
 } from "@src/api/stores";
 import { getErrorMessage } from "@src/lib/api-error";
 import { useStore } from "@src/contexts/store-context";
+import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <View className="flex-row items-center justify-between gap-3 rounded-xl border border-gray-200 bg-surface px-3 py-2.5">
+      <View className="min-w-0 flex-1">
+        <Text className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+          {label}
+        </Text>
+        <Text className="font-mono text-[14px] font-semibold text-ink" numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+      <Pressable
+        className="shrink-0 rounded-full bg-gray-100 px-3 py-1.5"
+        onPress={() => {
+          void Clipboard.setStringAsync(value).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          });
+        }}
+      >
+        <Text className="text-[12px] font-semibold text-ink">{copied ? "Copied" : "Copy"}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function DomainSteps({
+  dnsType,
+  dnsName,
+  dnsValue,
+}: {
+  dnsType: string;
+  dnsName: string;
+  dnsValue: string;
+}) {
+  const showParked = dnsType === "A" && dnsName === "@";
+  const steps = [
+    "Open the place where you bought the domain.",
+    ...(showParked ? ["Delete the row that says A, @, Parked. Leave every other row."] : []),
+    "Add this record if it is not already there.",
+    "Come back here and tap Verify.",
+  ];
+  return (
+    <View className="mb-3 rounded-2xl border border-gray-200 bg-gray-100 px-4 py-4">
+      {steps.map((text, index) => (
+        <View key={text} className={`flex-row gap-3 ${index > 0 ? "mt-3" : ""}`}>
+          <View className="mt-0.5 h-5 w-5 items-center justify-center rounded-full bg-surface">
+            <Text className="text-[11px] font-semibold text-ink">{index + 1}</Text>
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="text-[13px] leading-5 text-ink">{text}</Text>
+            {text.startsWith("Add this record") ? (
+              <View className="mt-2 gap-2">
+                <CopyRow label="Type" value={dnsType} />
+                <CopyRow label="Name" value={dnsName} />
+                <CopyRow label="Value" value={dnsValue} />
+                <Muted className="text-[12px] leading-5">Leave TTL as it is.</Muted>
+              </View>
+            ) : null}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function statusLabel(status: CustomDomainView["status"]): string {
   switch (status) {
@@ -34,6 +103,7 @@ export function CustomDomainPanel() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeTone, setNoticeTone] = useState<"ok" | "warn">("ok");
 
   const load = useCallback(async () => {
     if (!storeId) return;
@@ -54,7 +124,10 @@ export function CustomDomainPanel() {
     void load();
   }, [load]);
 
-  const run = async (fn: () => Promise<CustomDomainView>, success: string) => {
+  const run = async (
+    fn: () => Promise<CustomDomainView>,
+    success: string | ((data: CustomDomainView) => { text: string; tone: "ok" | "warn" })
+  ) => {
     if (!storeId) return;
     setBusy(true);
     setError(null);
@@ -64,7 +137,10 @@ export function CustomDomainPanel() {
       setView(data);
       if (data.custom_domain) setDomainInput(data.custom_domain);
       else setDomainInput("");
-      setNotice(success);
+      const result =
+        typeof success === "function" ? success(data) : { text: success, tone: "ok" as const };
+      setNotice(result.text);
+      setNoticeTone(result.tone);
       await refreshStore({ silent: true });
     } catch (err) {
       setError(getErrorMessage(err, "Domain update failed"));
@@ -84,13 +160,19 @@ export function CustomDomainPanel() {
   return (
     <View className="px-5 pb-4 pt-0">
       {error ? (
-        <View className="mb-3 rounded-xl bg-red-50 px-4 py-3">
-          <Text className="text-[13px] text-red-700">{error}</Text>
+        <View className="mb-3 rounded-xl bg-danger-bg px-4 py-3">
+          <Text className="text-[13px] text-danger">{error}</Text>
         </View>
       ) : null}
       {notice ? (
-        <View className="mb-3 rounded-xl bg-emerald-50 px-4 py-3">
-          <Text className="text-[13px] text-emerald-800">{notice}</Text>
+        <View
+          className={`mb-3 rounded-xl px-4 py-3 ${
+            noticeTone === "warn" ? "bg-warning-bg" : "bg-success-bg"
+          }`}
+        >
+          <Text className={`text-[13px] ${noticeTone === "warn" ? "text-warning" : "text-success"}`}>
+            {notice}
+          </Text>
         </View>
       ) : null}
 
@@ -99,10 +181,55 @@ export function CustomDomainPanel() {
       </Muted>
 
       {view?.status === "active" && view.custom_domain ? (
-        <Muted className="mb-3 text-[13px] leading-5">
-          Customers can open your store at https://{view.custom_domain}. Your
-          AiShopy subdomain still works as a backup.
-        </Muted>
+        <View className="mb-3">
+          <Muted className="text-[13px] leading-5">
+            Customers can open your store at https://{view.custom_domain}. Your
+            AiShopy subdomain still works as a backup.
+          </Muted>
+          <Caption className="mb-2 mt-4 text-[10px] uppercase tracking-widest text-gray-400">
+            Link to share
+          </Caption>
+          <View className="flex-row gap-1 rounded-xl bg-gray-100 p-1">
+            {(
+              [
+                ["custom", "Custom domain"],
+                ["subdomain", "AiShopy link"],
+              ] as const
+            ).map(([value, label]) => {
+              const selected = (view.public_link_host ?? "custom") === value;
+              return (
+                <Pressable
+                  key={value}
+                  disabled={busy || selected}
+                  onPress={() =>
+                    void run(
+                      () => setPublicLinkHost(storeId!, value),
+                      value === "custom"
+                        ? "Share links now use your custom domain."
+                        : "Share links now use your AiShopy link."
+                    )
+                  }
+                  className={`flex-1 items-center rounded-lg px-3 py-2.5 ${
+                    selected ? "bg-ink" : ""
+                  }`}
+                >
+                  <Text
+                    className={`text-center text-[13px] font-semibold ${
+                      selected ? "text-brand-on-primary" : "text-ink"
+                    }`}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Muted className="mt-2 text-[13px] leading-5">
+            {(view.public_link_host ?? "custom") === "subdomain"
+              ? `https://${view.custom_domain} still opens your store.`
+              : `${view.subdomain} still opens your store.`}
+          </Muted>
+        </View>
       ) : (
         <>
           <Caption className="text-[10px] uppercase tracking-widest text-gray-400 mb-1.5">
@@ -115,25 +242,17 @@ export function CustomDomainPanel() {
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
-            className="mb-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] text-ink"
+            className="mb-3 rounded-xl border border-gray-200 bg-surface px-4 py-3 text-[15px] text-ink"
           />
         </>
       )}
 
       {view?.custom_domain && view.status !== "active" ? (
-        <View className="mb-3 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-          <Text className="mb-1 text-[13px] font-semibold text-ink">
-            Add this DNS record
-          </Text>
-          <Muted className="text-[13px] leading-5">
-            Type CNAME{"\n"}
-            Host {view.cname_host}
-            {"\n"}
-            Value {view.cname_target}
-            {"\n\n"}
-            Then tap Verify. SSL is issued automatically after DNS is correct.
-          </Muted>
-        </View>
+        <DomainSteps
+          dnsType={view.dns_type ?? "CNAME"}
+          dnsName={view.dns_name ?? view.cname_host}
+          dnsValue={view.dns_value ?? view.cname_target}
+        />
       ) : null}
 
       <View className="gap-2">
@@ -144,7 +263,7 @@ export function CustomDomainPanel() {
             onPress={() =>
               run(
                 () => saveCustomDomain(storeId!, domainInput.trim()),
-                "Domain saved. Add the CNAME, then verify."
+                "Domain saved. Add the record below, then verify."
               )
             }
           />
@@ -155,7 +274,14 @@ export function CustomDomainPanel() {
             variant="outline"
             loading={busy}
             onPress={() =>
-              run(() => verifyCustomDomain(storeId!), "Checked DNS")
+              run(() => verifyCustomDomain(storeId!), (data) =>
+                data.status === "active"
+                  ? { text: "Your domain is live.", tone: "ok" }
+                  : {
+                      text: "The DNS record was not found yet. Add it, then verify again.",
+                      tone: "warn",
+                    }
+              )
             }
           />
         ) : null}

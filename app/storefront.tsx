@@ -7,10 +7,9 @@ import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import { StoreAvatar } from '@/components/store/StoreAvatar'
 import { StorePickerList } from '@/components/store/StorePickerList'
 import { StorefrontUrlActions } from '@/components/store/StorefrontUrlActions'
-import { env } from '@src/config/env'
 import { useStore } from '@src/contexts/store-context'
 import { shadows } from '@src/lib/shadows'
-import { buildSubdomainUrl } from '@src/lib/storefront'
+import { storefrontAddress } from '@src/lib/storefront'
 import type { StoreAccessRole } from '@src/types/store'
 
 function RoleBadge({ role }: { role: StoreAccessRole }) {
@@ -33,11 +32,9 @@ export default function StorefrontScreen() {
     }, [refreshStores])
   )
 
-  const storefrontHost = store?.slug
-    ? `${store.slug}.${env.storefrontBaseDomain}`
-    : null
-  const storefrontUrl =
-    subdomainUrl ?? (store?.slug ? buildSubdomainUrl(store.slug) : null)
+  const address = storefrontAddress(store)
+  const storefrontHost = address?.host ?? null
+  const storefrontUrl = address?.url ?? subdomainUrl
 
   const handleSelectStore = async (storeId: number) => {
     if (selectingRef.current) return

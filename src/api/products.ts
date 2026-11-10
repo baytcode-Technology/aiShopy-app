@@ -61,6 +61,8 @@ export type UpdateProductPayload = Partial<{
   category_id: number | null
   images: string[]
   thumbnail_url: string
+  delivery_business_days?: number | null
+  restock_note?: string | null
 }>
 
 export type UpdateProductResponse = {
@@ -92,7 +94,6 @@ export async function createProductVariant(
   return authenticatedFetch<VariantResponse>(`${endpoints.products}/${productId}/variants`, {
     method: 'POST',
     body: JSON.stringify({
-      price_delta: 0,
       stock_qty: 0,
       is_active: true,
       sort_order: 0,

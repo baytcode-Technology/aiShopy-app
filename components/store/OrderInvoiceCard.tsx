@@ -106,7 +106,7 @@ export function OrderInvoiceCard({ order, store }: Props) {
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-1 pr-2">
           <Text className="text-[20px] font-extrabold text-ink leading-tight">{store.name}</Text>
-          <Muted className="text-[13px]">{formatStorefrontHost(store.slug)}</Muted>
+          <Muted className="text-[13px]">{formatStorefrontHost(store)}</Muted>
           <Muted className="text-[13px]">{formatStoreWhatsApp(store)}</Muted>
         </View>
 

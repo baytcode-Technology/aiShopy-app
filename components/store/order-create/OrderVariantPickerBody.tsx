@@ -45,13 +45,13 @@ export function OrderVariantPickerBody({
                 <Image
                   source={{ uri: variant.image_url }}
                   style={styles.thumb}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               ) : product?.thumbnail_url ? (
                 <Image
                   source={{ uri: product.thumbnail_url }}
                   style={styles.thumb}
-                  resizeMode="cover"
+                  resizeMode="contain"
                 />
               ) : (
                 <FontAwesome name="image" size={18} color={Colors.text.muted} />

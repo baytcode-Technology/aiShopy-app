@@ -39,10 +39,10 @@ export function ManageVariantOptionsModal({
 
   useEffect(() => {
     if (!visible) return
-    const state = hydrateVariantEditorState(initialVariants)
+    const state = hydrateVariantEditorState(initialVariants, Number(product?.base_price ?? 0))
     setOptions(state.options)
     setGenerated(state.generated)
-  }, [visible, initialVariants])
+  }, [visible, initialVariants, product?.base_price])
 
   const validate = (): boolean => {
     for (const v of generated) {

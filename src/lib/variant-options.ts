@@ -1,3 +1,4 @@
+import { parseVariantPrice, variantPriceDraft } from '@src/lib/variant-price'
 import type { CreateProductVariantPayload, ProductVariant } from '@src/types/product'
 
 export type VariantOption = {
@@ -10,7 +11,7 @@ export type GeneratedVariant = {
   id: string
   name: string
   options: Record<string, string>
-  priceDelta: string
+  price: string
   compareAtPrice: string
   stockQty: string
   sku: string
@@ -63,12 +64,15 @@ export function extractVariantOptions(variants: ProductVariant[]): VariantOption
   })
 }
 
-export function variantsToGenerated(variants: ProductVariant[]): GeneratedVariant[] {
+export function variantsToGenerated(
+  variants: ProductVariant[],
+  basePrice = 0,
+): GeneratedVariant[] {
   return variants.map((v) => ({
     id: String(v.id),
     name: v.name,
     options: normalizeOptions(v.options ?? {}),
-    priceDelta: String(v.price_delta),
+    price: variantPriceDraft(v, basePrice),
     compareAtPrice: v.compare_at_price != null ? String(v.compare_at_price) : '',
     stockQty: String(v.stock_qty),
     sku: v.sku ?? '',
@@ -77,7 +81,10 @@ export function variantsToGenerated(variants: ProductVariant[]): GeneratedVarian
   }))
 }
 
-export function hydrateVariantEditorState(variants: ProductVariant[]): {
+export function hydrateVariantEditorState(
+  variants: ProductVariant[],
+  basePrice = 0,
+): {
   options: VariantOption[]
   generated: GeneratedVariant[]
 } {
@@ -85,7 +92,7 @@ export function hydrateVariantEditorState(variants: ProductVariant[]): {
     return { options: [], generated: [] }
   }
   const options = extractVariantOptions(variants)
-  const generated = generateVariantsFromOptions(options, variantsToGenerated(variants))
+  const generated = generateVariantsFromOptions(options, variantsToGenerated(variants, basePrice))
   return { options, generated }
 }
 
@@ -163,7 +170,7 @@ export function generateVariantsFromOptions(
       id: existing?.id ?? `gen-${index}-${Date.now()}`,
       name,
       options: opts,
-      priceDelta: existing?.priceDelta ?? '0',
+      price: existing?.price ?? '',
       compareAtPrice: existing?.compareAtPrice ?? '',
       stockQty: existing?.stockQty ?? '0',
       sku: existing?.sku ?? '',
@@ -183,7 +190,7 @@ export function toCreateVariantPayload(
   return {
     name: v.name,
     options: v.options,
-    price_delta: Number(v.priceDelta) || 0,
+    price: parseVariantPrice(v.price),
     compare_at_price,
     stock_qty: Number(v.stockQty) || 0,
     sku: v.sku.trim() || undefined,

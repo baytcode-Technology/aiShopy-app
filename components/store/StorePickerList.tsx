@@ -2,8 +2,8 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { StoreAvatar } from '@/components/store/StoreAvatar'
 import { Caption, Muted } from '@/components/ui/Typography'
-import { env } from '@src/config/env'
 import { shadows } from '@src/lib/shadows'
+import { storefrontAddress } from '@src/lib/storefront'
 import Colors from '@src/theme/colors'
 import type { StoreAccessRole, StoreListItem } from '@src/types/store'
 
@@ -54,7 +54,7 @@ export function StorePickerList({
       style={shadows.card}
     >
       {stores.map((item, index) => {
-        const host = `${item.store.slug}.${env.storefrontBaseDomain}`
+        const host = storefrontAddress(item.store)?.host ?? item.store.slug
         const selected = selectedStoreId === item.store.id
         const wasLastUsed =
           !selected && lastSessionStoreId != null && lastSessionStoreId === item.store.id

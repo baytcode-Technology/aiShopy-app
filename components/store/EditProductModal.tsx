@@ -67,6 +67,8 @@ export function EditProductModal({
   const [generatedVariants, setGeneratedVariants] = useState<GeneratedVariant[]>([])
   const [markAsSold, setMarkAsSold] = useState(false)
   const [markAsNonInventory, setMarkAsNonInventory] = useState(false)
+  const [deliveryDays, setDeliveryDays] = useState('')
+  const [restockNote, setRestockNote] = useState('')
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -107,7 +109,7 @@ export function EditProductModal({
     setImageError('')
 
     if (initialVariants.length > 0) {
-      const hydrated = hydrateVariantEditorState(initialVariants)
+      const hydrated = hydrateVariantEditorState(initialVariants, Number(product.base_price))
       setVariantOptions(hydrated.options)
       setGeneratedVariants(hydrated.generated)
     } else {
@@ -120,6 +122,10 @@ export function EditProductModal({
     setStockError('')
     setMarkAsSold(product.mark_as_sold ?? false)
     setMarkAsNonInventory(product.mark_as_non_inventory ?? false)
+    setDeliveryDays(
+      product.delivery_business_days != null ? String(product.delivery_business_days) : ''
+    )
+    setRestockNote(product.restock_note ?? '')
   }, [product, visible, initialVariants])
 
   const validateVariants = (): boolean => {
@@ -164,6 +170,8 @@ export function EditProductModal({
         thumbnail_url,
         mark_as_sold: hasVariants ? false : markAsSold,
         mark_as_non_inventory: hasVariants ? false : markAsNonInventory,
+        delivery_business_days: deliveryDays.trim() ? Number(deliveryDays) : null,
+        restock_note: restockNote.trim() || null,
       })
 
       if (hasExistingVariants) {
@@ -322,6 +330,19 @@ export function EditProductModal({
           />
         ) : null}
         <Input label="SKU" value={sku} onChangeText={setSku} autoCapitalize="none" />
+        <Input
+          label="Delivery days (this product)"
+          value={deliveryDays}
+          onChangeText={setDeliveryDays}
+          keyboardType="number-pad"
+          placeholder="Blank = shop default"
+        />
+        <Input
+          label="Restock note"
+          value={restockNote}
+          onChangeText={setRestockNote}
+          placeholder="Optional — when stock is back"
+        />
         <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
         <Input
           label="Description"
@@ -348,6 +369,7 @@ export function EditProductModal({
             existingVariants={initialVariants}
             options={variantOptions}
             generatedVariants={generatedVariants}
+            basePrice={basePrice}
             onChange={(nextOptions, nextGenerated) => {
               setVariantOptions(nextOptions)
               setGeneratedVariants(nextGenerated)
@@ -357,6 +379,7 @@ export function EditProductModal({
           <ShopifyVariantEditor
             options={variantOptions}
             variants={generatedVariants}
+            basePrice={basePrice}
             onChange={(nextOptions, nextGenerated) => {
               setVariantOptions(nextOptions)
               setGeneratedVariants(nextGenerated)

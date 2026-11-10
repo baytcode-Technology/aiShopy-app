@@ -19,7 +19,11 @@ import {
   getVariantAvailabilityLabel,
   getVariantCardInventoryFlags,
 } from "@src/lib/product-inventory";
+import { variantSellingPrice } from "@src/lib/variant-price";
+import { shareLink } from "@src/lib/share-link";
+import { buildStorefrontProductUrl } from "@src/lib/storefront";
 import { showError, showSuccess } from "@src/lib/toast";
+import { useStore } from "@src/contexts/store-context";
 import Colors from "@src/theme/colors";
 import type { Product, ProductVariant } from "@src/types/product";
 import { useState } from "react";
@@ -40,6 +44,7 @@ export function VariantEditableCard({
   onUpdated,
   onDeleted,
 }: Props) {
+  const { store } = useStore();
   const [editOpen, setEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
@@ -55,7 +60,7 @@ export function VariantEditableCard({
   const status = displayActive ? "active" : "unlisted";
   const cardLocked = busy || deleteLoading || imageBusy;
 
-  const unitPrice = Number(product.base_price) + Number(variant.price_delta);
+  const unitPrice = variantSellingPrice(product.base_price, variant);
   const availabilityLabel = getVariantAvailabilityLabel(product, variant);
   const { showSoldOut, showNonInventory } = getVariantCardInventoryFlags(
     product,
@@ -210,7 +215,7 @@ export function VariantEditableCard({
           <Caption className="mb-3">{optionLabels}</Caption>
         ) : null}
 
-        <View className="flex-row flex-wrap items-center gap-3 pr-[4.75rem]">
+        <View className="flex-row flex-wrap items-center gap-3 pr-[7.5rem]">
           <PriceDisplayRow
             currencySymbol={currencySymbol}
             price={unitPrice}
@@ -230,6 +235,18 @@ export function VariantEditableCard({
         </View>
 
         <View className="absolute bottom-3 right-3 flex-row items-center gap-2">
+          <IconButton
+            size="sm"
+            onPress={() => {
+              if (!store?.slug) return;
+              const url = buildStorefrontProductUrl(store.slug, product, variant.id, store);
+              void shareLink({ title: `${product.name} — ${variant.name}`, url });
+            }}
+            disabled={cardLocked || !store?.slug}
+            accessibilityLabel="Share variant"
+          >
+            <FontAwesome name="share-alt" size={14} color={Colors.text.primary} />
+          </IconButton>
           <IconButton
             size="sm"
             onPress={() => setEditOpen(true)}

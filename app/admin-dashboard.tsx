@@ -4,8 +4,8 @@ import { CustomDomainPanel } from "@/components/admin/CustomDomainPanel";
 import { Screen, ScreenScrollBody } from "@/components/ui/Screen";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { Caption, Muted } from "@/components/ui/Typography";
-import { env } from "@src/config/env";
 import { useStore } from "@src/contexts/store-context";
+import { storefrontAddress } from "@src/lib/storefront";
 import { shadows } from "@src/lib/shadows";
 import { hasPremiumAccess } from "@src/lib/subscription";
 import { Redirect, router, type Href } from "expo-router";
@@ -21,12 +21,7 @@ export default function AdminDashboardScreen() {
     return <Redirect href="/settings" />;
   }
 
-  const currentDomain =
-    store?.custom_domain_status === "active" && store.custom_domain
-      ? store.custom_domain
-      : store?.slug
-        ? `${store.slug}.${env.storefrontBaseDomain}`
-        : "—";
+  const currentDomain = storefrontAddress(store)?.host ?? "—";
 
   const goToSubscription = () => router.push("/subscription" as Href);
 

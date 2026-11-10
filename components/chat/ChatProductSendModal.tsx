@@ -23,6 +23,11 @@ type Props = {
   storeId: number
   storeSlug: string
   currency?: string
+  store?: {
+    custom_domain?: string | null
+    custom_domain_status?: string | null
+    public_link_host?: string | null
+  } | null
   onClose: () => void
   onSend: (payload: ProductShareSendPayload) => void
 }
@@ -32,6 +37,7 @@ export function ChatProductSendModal({
   storeId,
   storeSlug,
   currency,
+  store,
   onClose,
   onSend,
 }: Props) {
@@ -82,6 +88,7 @@ export function ChatProductSendModal({
       variant,
       currency,
       storeSlug,
+      store,
     })
     reset()
     onSend({

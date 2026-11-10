@@ -49,7 +49,7 @@ export function OrderInvoiceItemsTable({ items, currency }: Props) {
           >
             <View className="w-11 h-11 rounded-lg bg-gray-100 border border-gray-200 overflow-hidden items-center justify-center">
               {thumbnailUrl ? (
-                <Image source={{ uri: thumbnailUrl }} style={styles.thumb} resizeMode="cover" />
+                <Image source={{ uri: thumbnailUrl }} style={styles.thumb} resizeMode="contain" />
               ) : (
                 <FontAwesome name="image" size={16} color={Colors.text.muted} />
               )}

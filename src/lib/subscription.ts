@@ -72,7 +72,7 @@ export function isIndiaStore(store: Pick<Store, 'country'> | null | undefined): 
 export function getBusinessPriceLabel(
   store: Pick<Store, 'country'> | null | undefined
 ): string {
-  return isIndiaStore(store) ? '₹1399 / month' : '$20 / month'
+  return isIndiaStore(store) ? '₹999 / month' : '$20 / month'
 }
 
 export function getPlanLabel(plan: SubscriptionPlan): string {

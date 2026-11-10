@@ -10,6 +10,7 @@ import { Caption, Label, SectionTitle } from '@/components/ui/Typography'
 import { deleteProductVariant } from '@src/api/products'
 import { showError, showSuccess } from '@src/lib/toast'
 import Colors from '@src/theme/colors'
+import { variantPriceDraft } from '@src/lib/variant-price'
 import type { ProductVariant } from '@src/types/product'
 
 export type EditableVariantRow = {
@@ -27,11 +28,11 @@ export type EditableVariantRow = {
   imageRemoved?: boolean
 }
 
-export function variantsToEditable(rows: ProductVariant[]): EditableVariantRow[] {
+export function variantsToEditable(rows: ProductVariant[], basePrice = 0): EditableVariantRow[] {
   return rows.map((v) => ({
     id: v.id,
     name: v.name,
-    priceDelta: String(v.price_delta),
+    price: variantPriceDraft(v, basePrice),
     compareAtPrice: v.compare_at_price != null ? String(v.compare_at_price) : '',
     stockQty: String(v.stock_qty),
     sku: v.sku ?? '',
@@ -48,9 +49,11 @@ type Props = {
   productId: number
   variants: EditableVariantRow[]
   onChange: (variants: EditableVariantRow[]) => void
+  basePrice?: string | number
 }
 
-export function VariantListEditor({ productId, variants, onChange }: Props) {
+export function VariantListEditor({ productId, variants, onChange, basePrice }: Props) {
+  const pricePlaceholder = basePrice === undefined || basePrice === '' ? undefined : String(basePrice)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
@@ -152,12 +155,14 @@ export function VariantListEditor({ productId, variants, onChange }: Props) {
             />
             <View className="flex-row gap-2">
               <View className="flex-1">
-                <Label className="mb-1 normal-case tracking-normal text-[10px]">Price +/−</Label>
+                <Label className="mb-1 normal-case tracking-normal text-[10px]">Price</Label>
                 <TextInput
                   className={fieldInputClass}
-                  value={v.priceDelta}
-                  onChangeText={(priceDelta) => update(v.id, { priceDelta })}
+                  value={v.price}
+                  onChangeText={(price) => update(v.id, { price })}
                   keyboardType="decimal-pad"
+                  placeholder={pricePlaceholder}
+                  placeholderTextColor={Colors.text.muted}
                 />
               </View>
               <View className="flex-1">

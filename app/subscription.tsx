@@ -63,7 +63,7 @@ export default function SubscriptionScreen() {
   const onBusinessPlan = isCurrentPlan(store, "business");
   const onStarterPlan = isCurrentPlan(store, "starter");
   const useAppleIap = Platform.OS === "ios";
-  // India stores: always show ₹1399 so UI matches Apple's India IAP charge.
+  // India stores: always show ₹999 so UI matches Apple's India IAP charge.
   // StoreKit priceString can return the USD base tier ($19.99) and confuse users.
   const indiaStore = isIndiaStore(store);
 

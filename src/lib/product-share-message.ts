@@ -3,11 +3,18 @@ import { formatMoney } from '@src/lib/format-money'
 import { buildStorefrontProductUrl } from '@src/lib/storefront'
 import type { Product, ProductVariant } from '@src/types/product'
 
+type StoreShareLink = {
+  custom_domain?: string | null
+  custom_domain_status?: string | null
+  public_link_host?: string | null
+}
+
 type BuildProductShareMessageInput = {
   product: Product
   variant: ProductVariant | null
   currency?: string
   storeSlug: string
+  store?: StoreShareLink | null
 }
 
 export function buildProductShareMessage({
@@ -15,10 +22,11 @@ export function buildProductShareMessage({
   variant,
   currency,
   storeSlug,
+  store,
 }: BuildProductShareMessageInput): string {
   const price = formatMoney(unitPrice(product, variant), currency)
   const title = variant ? `${product.name} — ${variant.name}` : product.name
-  const url = buildStorefrontProductUrl(storeSlug, product, variant?.id ?? null)
+  const url = buildStorefrontProductUrl(storeSlug, product, variant?.id ?? null, store)
 
   return `${title}\n${price}\n\n${url}`
 }

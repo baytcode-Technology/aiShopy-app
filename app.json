@@ -2,7 +2,7 @@
   "expo": {
     "name": "AiShopy",
     "slug": "aishopy",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/app_logo.jpg",
     "scheme": "aishopyapp",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aishopy.app",
-      "buildNumber": "11",
+      "buildNumber": "12",
       "usesAppleSignIn": true,
       "entitlements": {
         "com.apple.developer.applesignin": ["Default"]
@@ -38,13 +38,14 @@
           "credpay",
           "bhim"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Allow AiShopy to use your microphone to record voice messages in chat."
       }
     },
     "android": {
       "label": "AiShopy",
       "package": "com.aishopy.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"

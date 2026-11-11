@@ -39,17 +39,13 @@ export function SupportKeyboardChatLayout<T = unknown>({
     isNavigationBarTranslucentAndroid: true,
   });
 
-  const composerStyle = useAnimatedStyle(() => {
-    const kbHeight = keyboard.height.value;
-    const isKeyboardOpen = kbHeight > 0;
+  const columnStyle = useAnimatedStyle(() => ({
+    paddingBottom: keyboard.height.value,
+  }));
 
-    return {
-      // Only lift with the keyboard while it is open — leave open behavior as-is.
-      transform: [{ translateY: isKeyboardOpen ? -kbHeight : 0 }],
-      // When the keyboard is closed, pad above the system nav bar (3-button or gesture).
-      paddingBottom: isKeyboardOpen ? 0 : closedPadding,
-    };
-  });
+  const composerStyle = useAnimatedStyle(() => ({
+    paddingBottom: keyboard.height.value > 0 ? 0 : closedPadding,
+  }));
 
   useEffect(() => {
     const showEvent =
@@ -71,7 +67,7 @@ export function SupportKeyboardChatLayout<T = unknown>({
   }, [listRef, onKeyboardShow]);
 
   return (
-    <View className="flex-1">
+    <Animated.View className="flex-1" style={columnStyle}>
       <View className="flex-1">{children}</View>
       {footer}
       <Animated.View
@@ -80,6 +76,6 @@ export function SupportKeyboardChatLayout<T = unknown>({
       >
         {composer}
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }

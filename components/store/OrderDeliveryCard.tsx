@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { TrackingBarcodeScanner } from '@/components/store/TrackingBarcodeScanner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { updateOrder } from '@src/api/orders'
@@ -40,6 +41,8 @@ export function OrderDeliveryCard({
   onUpdated,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [scanOpen, setScanOpen] = useState(false)
+  const [cameraNote, setCameraNote] = useState<string | null>(null)
   const [promisedBy, setPromisedBy] = useState('')
   const [delayNote, setDelayNote] = useState('')
   const [courierName, setCourierName] = useState('')
@@ -124,11 +127,39 @@ export function OrderDeliveryCard({
           {showCourier ? (
             <>
               <Input label="Courier" value={courierName} onChangeText={setCourierName} />
-              <Input
-                label="Tracking number"
-                value={trackingNumber}
-                onChangeText={setTrackingNumber}
-                autoCapitalize="none"
+              <View className="flex-row items-end gap-2">
+                <View className="flex-1">
+                  <Input
+                    label="Tracking number"
+                    value={trackingNumber}
+                    onChangeText={setTrackingNumber}
+                    autoCapitalize="none"
+                  />
+                </View>
+                <Button
+                  label="Scan"
+                  variant="outline"
+                  style={{ width: undefined, alignSelf: 'flex-end' }}
+                  onPress={() => {
+                    setCameraNote(null)
+                    setScanOpen(true)
+                  }}
+                />
+              </View>
+              {cameraNote ? (
+                <Text className="text-[13px] leading-5 text-gray-500">{cameraNote}</Text>
+              ) : null}
+              <TrackingBarcodeScanner
+                visible={scanOpen}
+                onClose={() => setScanOpen(false)}
+                onScanned={(value) => {
+                  setTrackingNumber(value)
+                  setScanOpen(false)
+                }}
+                onDenied={() => {
+                  setScanOpen(false)
+                  setCameraNote('Camera access is off. Type the tracking number instead.')
+                }}
               />
               <Input
                 label="Tracking URL"

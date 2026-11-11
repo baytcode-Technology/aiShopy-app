@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ScrollView, View, type ScrollViewProps, type ViewProps } from 'react-native'
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
 import { cn } from '@src/lib/cn'
+import { useKeyboardInset } from '@src/hooks/useKeyboardInset'
 
 type Props = ViewProps & {
   children: ReactNode
@@ -30,7 +31,7 @@ export function ScreenBody({ children, className, ...props }: ViewProps) {
   )
 }
 
-type ScreenScrollBodyProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
+type ScreenScrollBodyProps = ScrollViewProps & {
   children: ReactNode
   className?: string
   contentContainerClassName?: string
@@ -43,14 +44,18 @@ export function ScreenScrollBody({
   contentContainerClassName,
   showsVerticalScrollIndicator = false,
   keyboardShouldPersistTaps = 'handled',
+  contentContainerStyle,
   ...props
 }: ScreenScrollBodyProps) {
+  const keyboardHeight = useKeyboardInset()
   return (
     <ScrollView
       className={cn('flex-1', className)}
       contentContainerClassName={cn('px-5 pt-2 pb-8 grow', contentContainerClassName)}
+      contentContainerStyle={[{ paddingBottom: keyboardHeight > 0 ? keyboardHeight : undefined }, contentContainerStyle]}
       showsVerticalScrollIndicator={showsVerticalScrollIndicator}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+      automaticallyAdjustKeyboardInsets
       {...props}
     >
       {children}

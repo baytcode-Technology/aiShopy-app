@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, ScrollView, View } from 'react-native'
+import { useKeyboardInset } from '@src/hooks/useKeyboardInset'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerSheet'
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
@@ -14,6 +15,7 @@ import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
 import { Muted } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
+import { parseShopPolicies } from '@src/types/shop-policies'
 import { useStore } from '@src/contexts/store-context'
 import { useStoreUnread } from '@src/contexts/store-unread-context'
 import { formatOrderNumber } from '@src/lib/order-status'
@@ -38,6 +40,7 @@ export default function OrderDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pickerField, setPickerField] = useState<OrderStatusField | null>(null)
+  const keyboardHeight = useKeyboardInset()
 
   const load = useCallback(async () => {
     if (!Number.isFinite(id) || !store?.id) return
@@ -141,8 +144,10 @@ export default function OrderDetailScreen() {
           <ScrollView
             className="flex-1"
             contentContainerClassName="px-5 pt-4 gap-3"
-            contentContainerStyle={{ paddingBottom: 32 }}
+            contentContainerStyle={{ paddingBottom: 32 + keyboardHeight }}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <AnimatedFadeIn className="gap-2">
               {order.payment?.payment_proof_url ? (
@@ -195,6 +200,7 @@ export default function OrderDetailScreen() {
                 <OrderDeliveryCard
                   order={order}
                   storeId={store.id}
+                  courierTracking={parseShopPolicies(store.shop_policies).courier_tracking}
                   saving={saving}
                   onSavingChange={setSaving}
                   onUpdated={setOrder}

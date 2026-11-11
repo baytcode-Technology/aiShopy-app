@@ -119,6 +119,7 @@ export default function ShopPoliciesScreen() {
   const [returnNote, setReturnNote] = useState('')
   const [offerNote, setOfferNote] = useState('')
   const [pickupNote, setPickupNote] = useState('')
+  const [courierTracking, setCourierTracking] = useState(false)
 
   useEffect(() => {
     if (!store) return
@@ -139,6 +140,7 @@ export default function ShopPoliciesScreen() {
     setReturnNote(p.return_note ?? '')
     setOfferNote(p.current_offer_note ?? '')
     setPickupNote(p.pickup_note ?? '')
+    setCourierTracking(p.courier_tracking)
   }, [store])
 
   const save = async () => {
@@ -163,6 +165,7 @@ export default function ShopPoliciesScreen() {
           return_note: returnNote,
           current_offer_note: offerNote,
           pickup_note: pickupNote,
+          courier_tracking: courierTracking,
         }),
       })
       await refreshStore({ silent: true })
@@ -215,6 +218,11 @@ export default function ShopPoliciesScreen() {
             value={freeAbove}
             onChangeText={setFreeAbove}
             keyboardType="decimal-pad"
+          />
+          <PolicySwitch
+            label="Courier tracking"
+            value={courierTracking}
+            onValueChange={setCourierTracking}
           />
           <PolicySwitch label="Same-day delivery" value={sameDay} onValueChange={setSameDay} />
           <PolicySwitch label="Next-day delivery" value={nextDay} onValueChange={setNextDay} />
@@ -274,7 +282,7 @@ export default function ShopPoliciesScreen() {
 
         <Muted className="px-1 text-[13px] leading-5">
           Slow items: set extra delivery days on the product. A delayed order: open the order and
-          add a promised date, delay note, courier, or tracking link.
+          add a promised date or delay note. Courier and tracking appear when Courier tracking is on.
         </Muted>
         <Button
           label={saving ? 'Saving…' : 'Save policies'}

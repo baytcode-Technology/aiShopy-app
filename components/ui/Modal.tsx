@@ -1,4 +1,15 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react'
 import {
   KeyboardAvoidingView,
   LayoutChangeEvent,
@@ -26,6 +37,101 @@ import type { RefObject } from 'react'
 /** Matches tailwind `pb-7` — minimum footer padding on gesture-navigation devices. */
 const FOOTER_PADDING_MIN = 28
 
+type PortalApi = {
+  set: (id: string, node: ReactNode) => void
+  remove: (id: string) => void
+}
+
+type PortalStore = PortalApi & {
+  subscribe: (listener: () => void) => () => void
+  getVersion: () => number
+  getNodes: () => Array<[string, ReactNode]>
+}
+
+const ModalPortalContext = createContext<PortalApi | null>(null)
+
+function createPortalStore(): PortalStore {
+  let version = 0
+  const nodes = new Map<string, ReactNode>()
+  const listeners = new Set<() => void>()
+  const emit = () => {
+    version += 1
+    listeners.forEach((listener) => listener())
+  }
+  return {
+    set(id, node) {
+      nodes.set(id, node)
+      emit()
+    },
+    remove(id) {
+      if (!nodes.delete(id)) return
+      emit()
+    },
+    subscribe(listener) {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+    getVersion: () => version,
+    getNodes: () => Array.from(nodes.entries()),
+  }
+}
+
+function PortalOutlet({ store }: { store: PortalStore }) {
+  useSyncExternalStore(store.subscribe, store.getVersion, store.getVersion)
+  const entries = store.getNodes()
+  if (entries.length === 0) return null
+  return (
+    <>
+      {entries.map(([id, node]) => (
+        <View key={id} pointerEvents="box-none" style={styles.portal}>
+          {node}
+        </View>
+      ))}
+    </>
+  )
+}
+
+function ModalFrame({ children }: { children: ReactNode }) {
+  const store = useRef(createPortalStore()).current
+  const api = useMemo<PortalApi>(
+    () => ({
+      set: store.set,
+      remove: store.remove,
+    }),
+    [store]
+  )
+  return (
+    <ModalPortalContext.Provider value={api}>
+      <View style={styles.frame}>
+        {children}
+        <PortalOutlet store={store} />
+      </View>
+    </ModalPortalContext.Provider>
+  )
+}
+
+/** Draws `node` inside the open sheet instead of a second native modal. */
+export function useInModalPortal(active: boolean, node: ReactNode): boolean {
+  const portal = useContext(ModalPortalContext)
+  const id = useId()
+
+  useLayoutEffect(() => {
+    if (!portal) return
+    if (!active) {
+      portal.remove(id)
+      return
+    }
+    portal.set(id, node)
+  })
+
+  useLayoutEffect(() => {
+    if (!portal) return
+    return () => portal.remove(id)
+  }, [portal, id])
+
+  return portal != null
+}
+
 type Props = {
   isOpen: boolean
   onClose: () => void
@@ -48,6 +154,25 @@ type Props = {
 }
 
 export function SleekModal(props: Props) {
+  const portal = useContext(ModalPortalContext)
+  const nestedId = useId()
+
+  useLayoutEffect(() => {
+    if (!portal) return
+    if (!props.isOpen) {
+      portal.remove(nestedId)
+      return
+    }
+    portal.set(nestedId, <SleekModalSheet {...props} />)
+  })
+
+  useLayoutEffect(() => {
+    if (!portal) return
+    return () => portal.remove(nestedId)
+  }, [portal, nestedId])
+
+  if (portal) return null
+
   return (
     <RNModal
       visible={props.isOpen}
@@ -58,8 +183,10 @@ export function SleekModal(props: Props) {
       onRequestClose={props.onClose}
     >
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-        <SleekModalSheet {...props} />
-        {/* Native Modal sits above the root Toast; mount one here so alerts are visible. */}
+        <ModalFrame>
+          <SleekModalSheet {...props} />
+        </ModalFrame>
+        {/* Above the sheet and any in-sheet portal, still inside this native modal. */}
         <Toast config={toastConfig} />
       </SafeAreaProvider>
     </RNModal>
@@ -251,6 +378,13 @@ function SleekModalSheet({
 }
 
 const styles = StyleSheet.create({
+  frame: {
+    flex: 1,
+  },
+  portal: {
+    ...StyleSheet.absoluteFillObject,
+    flex: 1,
+  },
   sheetHost: {
     width: '100%',
   },

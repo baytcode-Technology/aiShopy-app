@@ -38,7 +38,10 @@ export function ManageVariantOptionsModal({
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
-    if (!visible) return
+    if (!visible) {
+      setConfirmDelete(false)
+      return
+    }
     const state = hydrateVariantEditorState(initialVariants, Number(product?.base_price ?? 0))
     setOptions(state.options)
     setGenerated(state.generated)
@@ -116,17 +119,16 @@ export function ManageVariantOptionsModal({
             setGenerated(nextGenerated)
           }}
         />
+        <ConfirmDialog
+          visible={confirmDelete}
+          title="Remove variants?"
+          message="Removing option values will delete variants that use them. Continue?"
+          confirmLabel="Save changes"
+          loading={loading}
+          onConfirm={() => void save()}
+          onCancel={() => setConfirmDelete(false)}
+        />
       </FormModal>
-
-      <ConfirmDialog
-        visible={confirmDelete}
-        title="Remove variants?"
-        message="Removing option values will delete variants that use them. Continue?"
-        confirmLabel="Save changes"
-        loading={loading}
-        onConfirm={() => void save()}
-        onCancel={() => setConfirmDelete(false)}
-      />
     </>
   )
 }

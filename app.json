@@ -136,10 +136,17 @@
       "expo-secure-store",
       "expo-apple-authentication",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AiShopy to use your camera for chat photos and to scan a delivery label.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Allow AiShopy to access your photos for product images and chat media.",
-          "cameraPermission": "Allow AiShopy to access your camera to send photos and videos in chat."
+          "cameraPermission": "Allow AiShopy to use your camera for chat photos and to scan a delivery label."
         }
       ],
       [

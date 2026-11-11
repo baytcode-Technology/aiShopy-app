@@ -92,7 +92,11 @@ export function EditProductModal({
   const hasExistingVariants = initialVariants.length > 0
 
   useEffect(() => {
-    if (!product || !visible) return
+    if (!visible) {
+      setConfirmDelete(false)
+      return
+    }
+    if (!product) return
     setName(product.name)
     setBasePrice(String(product.base_price))
     setCompareAtPrice(
@@ -386,17 +390,16 @@ export function EditProductModal({
             }}
           />
         )}
+        <ConfirmDialog
+          visible={confirmDelete}
+          title="Remove variants?"
+          message="Removing option values will delete variants that use them. Continue?"
+          confirmLabel="Save changes"
+          loading={loading}
+          onConfirm={() => void submit()}
+          onCancel={() => setConfirmDelete(false)}
+        />
       </FormModal>
-
-      <ConfirmDialog
-        visible={confirmDelete}
-        title="Remove variants?"
-        message="Removing option values will delete variants that use them. Continue?"
-        confirmLabel="Save changes"
-        loading={loading}
-        onConfirm={() => void submit()}
-        onCancel={() => setConfirmDelete(false)}
-      />
     </>
   )
 }

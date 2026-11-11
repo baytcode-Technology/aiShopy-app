@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { router } from 'expo-router'
-import { ActivityIndicator, Switch, Text, View } from 'react-native'
+import { ActivityIndicator, Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { AiThirdPartyConsentModal } from '@/components/store/AiThirdPartyConsentModal'
 import { Button } from '@/components/ui/Button'
@@ -163,12 +164,10 @@ export default function ChatBoatScreen() {
                     When on, Chat Boat answers customer messages automatically.
                   </Muted>
                 </View>
-                <Switch
+                <ThemeSwitch
                   value={enabled}
                   onValueChange={handleToggleEnabled}
                   disabled={!premium || saving}
-                  trackColor={{ false: '#E4E4E7', true: Colors.brand.primary }}
-                  thumbColor="#FFFFFF"
                 />
               </View>
             </View>

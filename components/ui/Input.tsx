@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   Text,
@@ -8,6 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native'
+import { useScrollFieldIntoView } from '@/components/ui/Screen'
 import { cn } from '@src/lib/cn'
 import Colors from '@src/theme/colors'
 import { Label } from './Typography'
@@ -35,9 +36,12 @@ export function Input({
   ...props
 }: Props) {
   const [focused, setFocused] = useState(false)
+  const containerRef = useRef<View>(null)
+  const scrollField = useScrollFieldIntoView()
 
   return (
     <View
+      ref={containerRef}
       className={cn('gap-2 mb-0.5 w-full', containerClassName)}
       style={containerStyle}
       onLayout={containerOnLayout}
@@ -56,6 +60,9 @@ export function Input({
         onFocus={(e) => {
           setFocused(true)
           onFocus?.(e)
+          const field = containerRef.current
+          if (!field || !scrollField) return
+          requestAnimationFrame(() => scrollField.scrollFieldIntoView(field))
         }}
         onBlur={(e) => {
           setFocused(false)

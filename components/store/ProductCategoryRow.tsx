@@ -96,7 +96,7 @@ export function ProductCategoryRow({
       </DetailSection>
 
       <SleekModal
-        isOpen={open}
+        isOpen={open && !createOpen}
         onClose={() => !saving && setOpen(false)}
         title="Category"
         subtitle="Assign this product to a category"

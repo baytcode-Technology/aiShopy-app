@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Pressable, Switch, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { CategoryImagePicker } from '@/components/store/CategoryImagePicker'
 import type { PickedImage } from '@/components/store/ProductImagePicker'
@@ -146,13 +147,7 @@ export function EditCategoryModal({
             {isActive ? 'Active on storefront' : 'Unlisted (hidden)'}
           </Caption>
         </View>
-        <Switch
-          value={isActive}
-          onValueChange={setIsActive}
-          trackColor={{ false: '#E4E4E7', true: '#3EB056' }}
-          thumbColor="#FFFFFF"
-          disabled={saving}
-        />
+        <ThemeSwitch value={isActive} onValueChange={setIsActive} disabled={saving} />
       </View>
 
       <Field label="Description">

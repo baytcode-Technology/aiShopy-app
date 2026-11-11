@@ -1,6 +1,5 @@
-import { Switch, Text, View } from 'react-native'
-
-import Colors from '@src/theme/colors'
+import { Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 
 
 
@@ -52,22 +51,13 @@ export function VariantInventoryFlagsEditor({
 
         </View>
 
-        <Switch
-
+        <ThemeSwitch
           value={markAsSold}
-
           onValueChange={(value) => {
-
             onMarkAsSoldChange(value)
-
             if (value) onMarkAsNonInventoryChange(false)
-
           }}
-
           disabled={disabled}
-
-          trackColor={{ false: Colors.border.default, true: Colors.brand.primary }}
-
         />
 
       </View>
@@ -88,22 +78,13 @@ export function VariantInventoryFlagsEditor({
 
         </View>
 
-        <Switch
-
+        <ThemeSwitch
           value={markAsNonInventory}
-
           onValueChange={(value) => {
-
             onMarkAsNonInventoryChange(value)
-
             if (value) onMarkAsSoldChange(false)
-
           }}
-
           disabled={disabled}
-
-          trackColor={{ false: Colors.border.default, true: Colors.brand.primary }}
-
         />
 
       </View>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Switch, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import * as Notifications from 'expo-notifications'
 import {
   registerThisDeviceAsAdminPush,
@@ -12,8 +13,6 @@ import {
   setPushAlertsEnabled,
 } from '@src/lib/push-notifications'
 import { shadows } from '@src/lib/shadows'
-import Colors from '@src/theme/colors'
-
 type Props = {
   variant?: 'card' | 'row'
 }
@@ -84,11 +83,10 @@ export function AdminAlertsToggle({ variant = 'card' }: Props) {
           </Text>
         )}
       </View>
-      <Switch
+      <ThemeSwitch
         value={subscribed}
         disabled={busy}
         onValueChange={(v) => void handleToggle(v)}
-        trackColor={{ false: '#e4e4e7', true: Colors.brand.primary }}
       />
     </View>
   )

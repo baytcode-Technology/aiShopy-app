@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Image, Pressable, Switch, Text, View } from 'react-native'
+import { Image, Pressable, Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import * as ImagePicker from 'expo-image-picker'
 import { router, useFocusEffect } from 'expo-router'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
@@ -193,12 +194,7 @@ export default function UpiPaymentScreen() {
                   Show your UPI ID and QR at checkout. Confirm payment manually in the app.
                 </Muted>
               </View>
-              <Switch
-                value={enabled}
-                onValueChange={setEnabled}
-                trackColor={{ false: '#E4E4E7', true: '#0A0A0B' }}
-                thumbColor="#FFFFFF"
-              />
+              <ThemeSwitch value={enabled} onValueChange={setEnabled} />
             </View>
 
             <Input

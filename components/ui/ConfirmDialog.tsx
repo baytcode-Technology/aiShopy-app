@@ -1,12 +1,6 @@
-import {
-  Modal as RNModal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  ActivityIndicator,
-} from 'react-native'
-import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { Modal as RNModal, Pressable, StyleSheet, View } from 'react-native'
+import { Button } from '@/components/ui/Button'
+import { useInModalPortal } from '@/components/ui/Modal'
 import { Heading, Muted } from './Typography'
 
 type Props = {
@@ -22,89 +16,64 @@ type Props = {
   onCancel: () => void
 }
 
-export function ConfirmDialog({
-  visible,
+function ConfirmCard({
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
-  confirmVariant = 'danger',
-  tone = 'default',
-  loading = false,
+  confirmLabel,
+  cancelLabel,
+  loading,
   onConfirm,
   onCancel,
 }: Props) {
-  const confirmBg = confirmVariant === 'primary' ? '#3EB056' : '#E11D48'
-  const isDangerTone = tone === 'danger'
-
   return (
-    <RNModal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={loading ? undefined : onCancel}
-    >
-      <View className="flex-1 justify-center px-6">
-        <Pressable
-          style={StyleSheet.absoluteFill}
-          onPress={loading ? undefined : onCancel}
-          accessibilityLabel="Dismiss"
-        >
-          <View className="flex-1 bg-ink-overlay" />
-        </Pressable>
+    <View className="flex-1 justify-center px-6">
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={loading ? undefined : onCancel}
+        accessibilityLabel="Dismiss"
+      >
+        <View className="flex-1 bg-ink-overlay" />
+      </Pressable>
 
-        <View
-          className={`bg-surface rounded-3xl border p-6 shadow-sm ${
-            isDangerTone ? 'border-rose-200' : 'border-gray-200'
-          }`}
-        >
-          {isDangerTone ? (
-            <View className="items-center mb-4">
-              <View className="w-14 h-14 rounded-full bg-rose-100 border border-rose-200 items-center justify-center">
-                <FontAwesome name="exclamation-triangle" size={24} color="#E11D48" />
-              </View>
-            </View>
-          ) : null}
+      <View className="bg-surface rounded-3xl border border-gray-200 p-6">
+        <Heading className="text-xl mb-2 text-ink">{title}</Heading>
+        <Muted className="text-[15px] leading-[22px] mb-6">{message}</Muted>
 
-          <Heading className={`text-xl mb-2 ${isDangerTone ? 'text-center' : ''}`}>
-            {title}
-          </Heading>
-          <Muted
-            className={`text-[15px] leading-[22px] mb-6 ${
-              isDangerTone ? 'text-center text-gray-600' : ''
-            }`}
-          >
-            {message}
-          </Muted>
-
-          <View className="flex-row gap-3">
-            <Pressable
+        <View className="flex-row gap-3">
+          <View className="flex-1">
+            <Button
+              label={cancelLabel ?? 'Cancel'}
+              variant="outline"
               onPress={onCancel}
               disabled={loading}
-              className="flex-1 py-4 rounded-2xl border-2 border-gray-200 bg-surface items-center justify-center"
-              style={loading ? { opacity: 0.5 } : undefined}
-            >
-              <Text className="text-[16px] font-bold text-ink">{cancelLabel}</Text>
-            </Pressable>
-            <Pressable
+            />
+          </View>
+          <View className="flex-1">
+            <Button
+              label={confirmLabel ?? 'Confirm'}
+              variant="primary"
+              loading={loading}
               onPress={onConfirm}
-              disabled={loading}
-              className="flex-1 py-4 rounded-2xl items-center justify-center border-2"
-              style={{
-                backgroundColor: confirmBg,
-                borderColor: confirmBg,
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text className="text-[16px] font-bold text-white">{confirmLabel}</Text>
-              )}
-            </Pressable>
+            />
           </View>
         </View>
       </View>
+    </View>
+  )
+}
+
+export function ConfirmDialog(props: Props) {
+  const inSheet = useInModalPortal(props.visible, <ConfirmCard {...props} />)
+  if (inSheet) return null
+
+  return (
+    <RNModal
+      visible={props.visible}
+      transparent
+      animationType="fade"
+      onRequestClose={props.loading ? undefined : props.onCancel}
+    >
+      <ConfirmCard {...props} />
     </RNModal>
   )
 }

@@ -1,7 +1,26 @@
-import type { ReactNode } from 'react'
-import { ScrollView, View, type ScrollViewProps, type ViewProps } from 'react-native'
+import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from 'react'
+import {
+  findNodeHandle,
+  Keyboard,
+  Platform,
+  ScrollView,
+  View,
+  type ScrollViewProps,
+  type ViewProps,
+} from 'react-native'
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context'
 import { cn } from '@src/lib/cn'
+import { useKeyboardInset } from '@src/hooks/useKeyboardInset'
+
+type ScrollFieldContextValue = {
+  scrollFieldIntoView: (field: View) => void
+}
+
+const ScrollFieldContext = createContext<ScrollFieldContextValue | null>(null)
+
+export function useScrollFieldIntoView(): ScrollFieldContextValue | null {
+  return useContext(ScrollFieldContext)
+}
 
 type Props = ViewProps & {
   children: ReactNode
@@ -30,7 +49,7 @@ export function ScreenBody({ children, className, ...props }: ViewProps) {
   )
 }
 
-type ScreenScrollBodyProps = Omit<ScrollViewProps, 'contentContainerStyle'> & {
+type ScreenScrollBodyProps = ScrollViewProps & {
   children: ReactNode
   className?: string
   contentContainerClassName?: string
@@ -43,17 +62,64 @@ export function ScreenScrollBody({
   contentContainerClassName,
   showsVerticalScrollIndicator = false,
   keyboardShouldPersistTaps = 'handled',
+  contentContainerStyle,
   ...props
 }: ScreenScrollBodyProps) {
+  const keyboardHeight = useKeyboardInset()
+  const scrollRef = useRef<ScrollView>(null)
+  const focusedField = useRef<View | null>(null)
+
+  const scrollFieldIntoView = useCallback((field: View) => {
+    focusedField.current = field
+    const scrollNode = findNodeHandle(scrollRef.current)
+    if (scrollNode == null) return
+    field.measureLayout(
+      scrollNode,
+      (_x, y) => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true })
+      },
+      () => {},
+    )
+  }, [])
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const showSub = Keyboard.addListener(showEvent, () => {
+      const field = focusedField.current
+      if (!field) return
+      requestAnimationFrame(() => scrollFieldIntoView(field))
+    })
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      focusedField.current = null
+    })
+    return () => {
+      showSub.remove()
+      hideSub.remove()
+    }
+  }, [scrollFieldIntoView])
+
   return (
-    <ScrollView
-      className={cn('flex-1', className)}
-      contentContainerClassName={cn('px-5 pt-2 pb-8 grow', contentContainerClassName)}
-      showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
-      {...props}
-    >
-      {children}
-    </ScrollView>
+    <ScrollFieldContext.Provider value={{ scrollFieldIntoView }}>
+      <ScrollView
+        ref={scrollRef}
+        className={cn('flex-1', className)}
+        contentContainerClassName={cn(
+          'grow px-5 pt-2',
+          keyboardHeight > 0 ? '' : 'pb-8',
+          contentContainerClassName,
+        )}
+        contentContainerStyle={[
+          contentContainerStyle,
+          keyboardHeight > 0 ? { paddingBottom: keyboardHeight + 24 } : null,
+        ]}
+        showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+        keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+        automaticallyAdjustKeyboardInsets
+        {...props}
+      >
+        {children}
+      </ScrollView>
+    </ScrollFieldContext.Provider>
   )
 }

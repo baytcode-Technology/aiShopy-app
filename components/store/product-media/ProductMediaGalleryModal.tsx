@@ -238,7 +238,11 @@ export function ProductMediaGalleryModal({
 
   return (
     <>
-      <Modal visible={visible} animationType="slide" onRequestClose={handleCancel}>
+      <Modal
+        visible={visible && previewItem == null}
+        animationType="slide"
+        onRequestClose={handleCancel}
+      >
         <View className="flex-1 bg-surface" style={{ paddingTop: insets.top }}>
           <View className="flex-row items-center px-4 py-3 border-b border-gray-100">
             <Pressable onPress={handleCancel} hitSlop={12}>

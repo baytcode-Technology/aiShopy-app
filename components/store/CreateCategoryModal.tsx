@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { LayoutChangeEvent, ScrollView, Switch, Text, View } from 'react-native'
+import { LayoutChangeEvent, ScrollView, Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label, Muted } from '@/components/ui/Typography'
@@ -139,12 +140,7 @@ export function CreateCategoryModal({
           <Label>Active</Label>
           <Muted className="text-xs mt-0.5">Show this category on your storefront</Muted>
         </View>
-        <Switch
-          value={isActive}
-          onValueChange={setIsActive}
-          trackColor={{ false: '#E4E4E7', true: '#0A0A0B' }}
-          thumbColor="#FFFFFF"
-        />
+        <ThemeSwitch value={isActive} onValueChange={setIsActive} />
       </View>
     </FormModal>
   )

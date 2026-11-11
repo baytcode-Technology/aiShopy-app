@@ -4,7 +4,9 @@ import { useKeyboardInset } from '@src/hooks/useKeyboardInset'
 import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from 'expo-router'
 import { OrderStatusPickerSheet } from '@/components/store/OrderStatusPickerSheet'
 import { OrderStatusRow } from '@/components/store/OrderStatusRow'
+import { DetailSection } from '@/components/store/detail/DetailSection'
 import { OrderDeliveryCard } from '@/components/store/OrderDeliveryCard'
+import { OrderSummaryCard } from '@/components/store/OrderSummaryCard'
 import { OrderInvoiceCard } from '@/components/store/OrderInvoiceCard'
 import { OrderPaymentActions } from '@/components/store/OrderPaymentActions'
 import { OrderPaymentProofCard } from '@/components/store/OrderPaymentProofCard'
@@ -13,7 +15,7 @@ import { OrderRazorpayPendingCard } from '@/components/store/OrderRazorpayPendin
 import { DetailScreenHeader } from '@/components/navigation/DetailScreenHeader'
 import { AnimatedFadeIn } from '@/components/ui/AnimatedFadeIn'
 import { Screen, ScreenBody } from '@/components/ui/Screen'
-import { Muted } from '@/components/ui/Typography'
+import { Muted, SectionTitle } from '@/components/ui/Typography'
 import { fetchOrder, updateOrder } from '@src/api/orders'
 import { parseShopPolicies } from '@src/types/shop-policies'
 import { useStore } from '@src/contexts/store-context'
@@ -143,13 +145,76 @@ export default function OrderDetailScreen() {
 
           <ScrollView
             className="flex-1"
-            contentContainerClassName="px-5 pt-4 gap-3"
+            contentContainerClassName="px-5 pt-4 gap-4"
             contentContainerStyle={{ paddingBottom: 32 + keyboardHeight }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            <AnimatedFadeIn className="gap-2">
+            <AnimatedFadeIn className="gap-4">
+              <OrderSummaryCard order={order} currency={store?.currency} />
+
+              <OrderPaymentActions
+                order={order}
+                payment={order.payment ?? null}
+                saving={saving}
+                onConfirmPayment={confirmPaymentReceived}
+              />
+              {order.payment?.provider === 'razorpay' &&
+              order.order_status !== 'cancelled' &&
+              order.payment_status !== 'paid' ? (
+                <OrderRazorpayPendingCard failed={order.payment?.status === 'failed'} />
+              ) : null}
+
+              <View className="gap-2">
+                <SectionTitle>Status</SectionTitle>
+                <DetailSection>
+                  <OrderStatusRow
+                    grouped
+                    field="order_status"
+                    value={order.order_status}
+                    onPress={() => {
+                      if (!saving) setPickerField('order_status')
+                    }}
+                    disabled={saving}
+                  />
+                  <View className="mx-3.5 h-px bg-gray-200" />
+                  <OrderStatusRow
+                    grouped
+                    field="payment_status"
+                    value={order.payment_status}
+                    onPress={() => {
+                      if (!saving) setPickerField('payment_status')
+                    }}
+                    disabled={saving}
+                  />
+                  <View className="mx-3.5 h-px bg-gray-200" />
+                  <OrderStatusRow
+                    grouped
+                    field="fulfillment_status"
+                    value={order.fulfillment_status}
+                    onPress={() => {
+                      if (!saving) setPickerField('fulfillment_status')
+                    }}
+                    disabled={saving}
+                  />
+                </DetailSection>
+              </View>
+
+              {store ? (
+                <View className="gap-2">
+                  <SectionTitle>Delivery</SectionTitle>
+                  <OrderDeliveryCard
+                    order={order}
+                    storeId={store.id}
+                    courierTracking={parseShopPolicies(store.shop_policies).courier_tracking}
+                    saving={saving}
+                    onSavingChange={setSaving}
+                    onUpdated={setOrder}
+                  />
+                </View>
+              ) : null}
+
               {order.payment?.payment_proof_url ? (
                 <OrderPaymentProofCard url={order.payment.payment_proof_url} />
               ) : null}
@@ -158,55 +223,13 @@ export default function OrderDetailScreen() {
               order.payment.provider_payment_id ? (
                 <OrderRazorpayPaymentCard paymentId={order.payment.provider_payment_id} />
               ) : null}
-              {order.payment?.provider === 'razorpay' &&
-              order.order_status !== 'cancelled' &&
-              order.payment_status !== 'paid' ? (
-                <OrderRazorpayPendingCard failed={order.payment?.status === 'failed'} />
-              ) : null}
-              <OrderPaymentActions
-                order={order}
-                payment={order.payment ?? null}
-                saving={saving}
-                onConfirmPayment={confirmPaymentReceived}
-              />
-              <View>
-                <OrderStatusRow
-                  field="order_status"
-                  value={order.order_status}
-                  onPress={() => {
-                    if (!saving) setPickerField('order_status')
-                  }}
-                  disabled={saving}
-                />
-                <OrderStatusRow
-                  field="payment_status"
-                  value={order.payment_status}
-                  onPress={() => {
-                    if (!saving) setPickerField('payment_status')
-                  }}
-                  disabled={saving}
-                />
-                <OrderStatusRow
-                  field="fulfillment_status"
-                  value={order.fulfillment_status}
-                  onPress={() => {
-                    if (!saving) setPickerField('fulfillment_status')
-                  }}
-                  disabled={saving}
-                />
-              </View>
 
               {store ? (
-                <OrderDeliveryCard
-                  order={order}
-                  storeId={store.id}
-                  courierTracking={parseShopPolicies(store.shop_policies).courier_tracking}
-                  saving={saving}
-                  onSavingChange={setSaving}
-                  onUpdated={setOrder}
-                />
+                <View className="gap-2">
+                  <SectionTitle>Invoice</SectionTitle>
+                  <OrderInvoiceCard order={order} store={store} />
+                </View>
               ) : null}
-              {store ? <OrderInvoiceCard order={order} store={store} /> : null}
             </AnimatedFadeIn>
           </ScrollView>
         </View>

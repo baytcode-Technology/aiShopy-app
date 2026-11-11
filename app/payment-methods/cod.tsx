@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Switch, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import { router, useFocusEffect } from 'expo-router'
 import { PaymentMethodConfigLayout } from '@/components/store/PaymentMethodConfigLayout'
 import { Button } from '@/components/ui/Button'
@@ -94,12 +95,7 @@ export default function CodPaymentScreen() {
                   collects payment on delivery.
                 </Muted>
               </View>
-              <Switch
-                value={enabled}
-                onValueChange={setEnabled}
-                trackColor={{ false: '#E4E4E7', true: '#0A0A0B' }}
-                thumbColor="#FFFFFF"
-              />
+              <ThemeSwitch value={enabled} onValueChange={setEnabled} />
             </View>
           </View>
 

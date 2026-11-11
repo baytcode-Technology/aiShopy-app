@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Switch, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Text, TextInput, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import { Button } from '@/components/ui/Button'
 import { SleekModal } from '@/components/ui/Modal'
 import { Caption } from '@/components/ui/Typography'
@@ -100,13 +101,7 @@ export function CategoryInfoEditModal({
             {isActive ? 'Active on storefront' : 'Unlisted (hidden)'}
           </Caption>
         </View>
-        <Switch
-          value={isActive}
-          onValueChange={setIsActive}
-          trackColor={{ false: '#E4E4E7', true: '#3EB056' }}
-          thumbColor="#FFFFFF"
-          disabled={saving}
-        />
+        <ThemeSwitch value={isActive} onValueChange={setIsActive} disabled={saving} />
       </View>
 
       <Field label="Description">

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { Linking, Pressable, Switch, Text, View } from 'react-native'
+import { Linking, Pressable, Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import * as Notifications from 'expo-notifications'
 import { useFocusEffect } from 'expo-router'
 import { Button } from '@/components/ui/Button'
@@ -27,7 +28,6 @@ import { showError, showSuccess } from '@src/lib/toast'
 import { useStoreNotifications } from '@src/contexts/store-notifications-context'
 import { useStore } from '@src/contexts/store-context'
 import type { NotificationPreferences } from '@src/types/notification-preferences'
-import Colors from '@src/theme/colors'
 import { router } from 'expo-router'
 
 function notificationSettingsErrorMessage(error: unknown, fallback: string): string {
@@ -287,11 +287,10 @@ function ToggleRow({
         <Text className="text-[15px] font-semibold text-ink">{label}</Text>
         <Muted className="text-[13px] mt-0.5">{hint}</Muted>
       </View>
-      <Switch
+      <ThemeSwitch
         value={value}
         disabled={disabled}
         onValueChange={onValueChange}
-        trackColor={{ false: '#e4e4e7', true: Colors.brand.primary }}
       />
     </View>
   )

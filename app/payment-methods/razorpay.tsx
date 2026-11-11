@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Linking, Platform, Pressable, Switch, Text, View } from 'react-native'
+import { Linking, Platform, Pressable, Text, View } from 'react-native'
+import { ThemeSwitch } from '@/components/ui/ThemeSwitch'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { router, useFocusEffect } from 'expo-router'
 import * as Clipboard from 'expo-clipboard'
@@ -390,12 +391,7 @@ export default function RazorpayPaymentScreen() {
             <Label>Enable Razorpay</Label>
             <Muted className="text-xs mt-1">{enableHint}</Muted>
           </View>
-          <Switch
-            value={enabled}
-            onValueChange={handleEnableToggle}
-            trackColor={{ false: '#E4E4E7', true: '#0A0A0B' }}
-            thumbColor="#FFFFFF"
-          />
+          <ThemeSwitch value={enabled} onValueChange={handleEnableToggle} />
         </View>
 
         <View className="w-full">

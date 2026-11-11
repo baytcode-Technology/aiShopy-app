@@ -1,5 +1,5 @@
-import Colors from "@src/theme/colors";
-import { Switch, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { ThemeSwitch } from "@/components/ui/ThemeSwitch";
 
 type Props = {
   markAsSold: boolean;
@@ -27,14 +27,10 @@ export function ProductInventoryFlagsEditor({
             Shows as sold with 0 stock. Offline orders still allowed.
           </Text>
         </View>
-        <Switch
+        <ThemeSwitch
           value={markAsSold}
           onValueChange={onMarkAsSoldChange}
           disabled={disabled}
-          trackColor={{
-            false: Colors.border.default,
-            true: Colors.brand.primary,
-          }}
         />
       </View>
 
@@ -47,14 +43,10 @@ export function ProductInventoryFlagsEditor({
             Unlimited orders. Stock is not updated on checkout.
           </Text>
         </View>
-        <Switch
+        <ThemeSwitch
           value={markAsNonInventory}
           onValueChange={onMarkAsNonInventoryChange}
           disabled={disabled}
-          trackColor={{
-            false: Colors.border.default,
-            true: Colors.brand.primary,
-          }}
         />
       </View>
     </View>

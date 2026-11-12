@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -12,10 +12,10 @@ import { Muted } from '@/components/ui/Typography'
 import { updateMyStore } from '@src/api/stores'
 import { useStore } from '@src/contexts/store-context'
 import { formatMoney } from '@src/lib/format-money'
+import { useUnsavedChangesExit } from '@src/hooks/useUnsavedChangesExit'
 import { showError, showSuccess } from '@src/lib/toast'
 import { EMPTY_SHOP_POLICIES, parseShopPolicies } from '@src/types/shop-policies'
 import Colors from '@src/theme/colors'
-import { router } from 'expo-router'
 
 function numField(value: number | null): string {
   return value == null ? '' : String(value)
@@ -214,8 +214,55 @@ export default function ShopPoliciesScreen() {
     'None',
   )
 
-  const save = async () => {
-    if (!store?.id) return
+  const savedKey = useMemo(() => {
+    if (!store) return ''
+    const p = parseShopPolicies(store.shop_policies ?? EMPTY_SHOP_POLICIES)
+    return JSON.stringify({
+      hasPhysicalStore: p.has_physical_store,
+      address: p.address ?? '',
+      hours: p.hours ?? '',
+      defaultDays: numField(p.default_delivery_business_days),
+      deliveryFee: numField(p.delivery_fee),
+      freeAbove: numField(p.free_delivery_above),
+      sameDay: p.same_day_delivery,
+      nextDay: p.next_day_delivery,
+      serviceArea: p.service_area ?? '',
+      returnDays: numField(p.return_days),
+      returnsAllowed: p.returns_allowed,
+      exchangeAllowed: p.exchange_allowed,
+      refundDays: numField(p.refund_days_after_cancel),
+      returnNote: p.return_note ?? '',
+      offerNote: p.current_offer_note ?? '',
+      pickupNote: p.pickup_note ?? '',
+      courierTracking: p.courier_tracking,
+    })
+  }, [store])
+
+  const isDirty =
+    savedKey !== '' &&
+    savedKey !==
+      JSON.stringify({
+        hasPhysicalStore,
+        address,
+        hours,
+        defaultDays,
+        deliveryFee,
+        freeAbove,
+        sameDay,
+        nextDay,
+        serviceArea,
+        returnDays,
+        returnsAllowed,
+        exchangeAllowed,
+        refundDays,
+        returnNote,
+        offerNote,
+        pickupNote,
+        courierTracking,
+      })
+
+  const save = useCallback(async (): Promise<boolean> => {
+    if (!store?.id) return false
     setSaving(true)
     try {
       await updateMyStore(store.id, {
@@ -241,16 +288,44 @@ export default function ShopPoliciesScreen() {
       })
       await refreshStore({ silent: true })
       showSuccess('Shop policies saved')
+      return true
     } catch (e) {
       showError(e, 'Could not save shop policies')
+      return false
     } finally {
       setSaving(false)
     }
-  }
+  }, [
+    address,
+    courierTracking,
+    defaultDays,
+    deliveryFee,
+    exchangeAllowed,
+    freeAbove,
+    hasPhysicalStore,
+    hours,
+    nextDay,
+    offerNote,
+    pickupNote,
+    refreshStore,
+    refundDays,
+    returnDays,
+    returnNote,
+    returnsAllowed,
+    sameDay,
+    serviceArea,
+    store?.id,
+  ])
+
+  const { requestBack, dialog } = useUnsavedChangesExit({
+    isDirty,
+    isLoading: !store,
+    onSave: save,
+  })
 
   return (
     <Screen variant="shell" edges={['top']}>
-      <ScreenHeader title="Shop policies" onBack={() => router.back()} />
+      <ScreenHeader title="Shop policies" onBack={requestBack} />
       <ScreenScrollBody contentContainerClassName="gap-4 pt-4">
         <Muted className="px-1 text-[13px] leading-5">
           Leave a field blank if staff should check. Chat Boat will not invent a fee, date, or
@@ -405,6 +480,7 @@ export default function ShopPoliciesScreen() {
           disabled={saving || !store}
         />
       </View>
+      {dialog}
     </Screen>
   )
 }

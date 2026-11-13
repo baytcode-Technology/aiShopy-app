@@ -152,8 +152,9 @@ export function OrderDeliveryCard({
               <TrackingBarcodeScanner
                 visible={scanOpen}
                 onClose={() => setScanOpen(false)}
-                onScanned={(value) => {
-                  setTrackingNumber(value)
+                onScanned={(scan) => {
+                  setTrackingNumber(scan.trackingNumber)
+                  setCourierName((current) => (current.trim() ? current : scan.courierName || current))
                   setScanOpen(false)
                 }}
                 onDenied={() => {

@@ -2,7 +2,7 @@
   "expo": {
     "name": "AiShopy",
     "slug": "aishopy",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/app_logo.jpg",
     "scheme": "aishopyapp",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aishopy.app",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "usesAppleSignIn": true,
       "entitlements": {
         "com.apple.developer.applesignin": ["Default"]
@@ -45,7 +45,7 @@
     "android": {
       "label": "AiShopy",
       "package": "com.aishopy.app",
-      "versionCode": 7,
+      "versionCode": 8,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/app_logo.jpg",
         "backgroundColor": "#ffffff"

@@ -1,5 +1,6 @@
 import { Caption, Heading, Muted } from '@/components/ui/Typography'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { useAppTheme } from '@src/contexts/theme-context'
 import { cn } from '@src/lib/cn'
 import { shadows } from '@src/lib/shadows'
 import Colors from '@src/theme/colors'
@@ -39,17 +40,24 @@ export function PlanCard({
 }: Props) {
   const isStarterLimited = tone === 'starter-limited'
   const isTrialOffer = tone === 'trial-offer' && !!compareAtPrice
+  const { isDark } = useAppTheme()
 
   const card = (
     <View
       className={cn(
         'rounded-[28px] border bg-surface overflow-hidden',
         isStarterLimited
-          ? selected
-            ? 'border-[#EF4444] bg-[#FEF2F2]'
-            : 'border-[#FECACA] bg-[#FEF2F2]'
+          ? isDark
+            ? selected
+              ? 'border-ink'
+              : 'border-gray-200'
+            : selected
+              ? 'border-[#EF4444] bg-[#FEF2F2]'
+              : 'border-[#FECACA] bg-[#FEF2F2]'
           : isTrialOffer && selected
-            ? 'border-brand-green bg-[#E8F8EC]'
+            ? isDark
+              ? 'border-brand-green'
+              : 'border-brand-green bg-[#E8F8EC]'
             : selected
               ? 'border-brand-primary'
               : 'border-gray-200',

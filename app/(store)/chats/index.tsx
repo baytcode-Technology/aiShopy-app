@@ -503,6 +503,7 @@ export default function MessagesListScreen() {
         variant="tab"
         title="Messages"
         subtitle={headerSubtitle}
+        subtitleMark={headerSubtitle === "Loading conversations…"}
         right={
           <AppPressable
             hitSlop={12}

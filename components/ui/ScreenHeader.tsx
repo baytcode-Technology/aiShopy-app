@@ -23,6 +23,26 @@ type Props = {
   showLogo?: boolean
   /** Show the settings cog in the top-right (default true). */
   showSettings?: boolean
+  /** Short brand-green tick under the subtitle. */
+  subtitleMark?: boolean
+}
+
+function HeaderSubtitle({
+  subtitle,
+  mark,
+  className,
+}: {
+  subtitle?: string
+  mark?: boolean
+  className: string
+}) {
+  if (!subtitle) return null
+  return (
+    <View>
+      <Subtitle className={className}>{subtitle}</Subtitle>
+      {mark ? <View className="mt-2 h-[3px] w-14 rounded-full bg-brand-green" /> : null}
+    </View>
+  )
 }
 
 export function ScreenHeader({
@@ -35,6 +55,7 @@ export function ScreenHeader({
   variant = 'default',
   showLogo = false,
   showSettings = true,
+  subtitleMark = false,
 }: Props) {
   const isTab = variant === 'tab'
 
@@ -65,11 +86,11 @@ export function ScreenHeader({
             >
               {title}
             </Heading>
-            {subtitle ? (
-              <Subtitle className="mt-2 text-gray-500 text-[15px] font-medium leading-5">
-                {subtitle}
-              </Subtitle>
-            ) : null}
+            <HeaderSubtitle
+              subtitle={subtitle}
+              mark={subtitleMark}
+              className="mt-2 text-gray-500 text-[15px] font-medium leading-5"
+            />
           </View>
           {headerActions ? <View className="pt-1 shrink-0">{headerActions}</View> : null}
         </View>
@@ -102,11 +123,11 @@ export function ScreenHeader({
           >
             <View className="flex-1 pr-3">
               <Heading className="text-2xl tracking-tight">{title}</Heading>
-              {subtitle ? (
-                <Subtitle className="mt-1.5 text-gray-500 text-[14px] font-medium leading-5">
-                  {subtitle}
-                </Subtitle>
-              ) : null}
+              <HeaderSubtitle
+                subtitle={subtitle}
+                mark={subtitleMark}
+                className="mt-1.5 text-gray-500 text-[14px] font-medium leading-5"
+              />
             </View>
             {headerActions ? <View className="shrink-0">{headerActions}</View> : null}
           </View>
@@ -124,11 +145,11 @@ export function ScreenHeader({
           <Heading className={cn(large ? 'text-[32px] leading-tight' : 'text-xl', 'tracking-tight')}>
             {title}
           </Heading>
-          {subtitle ? (
-            <Subtitle className="mt-2 text-gray-500 text-[15px] font-medium leading-5">
-              {subtitle}
-            </Subtitle>
-          ) : null}
+          <HeaderSubtitle
+            subtitle={subtitle}
+            mark={subtitleMark}
+            className="mt-2 text-gray-500 text-[15px] font-medium leading-5"
+          />
         </View>
         {headerActions ? <View className="pt-1 shrink-0">{headerActions}</View> : null}
       </View>
